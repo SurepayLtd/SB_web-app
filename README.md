@@ -239,4 +239,5 @@ https://mifosforge.jira.com/jira/software/c/projects/WEB/boards/62
 Want to file a bug, request a feature, contribute some code, or improve documentation? Excellent! Read up on our guidelines for [contributing](.github/CONTRIBUTING.md) and then check out one of our [issues](https://github.com/openMF/web-app/issues). Make sure you follow the guidelines before sending a contribution!
 
 Apache Fineract provides open APIs and affordable core banking solution for financial institutions
-and it is the backend for all UIs of the Mifos. Its GitHub Repository is (https://github.com/apache/fineract)
+and it is the backend for all UIs of the Mifos. Its GitHub Repository is (https://github.com/apache/fineract) 
+Surepay base release is 1.10.1 (Backend) and Release-1.10.1-latest FE as of 30/Jan/2025.

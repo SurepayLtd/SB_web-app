@@ -10,7 +10,7 @@ export const environment = {
   hash: env.mifos_x.hash,
   // For connecting to server running elsewhere update the tenant identifier
   fineractPlatformTenantId: loadedEnv['fineractPlatformTenantId'] || 'default',
-  fineractPlatformTenantIds: loadedEnv['fineractPlatformTenantIds'] || 'default',
+  fineractPlatformTenantIds: loadedEnv['fineractPlatformTenantIds'] || 'default,saviourmf',
   // For connecting to others servers running elsewhere update the base API URL
   baseApiUrls:
     loadedEnv['fineractApiUrls'] ||
