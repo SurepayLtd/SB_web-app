@@ -18,6 +18,7 @@ export class ClientsComponent implements OnInit {
   @ViewChild('showClosedAccounts') showClosedAccounts: MatCheckbox;
 
   displayedColumns = [
+    'id',
     'displayName',
     'accountNumber',
     'externalId',
