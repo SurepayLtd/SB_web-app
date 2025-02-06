@@ -62,8 +62,11 @@
             <tr>
               <td>{{ 'labels.inputs.Arrears By' | translate }}</td>
               <td>
-                {{ dataObject.summary.totalOverdue | formatNumber }}
-                <span *ngIf="dataObject.summary.totalOverdue < 0">{{ 'labels.inputs.Not Provided' | translate }}</span>
+              <span *ngIf="dataObject.summary">
+              {{ dataObject.summary.totalOverdue | formatNumber }}
+              <span *ngIf="dataObject.summary.totalOverdue < 0">{{ 'labels.inputs.Not Provided' | translate }}</span>
+              </span>
+                <span *ngIf="!dataObject.summary">{{ 'labels.inputs.Not Provided' | translate }}</span>
               </td>
             </tr>
           </tbody>
