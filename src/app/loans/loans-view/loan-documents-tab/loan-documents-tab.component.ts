@@ -6,6 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { environment } from 'environments/environment';
 import { LoansService } from 'app/loans/loans.service';
 import { SettingsService } from 'app/settings/settings.service';
+import {AuthenticationService} from '../../../core/authentication/authentication.service';
 
 /**
  * Overdue charges tab component
@@ -29,7 +30,7 @@ export class LoanDocumentsTabComponent {
   constructor(
     private route: ActivatedRoute,
     private loansService: LoansService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,private authenticationService: AuthenticationService
   ) {
     this.entityId = this.route.parent.snapshot.params['loanId'];
 
@@ -47,7 +48,7 @@ export class LoanDocumentsTabComponent {
         '/documents/' +
         ele.id +
         '/attachment?tenantIdentifier=' +
-        environment.fineractPlatformTenantId;
+        this.authenticationService.getTenantId();
       if (ele.fileName) {
         if (
           ele.fileName.toLowerCase().indexOf('.jpg') !== -1 ||

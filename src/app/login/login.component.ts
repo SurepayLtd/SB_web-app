@@ -79,6 +79,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   displayTenantSelector(): boolean {
-    return environment.displayTenantSelector === 'false' ? false : false;
+    return environment.displayTenantSelector === 'false' ? false : true;
   }
 }

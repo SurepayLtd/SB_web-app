@@ -8,9 +8,7 @@ export const environment = {
   production: true,
   version: env.mifos_x.version,
   hash: env.mifos_x.hash,
-  baseApiUrls:
-    loadedEnv['fineractApiUrls'] ||
-    'https://localhost:8443',
+  baseApiUrls:'https://localhost:8443',
   // For connecting to server running elsewhere set the base API URL
   baseApiUrl: loadedEnv['fineractApiUrl'] || window.location.protocol + '//' + window.location.hostname,
   oauthServerUrl: loadedEnv['oauthServerUrl'] || loadedEnv['fineractApiUrl'] + loadedEnv['apiProvider'],
