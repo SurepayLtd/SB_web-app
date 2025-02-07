@@ -21,6 +21,7 @@ export class LoginFormComponent implements OnInit {
   loginForm: UntypedFormGroup;
   /** Password input field type. */
   passwordInputType: string;
+  tenant: string;
   /** True if loading. */
   loading = false;
 
@@ -75,6 +76,7 @@ export class LoginFormComponent implements OnInit {
    */
   private createLoginForm() {
     this.loginForm = this.formBuilder.group({
+      tenant: ['', Validators.required],
       username: [
         '',
         Validators.required

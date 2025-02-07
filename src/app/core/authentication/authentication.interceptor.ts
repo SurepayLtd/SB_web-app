@@ -12,7 +12,7 @@ import { SettingsService } from 'app/settings/settings.service';
 /** Http request (default) options headers. */
 const httpOptions = {
   headers: {
-    'Fineract-Platform-TenantId': environment.fineractPlatformTenantId
+
   }
 };
 
@@ -58,6 +58,10 @@ export class AuthenticationInterceptor implements HttpInterceptor {
    */
   setTwoFactorAccessToken(twoFactorAccessToken: string) {
     httpOptions.headers[twoFactorAccessTokenHeader] = twoFactorAccessToken;
+  }
+
+  setTenantId(tenantId: string){
+    httpOptions.headers['Fineract-Platform-TenantId'] = tenantId;
   }
 
   /**

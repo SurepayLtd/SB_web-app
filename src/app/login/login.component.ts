@@ -72,13 +72,13 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   reloadSettings(): void {
     this.settingsService.setTenantIdentifier('');
-    this.settingsService.setTenantIdentifier(environment.fineractPlatformTenantId || 'default');
-    this.settingsService.setTenantIdentifiers(environment.fineractPlatformTenantIds.split(','));
+    // this.settingsService.setTenantIdentifier(environment.fineractPlatformTenantId || 'default');
+    // this.settingsService.setTenantIdentifiers(environment.fineractPlatformTenantIds.split(','));
     this.settingsService.setServers(environment.baseApiUrls.split(','));
     window.location.reload();
   }
 
   displayTenantSelector(): boolean {
-    return environment.displayTenantSelector === 'false' ? false : true;
+    return environment.displayTenantSelector === 'false' ? false : false;
   }
 }
