@@ -61,6 +61,7 @@ export class AuthenticationInterceptor implements HttpInterceptor {
   }
 
   setTenantId(tenantId: string){
+    console.log("tenantId -- >", tenantId);
     httpOptions.headers['Fineract-Platform-TenantId'] = tenantId;
   }
 
