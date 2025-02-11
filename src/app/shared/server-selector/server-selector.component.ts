@@ -37,8 +37,8 @@ export class ServerSelectorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // this.servers = this.settingsService.servers;
-    this.servers = this.settingsService.servers.filter((server: string) => server !== 'http://localhost:4200');
+    this.servers = this.settingsService.servers;
+    // this.servers = this.settingsService.servers.filter((server: string) => server !== 'http://localhost:4200');
 
     this.existMoreThanOneServer = this.servers && this.servers.length > 1;
     if (!this.existMoreThanOneServer) {
