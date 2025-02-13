@@ -101,8 +101,6 @@ export class LoanAccountActionsComponent {
   ) {
     this.navigationData = this.router.getCurrentNavigation().extras.state.data;
     this.route.data.subscribe((data: { actionButtonData: any }) => {
-      console.log("-Just Data-"+data);
-      console.log("*  Action Button  *"+data.actionButtonData);
       this.actionButtonData = data.actionButtonData;
     });
 
