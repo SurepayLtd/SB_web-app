@@ -122,7 +122,7 @@ export class LoansViewComponent implements OnInit {
           taskPermissionName: 'ADJUST_REPAYMENT_SCHEDULE'
         });
       }
-    } else if (this.status === 'Approved') {
+    } else if (this.status === 'Approved' || this.status === 'Active') {
       this.buttonConfig.addButton({
         name: this.loanDetailsData.loanOfficerName ? 'Change Loan Officer' : 'Assign Loan Officer',
         icon: 'user-tie',
@@ -158,6 +158,7 @@ export class LoansViewComponent implements OnInit {
         });
       }
       // loan officer not assigned to loan, below logic
+
       // helps to display otherwise not
       if (!this.loanDetailsData.loanOfficerName) {
         this.buttonConfig.addButton({
