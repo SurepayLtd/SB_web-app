@@ -37,8 +37,18 @@ export class ServerSelectorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.servers = this.settingsService.servers;
-    // this.servers = this.settingsService.servers.filter((server: string) => server !== 'http://localhost:4200');
+    this.servers = this.settingsService.servers.filter((server: string) => server && server !== 'http://localhost:4200');
+
+    if (this.servers.length > 1) {
+      this.servers = [this.servers[0]]; // Keep only the first server
+    }
+
+    if (this.servers.length === 0) {
+      console.error('No valid servers available');
+      return;
+    }
+    console.log("Server 1 ->"+this.servers[0]);
+    console.log("Server 2 ->"+this.servers.length);
 
     this.existMoreThanOneServer = this.servers && this.servers.length > 1;
     if (!this.existMoreThanOneServer) {
