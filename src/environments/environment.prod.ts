@@ -12,9 +12,7 @@ export const environment = {
   fineractPlatformTenantId: loadedEnv['fineractPlatformTenantId'] || 'default',
   fineractPlatformTenantIds: loadedEnv['fineractPlatformTenantIds'] || 'default',
   // For connecting to others servers running elsewhere update the base API URL
-  baseApiUrls:
-    loadedEnv['fineractApiUrls'] ||
-    'https://localhost:8443',
+  baseApiUrls: loadedEnv['fineractApiUrls'] || 'https://localhost:8443',
   // For connecting to server running elsewhere set the base API URL
   baseApiUrl: loadedEnv['fineractApiUrl'] || window.location.protocol + '//' + window.location.hostname,
   oauthServerUrl: loadedEnv['oauthServerUrl'] || loadedEnv['fineractApiUrl'] + loadedEnv['apiProvider'],
