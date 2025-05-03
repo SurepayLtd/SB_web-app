@@ -123,9 +123,7 @@
     </div>
 
     <div fxFlexFill>
-      <span fxFlex="50%"
-        >{{ 'labels.inputs.Is interest recognition on disbursement date?' | translate }}:</span
-      >
+      <span fxFlex="50%">{{ 'labels.inputs.Is interest recognition on disbursement date?' | translate }}:</span>
       <span fxFlex="50%">{{ loanDetails.interestRecognitionOnDisbursementDate | yesNo }}</span>
     </div>
 
@@ -230,6 +228,22 @@
           loanDetails.maximumGap | formatNumber
         }}&nbsp;{{ 'labels.text.Days' | translate }})
       </span>
+    </div>
+    <div fxFlexFill>
+      <span fxFlex="50%">{{ 'labels.inputs.Disburse Via Mobile Money' | translate }}:</span>
+      <span fxFlex="50%">{{ loanDetails.disbursedViaMomoPay }}</span>
+    </div>
+    <div fxFlexFill>
+      <span fxFlex="50%">{{ 'labels.inputs.Disburse Via Mobile Money Completed' | translate }}:</span>
+      <span fxFlex="50%">{{ loanDetails.disbursementPayoutCompleted }}</span>
+    </div>
+    <div fxFlexFill>
+      <span fxFlex="50%">{{ 'labels.inputs.Disburse Via Mobile Money Completed On' | translate }}:</span>
+      <span fxFlex="50%">{{ loanDetails.disbursementPayoutCompletedDate | dateFormat }}</span>
+    </div>
+    <div fxFlexFill>
+      <span fxFlex="50%">{{ 'labels.inputs.Middleware Reference Number' | translate }}:</span>
+      <span fxFlex="50%">{{ loanDetails.middlewareReferenceNo }}</span>
     </div>
   </div>
 </div>

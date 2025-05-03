@@ -19,12 +19,7 @@ export const environment = {
   // For connecting to others servers running elsewhere update the base API URL
   baseApiUrls:
     loadedEnv['fineractApiUrls'] ||
-    'https://localhost:8443,' +
-      window.location.protocol +
-      '//' +
-      window.location.hostname +
-      ':' +
-      window.location.port,
+    'https://localhost:8443,' + window.location.protocol + '//' + window.location.hostname + ':' + window.location.port,
   // For connecting to server running elsewhere set the base API URL
   baseApiUrl:
     loadedEnv['baseApiUrl'] || window.location.protocol + '//' + window.location.hostname + ':' + window.location.port,
