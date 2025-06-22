@@ -42,6 +42,7 @@ RUN npm run build -- --output-path=/dist $BUILD_ENVIRONMENT_OPTIONS
 
 ###############
 ### STAGE 2: Serve app with nginx ###
+
 ###############
 FROM $NGINX_IMAGE
 
