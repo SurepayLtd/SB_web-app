@@ -14,6 +14,7 @@ import { TranslatePipe } from './translate.pipe';
 import { TruncateTextPipe } from './truncate-text.pipe';
 import { UrlToStringPipe } from './url-to-string.pipe';
 import { YesnoPipe } from './yesno.pipe';
+import { CleanOfficeNamePipe } from './clean-office-name.pipe';
 
 @NgModule({
   imports: [
@@ -33,7 +34,8 @@ import { YesnoPipe } from './yesno.pipe';
     YesnoPipe,
     PrettyPrintPipe,
     TruncateTextPipe,
-    TranslatePipe
+    TranslatePipe,
+    CleanOfficeNamePipe
   ],
   providers: [
     StatusLookupPipe,
@@ -65,7 +67,8 @@ import { YesnoPipe } from './yesno.pipe';
     YesnoPipe,
     PrettyPrintPipe,
     TranslatePipe,
-    TruncateTextPipe
+    TruncateTextPipe,
+    CleanOfficeNamePipe
   ]
 })
 export class PipesModule {}

@@ -81,7 +81,11 @@ export class EditEmployeeComponent implements OnInit {
           Validators.pattern('(^[A-z]).*')]
       ],
       isLoanOfficer: [this.employeeData.isLoanOfficer],
-      mobileNo: [this.employeeData.mobileNo],
+      mobileNo: [this.employeeData.mobileNo,
+        [
+          Validators.required,
+          Validators.pattern('^\\+?[0-9]{10,15}$')]
+      ],
       isActive: [this.employeeData.isActive],
       joiningDate: [
         this.employeeData.joiningDate && new Date(this.employeeData.joiningDate),
