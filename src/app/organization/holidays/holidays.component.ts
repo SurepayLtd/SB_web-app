@@ -88,6 +88,7 @@ export class HolidaysComponent implements OnInit, AfterViewInit {
    */
   ngOnInit() {
     this.onChangeOffice();
+    this.officeSelector.setValue(1);
   }
 
   /**
