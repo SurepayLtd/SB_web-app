@@ -58,9 +58,11 @@ export class MakeRepaymentComponent implements OnInit {
   ngOnInit() {
     this.maxDate = this.settingsService.businessDate;
     this.createRepaymentLoanForm();
-    this.setRepaymentLoanDetails();
-    if (this.dataObject.currency) {
-      this.currency = this.dataObject.currency;
+    if (this.dataObject) {
+      this.setRepaymentLoanDetails();
+      if (this.dataObject.currency) {
+        this.currency = this.dataObject.currency;
+      }
     }
   }
 
@@ -84,6 +86,9 @@ export class MakeRepaymentComponent implements OnInit {
   }
 
   setRepaymentLoanDetails() {
+    if (!this.dataObject) {
+      return;
+    }
     this.paymentTypes = this.dataObject.paymentTypeOptions;
     this.repaymentLoanForm.patchValue({
       transactionAmount: this.dataObject.amount
