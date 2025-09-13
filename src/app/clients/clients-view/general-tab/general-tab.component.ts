@@ -202,6 +202,7 @@ export class GeneralTabComponent {
   }
 
   navigateToMakeRepayment(loan: any, $event: MouseEvent) {
+    console.log("Routing to repayment page . . . ");
     $event.stopPropagation();
     this.router.navigate(['../', 'loans-accounts', loan.id, 'actions', 'Make Repayment'], {
       relativeTo: this.route,
