@@ -171,17 +171,17 @@
     <ng-container matColumnDef="Actions">
       <th mat-header-cell class="center" *matHeaderCellDef>{{ 'labels.inputs.Actions' | translate }}</th>
       <td mat-cell class="center" *matCellDef="let element">
-        <button
-          *ngIf="element.status.active"
-          class="account-action-button"
-          mat-raised-button
-          color="primary"
-          matTooltip="{{ 'tooltips.Make Repayment' | translate }}"
-          matTooltipPosition="above"
-          (click)="navigateToMakeRepayment(element, $event)"
-        >
-          <i class="fa fa-dollar"></i>
-        </button>
+<!--        <button-->
+<!--          *ngIf="element.status.active"-->
+<!--          class="account-action-button"-->
+<!--          mat-raised-button-->
+<!--          color="primary"-->
+<!--          matTooltip="{{ 'tooltips.Make Repayment' | translate }}"-->
+<!--          matTooltipPosition="above"-->
+<!--          (click)="navigateToMakeRepayment(element, $event)"-->
+<!--        >-->
+<!--          <i class="fa fa-dollar"></i>-->
+<!--        </button>-->
         <span *ngIf="element.status.pendingApproval">
           <button
             class="account-action-button"
