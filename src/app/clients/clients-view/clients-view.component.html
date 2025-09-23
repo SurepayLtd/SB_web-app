@@ -147,6 +147,18 @@
                       ></mifosx-external-identifier>
                     </td>
                   </tr>
+                  <tr>
+                    <td>
+                      <b>{{ 'labels.buttons.Activate Momo Payment' | translate }}</b>
+                    </td>
+                    <td>
+                      <mat-slide-toggle
+                        [checked]="clientViewData.isMomoActive"
+                        (click)="$event.preventDefault(); activateMomoPayment()"
+                        color="primary">
+                      </mat-slide-toggle>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

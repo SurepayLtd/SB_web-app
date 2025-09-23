@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 /** Custom Dialogs */
 import { UnassignStaffDialogComponent } from './custom-dialogs/unassign-staff-dialog/unassign-staff-dialog.component';
@@ -12,6 +13,7 @@ import { DeleteSignatureDialogComponent } from './custom-dialogs/delete-signatur
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import { UploadImageDialogComponent } from './custom-dialogs/upload-image-dialog/upload-image-dialog.component';
 import { CaptureImageDialogComponent } from './custom-dialogs/capture-image-dialog/capture-image-dialog.component';
+import { MomoActivationDialogComponent } from './custom-dialogs/momo-activation-dialog/momo-activation-dialog.component';
 
 /** Custom Services */
 import { ClientsService } from '../clients.service';
@@ -32,7 +34,8 @@ export class ClientsViewComponent implements OnInit {
     private router: Router,
     private clientsService: ClientsService,
     private _sanitizer: DomSanitizer,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {
     this.route.data.subscribe((data: { clientViewData: any; clientTemplateData: any; clientDatatables: any }) => {
       this.clientViewData = data.clientViewData;
@@ -265,4 +268,52 @@ export class ClientsViewComponent implements OnInit {
       }
     });
   }
+
+  activateMomoPayment() {
+    const dialogRef = this.dialog.open(MomoActivationDialogComponent, {
+      data: {
+        title: this.clientViewData.isMomoActive ? 'Deactivate Momo Payment' : 'Activate Momo Payment',
+        message: this.clientViewData.isMomoActive ? 'Are you sure you want to deactivate momo payment?' : 'Are you sure you want to activate momo payment?'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        if (this.clientViewData.isMomoActive) {
+          this.clientsService.deactivateMomoPayment(this.clientViewData.id).subscribe(
+            (response: any) => {
+              this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
+                this.clientViewData = clientData;
+              });
+              this.snackBar.open('Momo payment deactivated successfully', 'Close', {
+                duration: 3000,
+              });
+            },
+            (error: any) => {
+              this.snackBar.open('Error deactivating momo payment', 'Close', {
+                duration: 3000,
+              });
+            }
+          );
+        } else {
+          this.clientsService.activateMomoPayment(this.clientViewData.id).subscribe(
+            (response: any) => {
+              this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
+                this.clientViewData = clientData;
+              });
+              this.snackBar.open('Momo payment activated successfully', 'Close', {
+                duration: 3000,
+              });
+            },
+            (error: any) => {
+              this.snackBar.open('Error activating momo payment', 'Close', {
+                duration: 3000,
+              });
+            }
+          );
+        }
+      }
+    });
+  }
+
 }

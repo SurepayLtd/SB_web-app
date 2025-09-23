@@ -57,6 +57,8 @@ import { CaptureImageDialogComponent } from './clients-view/custom-dialogs/captu
 import { CreateSelfServiceUserComponent } from './clients-view/client-actions/create-self-service-user/create-self-service-user.component';
 import { AddClientCollateralComponent } from './clients-view/client-actions/add-client-collateral/add-client-collateral.component';
 import { ClientDatatableStepComponent } from './client-stepper/client-datatable-step/client-datatable-step.component';
+import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/momo-activation-dialog/momo-activation-dialog.component';
+
 
 /**
  * Clients Module
@@ -119,7 +121,8 @@ import { ClientDatatableStepComponent } from './client-stepper/client-datatable-
     CaptureImageDialogComponent,
     CreateSelfServiceUserComponent,
     AddClientCollateralComponent,
-    ClientDatatableStepComponent
+    ClientDatatableStepComponent,
+    MomoActivationDialogComponent
   ],
   providers: []
 })
