@@ -156,7 +156,21 @@
                         [checked]="clientViewData.isMomoActive"
                         (click)="$event.preventDefault(); activateMomoPayment()"
                         color="primary">
+                        Activate Momo Payment
                       </mat-slide-toggle>
+                    </td>
+                  </tr>
+                  <tr *ngIf="showOtpInput">
+                    <td>
+                      <b>{{ 'labels.inputs.OTP' | translate }}</b>
+                    </td>
+                    <td>
+                      <mat-form-field>
+                        <input matInput placeholder="Enter OTP" [(ngModel)]="otpCode">
+                      </mat-form-field>
+                    </td>
+                    <td>
+                      <button mat-button (click)="validateOtp()">Validate OTP</button>
                     </td>
                   </tr>
                 </tbody>

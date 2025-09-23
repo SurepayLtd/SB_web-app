@@ -124,6 +124,7 @@ import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/mom
     ClientDatatableStepComponent,
     MomoActivationDialogComponent
   ],
+  entryComponents: [MomoActivationDialogComponent],
   providers: []
 })
 export class ClientsModule {}

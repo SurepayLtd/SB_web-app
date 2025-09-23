@@ -28,6 +28,8 @@ export class ClientsViewComponent implements OnInit {
   clientDatatables: any;
   clientImage: any;
   clientTemplateData: any;
+  showOtpInput = false;
+  otpCode: string;
 
   constructor(
     private route: ActivatedRoute,
@@ -298,10 +300,8 @@ export class ClientsViewComponent implements OnInit {
         } else {
           this.clientsService.activateMomoPayment(this.clientViewData.id).subscribe(
             (response: any) => {
-              this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
-                this.clientViewData = clientData;
-              });
-              this.snackBar.open('Momo payment activated successfully', 'Close', {
+              this.showOtpInput = true; // Show OTP input
+              this.snackBar.open('OTP sent to client', 'Close', {
                 duration: 3000,
               });
             },
@@ -315,5 +315,26 @@ export class ClientsViewComponent implements OnInit {
       }
     });
   }
+
+  validateOtp() {
+    this.clientsService.validateOtp(this.clientViewData.id, this.otpCode).subscribe(
+      (response: any) => {
+        this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
+          this.clientViewData = clientData;
+        });
+        this.showOtpInput = false;
+        this.otpCode = '';
+        this.snackBar.open('OTP validation successful', 'Close', {
+          duration: 3000,
+        });
+      },
+      (error: any) => {
+        this.snackBar.open('Error validating OTP', 'Close', {
+          duration: 3000,
+        });
+      }
+    );
+  }
+
 
 }
