@@ -169,16 +169,16 @@
                     </td>
                   </tr>
                   <tr *ngIf="showOtpInput">
-                    <td>
+                    <td class="otp-label">
                       <b>{{ 'labels.inputs.OTP' | translate }}</b>
                     </td>
-                    <td>
+                    <td class="enter-otp-field">
                       <mat-form-field>
-                        <input matInput placeholder="Enter OTP" [(ngModel)]="otpCode" />
+                        <input matInput placeholder="Enter OTP . . ." [(ngModel)]="otpCode" />
                       </mat-form-field>
                     </td>
                     <td>
-                      <button mat-button (click)="validateOtp()">Validate OTP</button>
+                      <button mat-button (click)="validateOtp()" class="validate-otp-button">Validate OTP</button>
                     </td>
                   </tr>
                 </tbody>

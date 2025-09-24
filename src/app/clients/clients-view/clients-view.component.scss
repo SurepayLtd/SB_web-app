@@ -35,3 +35,33 @@
 ::ng-deep .mat-slide-toggle.mat-primary.mat-checked .mat-slide-toggle-bar {
   background-color: #a5d6a7;
 }
+
+.otp-label {
+  color: white;
+}
+
+.mat-form-field {
+  width: 100%;
+}
+
+::ng-deep .mat-form-field-label {
+  color: white !important;
+}
+
+::ng-deep .mat-input-element::placeholder {
+  color: white !important;
+}
+
+::ng-deep .mat-input-element {
+  color: white !important;
+  caret-color: white !important;
+}
+
+::ng-deep .mat-form-field-appearance-legacy .mat-form-field-underline {
+  background-color: white !important;
+}
+
+.validate-otp-button {
+  background-color: white;
+  color: black;
+}
