@@ -274,40 +274,43 @@ export class ClientsViewComponent implements OnInit {
   activateMomoPayment() {
     const dialogRef = this.dialog.open(MomoActivationDialogComponent, {
       data: {
-        title: this.clientViewData.isMomoActive ? 'Deactivate Momo Payment' : 'Activate Momo Payment',
-        message: this.clientViewData.isMomoActive ? 'Are you sure you want to deactivate momo payment?' : 'Are you sure you want to activate momo payment?'
+        title: this.clientViewData.momoPaymentActive ? 'Deactivate Momo Payment' : 'Activate Momo Payment',
+        message: this.clientViewData.momoPaymentActive
+          ? 'Are you sure you want to deactivate momo payment?'
+          : 'Are you sure you want to activate momo payment?'
       }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        if (this.clientViewData.isMomoActive) {
+        if (this.clientViewData.momoPaymentActive) {
           this.clientsService.deactivateMomoPayment(this.clientViewData.id).subscribe(
             (response: any) => {
               this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
                 this.clientViewData = clientData;
               });
               this.snackBar.open('Momo payment deactivated successfully', 'Close', {
-                duration: 3000,
+                duration: 3000
               });
             },
             (error: any) => {
               this.snackBar.open('Error deactivating momo payment', 'Close', {
-                duration: 3000,
+                duration: 3000
               });
             }
           );
         } else {
           this.clientsService.activateMomoPayment(this.clientViewData.id).subscribe(
             (response: any) => {
+              this.clientViewData.momoPaymentOtpExpiry = response.momoPaymentOtpExpiry;
               this.showOtpInput = true; // Show OTP input
               this.snackBar.open('OTP sent to client', 'Close', {
-                duration: 3000,
+                duration: 3000
               });
             },
             (error: any) => {
               this.snackBar.open('Error activating momo payment', 'Close', {
-                duration: 3000,
+                duration: 3000
               });
             }
           );
@@ -325,16 +328,14 @@ export class ClientsViewComponent implements OnInit {
         this.showOtpInput = false;
         this.otpCode = '';
         this.snackBar.open('OTP validation successful', 'Close', {
-          duration: 3000,
+          duration: 3000
         });
       },
       (error: any) => {
         this.snackBar.open('Error validating OTP', 'Close', {
-          duration: 3000,
+          duration: 3000
         });
       }
     );
   }
-
-
 }

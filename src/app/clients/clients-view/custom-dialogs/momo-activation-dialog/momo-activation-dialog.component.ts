@@ -9,7 +9,7 @@ export interface DialogData {
 @Component({
   selector: 'mifosx-momo-activation-dialog',
   templateUrl: './momo-activation-dialog.component.html',
-  styleUrls: [],
+  styleUrls: []
 })
 export class MomoActivationDialogComponent {
   constructor(

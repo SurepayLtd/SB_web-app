@@ -99,8 +99,7 @@ export class CreateEmployeeComponent implements OnInit, AfterViewInit {
         '',
         [
           Validators.required,
-          Validators.pattern('^\\+?[0-9]{10,15}$')
-        ]
+          Validators.pattern('^\\+?[0-9]{10,15}$')]
       ],
       joiningDate: [
         '',

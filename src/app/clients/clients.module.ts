@@ -59,7 +59,6 @@ import { AddClientCollateralComponent } from './clients-view/client-actions/add-
 import { ClientDatatableStepComponent } from './client-stepper/client-datatable-step/client-datatable-step.component';
 import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/momo-activation-dialog/momo-activation-dialog.component';
 
-
 /**
  * Clients Module
  *

@@ -149,14 +149,22 @@
                   </tr>
                   <tr>
                     <td>
-                      <b>{{ 'labels.buttons.Activate Momo Payment' | translate }}</b>
+                      <b>{{ 'labels.buttons.Momo Payment' | translate }}</b>
                     </td>
                     <td>
                       <mat-slide-toggle
-                        [checked]="clientViewData.isMomoActive"
+                        [checked]="clientViewData.momoPaymentActive"
                         (click)="$event.preventDefault(); activateMomoPayment()"
-                        color="primary">
-                        Activate Momo Payment
+                      >
+                        <span *ngIf="clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
+                          'labels.buttons.Disable Payments' | translate
+                        }}</span>
+                        <span *ngIf="!clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
+                          'labels.buttons.Retry Activation' | translate
+                        }}</span>
+                        <span *ngIf="!clientViewData.momoPaymentActive && !clientViewData.momoPaymentOtpExpiry">{{
+                          'labels.buttons.Activate Payments' | translate
+                        }}</span>
                       </mat-slide-toggle>
                     </td>
                   </tr>
@@ -166,7 +174,7 @@
                     </td>
                     <td>
                       <mat-form-field>
-                        <input matInput placeholder="Enter OTP" [(ngModel)]="otpCode">
+                        <input matInput placeholder="Enter OTP" [(ngModel)]="otpCode" />
                       </mat-form-field>
                     </td>
                     <td>

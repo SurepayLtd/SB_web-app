@@ -91,7 +91,10 @@ export class GeneralTabComponent {
    * Fetches group's related data from `resolve`
    * @param {ActivatedRoute} route Activated Route.
    */
-  constructor(private route: ActivatedRoute, private router: Router) {
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router
+  ) {
     this.route.data.subscribe(
       (data: { groupAccountsData: any; groupClientMembers: any; groupSummary: any; glimData: any; gsimData: any }) => {
         this.glimAccounts = data.glimData;
@@ -131,10 +134,18 @@ export class GeneralTabComponent {
 
   navigateToMakeRepayment(loan: any, $event: MouseEvent) {
     $event.stopPropagation();
-    this.router.navigate(['../', 'loans-accounts', loan.id, 'actions', 'Make Repayment'], {
-      relativeTo: this.route,
-      state: { data: loan }
-    });
+    this.router.navigate(
+      [
+        '../',
+        'loans-accounts',
+        loan.id,
+        'actions',
+        'Make Repayment'
+      ],
+      {
+        relativeTo: this.route,
+        state: { data: loan }
+      }
+    );
   }
-
 }
