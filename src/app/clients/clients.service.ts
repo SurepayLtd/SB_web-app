@@ -415,4 +415,16 @@ export class ClientsService {
     }
     return this.http.post(`/v2/clients/search`, request);
   }
+
+  activateMomoPayment(clientId: string): Observable<any> {
+    return this.http.post(`/clients/${clientId}/activateMomoPayment`, {});
+  }
+
+  deactivateMomoPayment(clientId: string): Observable<any> {
+    return this.http.post(`/clients/${clientId}/deActivateMomoPayment`, {});
+  }
+
+  validateOtp(clientId: string, otpCode: string): Observable<any> {
+    return this.http.post(`/clients/${clientId}/validateotp`, { otpCode, locale: 'en' });
+  }
 }
