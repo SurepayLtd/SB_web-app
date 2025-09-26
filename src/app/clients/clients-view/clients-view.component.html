@@ -147,40 +147,42 @@
                       ></mifosx-external-identifier>
                     </td>
                   </tr>
-                  <tr>
-                    <td>
-                      <b>{{ 'labels.buttons.Momo Payment' | translate }}</b>
-                    </td>
-                    <td>
-                      <mat-slide-toggle
-                        [checked]="clientViewData.momoPaymentActive"
-                        (click)="$event.preventDefault(); activateMomoPayment()"
-                      >
-                        <span *ngIf="clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
-                          'labels.buttons.Disable Payments' | translate
-                        }}</span>
-                        <span *ngIf="!clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
-                          'labels.buttons.Retry Activation' | translate
-                        }}</span>
-                        <span *ngIf="!clientViewData.momoPaymentActive && !clientViewData.momoPaymentOtpExpiry">{{
-                          'labels.buttons.Activate Payments' | translate
-                        }}</span>
-                      </mat-slide-toggle>
-                    </td>
-                  </tr>
-                  <tr *ngIf="showOtpInput">
-                    <td class="otp-label">
-                      <b>{{ 'labels.inputs.OTP' | translate }}</b>
-                    </td>
-                    <td class="enter-otp-field">
-                      <mat-form-field>
-                        <input matInput placeholder="Enter OTP . . ." [(ngModel)]="otpCode" />
-                      </mat-form-field>
-                    </td>
-                    <td>
-                      <button mat-button (click)="validateOtp()" class="validate-otp-button">Validate OTP</button>
-                    </td>
-                  </tr>
+                  <ng-container *ngIf="isActive()">
+                    <tr>
+                      <td>
+                        <b>{{ 'labels.buttons.Momo Payment' | translate }}</b>
+                      </td>
+                      <td>
+                        <mat-slide-toggle
+                          [checked]="clientViewData.momoPaymentActive"
+                          (click)="$event.preventDefault(); activateMomoPayment()"
+                        >
+                          <span *ngIf="clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
+                            'labels.buttons.Disable Payments' | translate
+                          }}</span>
+                          <span *ngIf="!clientViewData.momoPaymentActive && clientViewData.momoPaymentOtpExpiry">{{
+                            'labels.buttons.Retry Activation' | translate
+                          }}</span>
+                          <span *ngIf="!clientViewData.momoPaymentActive && !clientViewData.momoPaymentOtpExpiry">{{
+                            'labels.buttons.Activate Payments' | translate
+                          }}</span>
+                        </mat-slide-toggle>
+                      </td>
+                    </tr>
+                    <tr *ngIf="showOtpInput">
+                      <td class="otp-label">
+                        <b>{{ 'labels.inputs.OTP' | translate }}</b>
+                      </td>
+                      <td class="enter-otp-field">
+                        <mat-form-field>
+                          <input matInput placeholder="Enter OTP . . ." [(ngModel)]="otpCode" />
+                        </mat-form-field>
+                      </td>
+                      <td>
+                        <button mat-button (click)="validateOtp()" class="validate-otp-button">Validate OTP</button>
+                      </td>
+                    </tr>
+                  </ng-container>
                 </tbody>
               </table>
             </div>
