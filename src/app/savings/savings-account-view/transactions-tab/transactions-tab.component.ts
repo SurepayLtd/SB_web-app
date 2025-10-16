@@ -41,6 +41,7 @@ export class TransactionsTabComponent implements OnInit {
     'debit',
     'credit',
     'balance',
+    'note',
     'actions'
   ];
   /** Data source for transactions table. */
