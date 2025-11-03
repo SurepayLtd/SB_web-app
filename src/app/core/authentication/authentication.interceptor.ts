@@ -48,7 +48,7 @@ export class AuthenticationInterceptor implements HttpInterceptor {
     if (environment.oauth.enabled) {
       httpOptions.headers[authorizationHeader] = `Bearer ${authenticationKey}`;
     } else {
-      httpOptions.headers[authorizationHeader] = `Basic ${authenticationKey}`;
+      httpOptions.headers[authorizationHeader] = `Bearer ${authenticationKey}`;
     }
   }
 
