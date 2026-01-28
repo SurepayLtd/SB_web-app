@@ -97,7 +97,12 @@
       <ng-container matColumnDef="commandValue">
         <th mat-header-cell *matHeaderCellDef>{{ 'labels.inputs.Command Value' | translate }}</th>
         <td mat-cell *matCellDef="let auditTrailCommand" class="column-value-wrapper">
-          {{ auditTrailCommand.commandValue }}
+          <ng-container *ngIf="isObject(auditTrailCommand.commandValue); else showPlain">
+            <pre>{{ auditTrailCommand.commandValue | json }}</pre>
+          </ng-container>
+          <ng-template #showPlain>
+            {{ auditTrailCommand.commandValue }}
+          </ng-template>
         </td>
       </ng-container>
 
