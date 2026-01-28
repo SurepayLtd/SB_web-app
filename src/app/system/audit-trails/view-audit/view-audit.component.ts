@@ -66,4 +66,11 @@ export class ViewAuditComponent implements OnInit {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
   }
+
+  /**
+   * Helper to check if a value is an object (for template display)
+   */
+  isObject(val: any): boolean {
+    return val && typeof val === 'object';
+  }
 }
