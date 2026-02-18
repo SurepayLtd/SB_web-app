@@ -101,4 +101,11 @@ export class ViewCheckerInboxComponent {
       }
     });
   }
+
+  /**
+   * Checks if a value is an object or array (not null).
+   */
+  isObjectOrArray(value: any): boolean {
+    return value !== null && typeof value === 'object';
+  }
 }
