@@ -80,7 +80,12 @@
           <ng-container *ngFor="let json of jsondata | keyvalue">
             <div fxFlexFill>
               <span fxFlex="40%">{{ json.key }}:</span>
-              <span fxFlex="60%">{{ json.value }}</span>
+              <span fxFlex="60%">
+                <ng-container *ngIf="isObjectOrArray(json.value); else plainValue">
+                  <pre>{{ json.value | json }}</pre>
+                </ng-container>
+                <ng-template #plainValue>{{ json.value }}</ng-template>
+              </span>
             </div>
           </ng-container>
         </ng-container>
