@@ -55,7 +55,9 @@ export const environment = {
     timeout: {
       idleTimeout: loadedEnv['sessionIdleTimeout'] || 300000 // 5 minutes
     }
-  }
+  },
+  // Enable mock 2FA for testing (set to true to test 2FA without backend support)
+  mockTwoFactorAuth: loadedEnv['mockTwoFactorAuth'] || false
 };
 
 // Server URL

@@ -226,6 +226,54 @@ MIFOS_DISPLAY_BACKEND_INFO=false
 
 For more information look the env.sample file in the root directory of the project
 
+## Two-Factor Authentication (2FA)
+
+This application includes a complete Two-Factor Authentication system that provides an additional security layer after basic authentication.
+
+### Quick Start
+
+To test 2FA without backend configuration, enable mock mode:
+
+1. Edit `src/environments/environment.ts`:
+   ```typescript
+   mockTwoFactorAuth: true
+   ```
+
+2. Start the app: `ng serve`
+
+3. Login with default credentials and use OTP: `123456`
+
+### Documentation
+
+- **Quick Start Guide**: [docs/2fa-quick-start.md](docs/2fa-quick-start.md)
+- **Full Documentation**: [docs/two-factor-authentication.md](docs/two-factor-authentication.md)
+
+### Features
+
+- ✅ Multiple delivery methods (SMS, Email)
+- ✅ OTP expiration handling
+- ✅ Resend OTP functionality
+- ✅ Token persistence with "Remember Me"
+- ✅ Mock mode for testing without backend
+- ✅ Automatic 2FA flow detection
+
+### Backend Configuration
+
+For production use, configure 2FA on the Fineract backend:
+
+```bash
+# Environment variable
+MOCK_TWO_FACTOR_AUTH=false  # Use real backend
+
+# Required backend endpoints:
+GET  /api/v1/twofactor           # Get delivery methods
+POST /api/v1/twofactor           # Request OTP
+POST /api/v1/twofactor/validate  # Validate OTP
+POST /api/v1/twofactor/invalidate # Logout
+```
+
+Users must have `isTwoFactorAuthenticationRequired: true` in their profile and configured delivery methods (phone/email).
+
 # Jira Links
 
 Jira Board Link: [Kanban Board]
