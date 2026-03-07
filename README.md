@@ -240,11 +240,6 @@ To test 2FA without backend configuration, enable mock mode:
    mockTwoFactorAuth: true
    ```
 
-2. **Option B: Use toggle script**
-   ```bash
-   ./scripts/toggle-mock-2fa.sh
-   ```
-
 3. **Option C: Use environment variable**
    ```bash
    MOCK_TWO_FACTOR_AUTH=true ng serve
@@ -261,12 +256,6 @@ The mock 2FA interceptor is **tunable** and can be:
 - ✅ Removed from code if never needed
 
 **Default**: Disabled (uses real backend)
-
-### Documentation
-
-- **Configuration Guide**: [docs/2FA-CONFIGURATION-GUIDE.md](docs/2FA-CONFIGURATION-GUIDE.md) - All config options
-- **Quick Start Guide**: [docs/2fa-quick-start.md](docs/2fa-quick-start.md) - Get started in 5 minutes
-- **Full Documentation**: [docs/two-factor-authentication.md](docs/two-factor-authentication.md) - Complete reference
 
 ### Features
 
@@ -293,19 +282,6 @@ POST /api/v1/twofactor/invalidate # Logout
 ```
 
 Users must have `isTwoFactorAuthenticationRequired: true` in their profile and configured delivery methods (phone/email).
-
-### Quick Commands
-
-```bash
-# Toggle mock mode on/off
-./scripts/toggle-mock-2fa.sh
-
-# Check current configuration
-grep "mockTwoFactorAuth" src/environments/environment.ts
-
-# Test setup
-./scripts/test-2fa-setup.sh
-```
 
 # Jira Links
 
