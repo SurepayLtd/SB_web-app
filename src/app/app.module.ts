@@ -107,8 +107,22 @@ export function HttpLoaderFactory(http: HttpClient) {
   ],
   providers: [
     DatePipe,
-    // Conditionally add Mock 2FA Interceptor for testing
-    ...(environment.mockTwoFactorAuth ? [{
+    /**
+     * Mock 2FA Interceptor (Optional)
+     *
+     * Enable mock 2FA for testing without backend by setting:
+     * environment.mockTwoFactorAuth = true
+     *
+     * When enabled:
+     * - Simulates 2FA backend responses
+     * - Test OTP: 123456
+     * - Console logs for debugging
+     *
+     * When disabled or undefined:
+     * - Uses real backend for 2FA
+     * - Normal production behavior
+     */
+    ...(environment.mockTwoFactorAuth === true ? [{
       provide: HTTP_INTERCEPTORS,
       useClass: MockTwoFactorInterceptor,
       multi: true

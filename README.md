@@ -234,19 +234,39 @@ This application includes a complete Two-Factor Authentication system that provi
 
 To test 2FA without backend configuration, enable mock mode:
 
-1. Edit `src/environments/environment.ts`:
+1. **Option A: Edit environment file**
    ```typescript
+   // src/environments/environment.ts
    mockTwoFactorAuth: true
    ```
 
-2. Start the app: `ng serve`
+2. **Option B: Use toggle script**
+   ```bash
+   ./scripts/toggle-mock-2fa.sh
+   ```
 
-3. Login with default credentials and use OTP: `123456`
+3. **Option C: Use environment variable**
+   ```bash
+   MOCK_TWO_FACTOR_AUTH=true ng serve
+   ```
+
+4. Login with default credentials and use OTP: `123456`
+
+### Configuration is Completely Optional
+
+The mock 2FA interceptor is **tunable** and can be:
+- ✅ Enabled for testing (`mockTwoFactorAuth: true`)
+- ✅ Disabled for production (`mockTwoFactorAuth: false`)
+- ✅ Omitted entirely (defaults to `false`)
+- ✅ Removed from code if never needed
+
+**Default**: Disabled (uses real backend)
 
 ### Documentation
 
-- **Quick Start Guide**: [docs/2fa-quick-start.md](docs/2fa-quick-start.md)
-- **Full Documentation**: [docs/two-factor-authentication.md](docs/two-factor-authentication.md)
+- **Configuration Guide**: [docs/2FA-CONFIGURATION-GUIDE.md](docs/2FA-CONFIGURATION-GUIDE.md) - All config options
+- **Quick Start Guide**: [docs/2fa-quick-start.md](docs/2fa-quick-start.md) - Get started in 5 minutes
+- **Full Documentation**: [docs/two-factor-authentication.md](docs/two-factor-authentication.md) - Complete reference
 
 ### Features
 
@@ -254,7 +274,7 @@ To test 2FA without backend configuration, enable mock mode:
 - ✅ OTP expiration handling
 - ✅ Resend OTP functionality
 - ✅ Token persistence with "Remember Me"
-- ✅ Mock mode for testing without backend
+- ✅ Mock mode for testing without backend (optional)
 - ✅ Automatic 2FA flow detection
 
 ### Backend Configuration
@@ -262,8 +282,8 @@ To test 2FA without backend configuration, enable mock mode:
 For production use, configure 2FA on the Fineract backend:
 
 ```bash
-# Environment variable
-MOCK_TWO_FACTOR_AUTH=false  # Use real backend
+# Disable mock mode (or omit the config entirely)
+mockTwoFactorAuth: false
 
 # Required backend endpoints:
 GET  /api/v1/twofactor           # Get delivery methods
@@ -273,6 +293,19 @@ POST /api/v1/twofactor/invalidate # Logout
 ```
 
 Users must have `isTwoFactorAuthenticationRequired: true` in their profile and configured delivery methods (phone/email).
+
+### Quick Commands
+
+```bash
+# Toggle mock mode on/off
+./scripts/toggle-mock-2fa.sh
+
+# Check current configuration
+grep "mockTwoFactorAuth" src/environments/environment.ts
+
+# Test setup
+./scripts/test-2fa-setup.sh
+```
 
 # Jira Links
 

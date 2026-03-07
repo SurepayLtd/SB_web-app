@@ -49,8 +49,24 @@ export const environment = {
       idleTimeout: loadedEnv['sessionIdleTimeout'] || 300000 // 5 minutes
     }
   },
-  // Enable mock 2FA for testing (set to true to test 2FA without backend support)
-  mockTwoFactorAuth: loadedEnv['mockTwoFactorAuth'] || false
+  /**
+   * Mock Two-Factor Authentication (Optional)
+   *
+   * Set to true to enable mock 2FA for testing without backend.
+   * Set to false or omit to use real backend 2FA.
+   *
+   * When true:
+   * - Simulates complete 2FA flow
+   * - Test OTP: 123456
+   * - No backend configuration needed
+   *
+   * When false or undefined:
+   * - Normal production behavior
+   * - Requires backend 2FA configuration
+   *
+   * Default: false (recommended for production)
+   */
+  mockTwoFactorAuth: loadedEnv['mockTwoFactorAuth'] === 'true' || false
 };
 
 // Server URL
