@@ -46,6 +46,10 @@ import { EditRoleComponent } from './roles-and-permissions/edit-role/edit-role.c
 import { RolesAndPermissionsComponent } from './roles-and-permissions/roles-and-permissions.component';
 import { ViewRoleComponent } from './roles-and-permissions/view-role/view-role.component';
 import { SystemComponent } from './system.component';
+import { TwoFactorConfigComponent } from './two-factor-config/two-factor-config.component';
+import { EditTwoFactorEmailComponent } from './two-factor-config/edit-two-factor-email/edit-two-factor-email.component';
+import { EditTwoFactorSmsComponent } from './two-factor-config/edit-two-factor-sms/edit-two-factor-sms.component';
+import { EditTwoFactorTokenComponent } from './two-factor-config/edit-two-factor-token/edit-two-factor-token.component';
 
 /** Custom Resolvers */
 import { AccountNumberPreferencesResolver } from './account-number-preferences/account-number-preferences.resolver';
@@ -88,6 +92,7 @@ import { ManageSurveysResolver } from './manage-surveys/manage-surveys.resolver'
 import { SurveyResolver } from './manage-surveys/survey.resolver';
 import { RolesAndPermissionsResolver } from './roles-and-permissions/roles-and-permissions.resolver';
 import { ViewRoleResolver } from './roles-and-permissions/view-role/view-role.resolver';
+import { TwoFactorConfigResolver } from './two-factor-config/two-factor-config.resolver';
 
 const routes: Routes = [
   Route.withShell([
@@ -251,6 +256,43 @@ const routes: Routes = [
                   }
                 }
               ]
+            }
+          ]
+        },
+        {
+          path: 'two-factor-config',
+          data: { title: 'Two-Factor Configuration', breadcrumb: 'Two-Factor Configuration' },
+          children: [
+            {
+              path: '',
+              component: TwoFactorConfigComponent,
+              resolve: {
+                twoFactorConfig: TwoFactorConfigResolver
+              }
+            },
+            {
+              path: 'edit-email',
+              component: EditTwoFactorEmailComponent,
+              data: { title: 'Edit Email Configuration', breadcrumb: 'Edit Email' },
+              resolve: {
+                twoFactorConfig: TwoFactorConfigResolver
+              }
+            },
+            {
+              path: 'edit-sms',
+              component: EditTwoFactorSmsComponent,
+              data: { title: 'Edit SMS Configuration', breadcrumb: 'Edit SMS' },
+              resolve: {
+                twoFactorConfig: TwoFactorConfigResolver
+              }
+            },
+            {
+              path: 'edit-token',
+              component: EditTwoFactorTokenComponent,
+              data: { title: 'Edit Token Configuration', breadcrumb: 'Edit Token' },
+              resolve: {
+                twoFactorConfig: TwoFactorConfigResolver
+              }
             }
           ]
         },
@@ -635,7 +677,8 @@ const routes: Routes = [
     ViewRoleResolver,
     EntityToEntityMappingResolver,
     MakerCheckerTasksResolver,
-    ViewHistorySchedulerJobsResolver
+    ViewHistorySchedulerJobsResolver,
+    TwoFactorConfigResolver
   ]
 })
 export class SystemRoutingModule {}

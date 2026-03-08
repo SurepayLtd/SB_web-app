@@ -1,0 +1,56 @@
+<div class="container">
+  <form [formGroup]="tokenConfigForm" (ngSubmit)="submit()">
+    <mat-card>
+      <mat-card-content>
+        <div fxLayout="column">
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.OTP Token Length' | translate }}</mat-label>
+            <input matInput type="number" formControlName="otp-token-length" required>
+            <mat-hint>Token length should be between 4 and 10 digits</mat-hint>
+            <mat-error *ngIf="tokenConfigForm.get('otp-token-length').hasError('required')">
+              {{ 'labels.inputs.OTP Token Length' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+            <mat-error *ngIf="tokenConfigForm.get('otp-token-length').hasError('min') || tokenConfigForm.get('otp-token-length').hasError('max')">
+              Token length must be between 4 and 10
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.OTP Token Live Time' | translate }} (seconds)</mat-label>
+            <input matInput type="number" formControlName="otp-token-live-time" required>
+            <mat-hint>How long the OTP token is valid (minimum 60 seconds)</mat-hint>
+            <mat-error *ngIf="tokenConfigForm.get('otp-token-live-time').hasError('required')">
+              {{ 'labels.inputs.OTP Token Live Time' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.Access Token Live Time' | translate }} (seconds)</mat-label>
+            <input matInput type="number" formControlName="access-token-live-time" required>
+            <mat-hint>Duration for standard access token (minimum 300 seconds)</mat-hint>
+            <mat-error *ngIf="tokenConfigForm.get('access-token-live-time').hasError('required')">
+              {{ 'labels.inputs.Access Token Live Time' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.Extended Access Token Live Time' | translate }} (seconds)</mat-label>
+            <input matInput type="number" formControlName="access-token-live-time-extended" required>
+            <mat-hint>Duration for extended access token (minimum 300 seconds)</mat-hint>
+            <mat-error *ngIf="tokenConfigForm.get('access-token-live-time-extended').hasError('required')">
+              {{ 'labels.inputs.Extended Access Token Live Time' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+        <button mat-raised-button [routerLink]="['../']">{{ 'labels.buttons.Cancel' | translate }}</button>
+        <button mat-raised-button color="primary" [disabled]="!tokenConfigForm.valid" type="submit">
+          {{ 'labels.buttons.Submit' | translate }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </form>
+</div>
+

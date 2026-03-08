@@ -194,13 +194,13 @@
           </mat-list-item>
 
           <mat-list-item>
-            <mat-icon matListIcon>
+            <mat-icon matListIcon [routerLink]="['two-factor-config']">
               <fa-icon icon="key" size="sm"></fa-icon>
             </mat-icon>
-            <h4 matLine>{{ 'labels.heading.Two-Factor Configuration' | translate }}</h4>
+            <h4 matLine [routerLink]="['two-factor-config']">{{ 'labels.heading.Two-Factor Configuration' | translate }}</h4>
             <fa-icon (click)="arrowBooleansToggle(14)" *ngIf="!arrowBooleans[14]" icon="arrow-down" size="md"></fa-icon>
             <fa-icon (click)="arrowBooleansToggle(14)" *ngIf="arrowBooleans[14]" icon="arrow-up" size="md"></fa-icon>
-            <p matLine *ngIf="arrowBooleans[14]">
+            <p matLine *ngIf="arrowBooleans[14]" [routerLink]="['two-factor-config']">
               {{ 'labels.text.Two-factor authentication configuration' | translate }}
             </p>
           </mat-list-item>
