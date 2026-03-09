@@ -756,4 +756,19 @@ export class SystemService {
     const emptyData = {};
     return this.http.post(`/loans/catch-up`, emptyData);
   }
+
+  /**
+   * @returns {Observable<any>} Two-Factor Configuration.
+   */
+  getTwoFactorConfiguration(): Observable<any> {
+    return this.http.get('/twofactor/configure');
+  }
+
+  /**
+   * @param {any} data Two-Factor Configuration data.
+   * @returns {Observable<any>}
+   */
+  updateTwoFactorConfiguration(data: any): Observable<any> {
+    return this.http.put('/twofactor/configure', data);
+  }
 }

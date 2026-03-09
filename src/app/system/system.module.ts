@@ -77,6 +77,10 @@ import { CustomParametersTableComponent } from './manage-jobs/scheduler-jobs/cus
 import { ErrorLogPopoverComponent } from './manage-jobs/scheduler-jobs/error-log-popover/error-log-popover.component';
 import { RunSelectedJobsPopoverComponent } from './manage-jobs/scheduler-jobs/run-selected-jobs-popover/run-selected-jobs-popover.component';
 import { RunSelectedJobsTableComponent } from './manage-jobs/scheduler-jobs/run-selected-jobs-popover/run-selected-jobs-table/run-selected-jobs-table.component';
+import { TwoFactorConfigComponent } from './two-factor-config/two-factor-config.component';
+import { EditTwoFactorEmailComponent } from './two-factor-config/edit-two-factor-email/edit-two-factor-email.component';
+import { EditTwoFactorSmsComponent } from './two-factor-config/edit-two-factor-sms/edit-two-factor-sms.component';
+import { EditTwoFactorTokenComponent } from './two-factor-config/edit-two-factor-token/edit-two-factor-token.component';
 
 @NgModule({
   imports: [
@@ -153,7 +157,11 @@ import { RunSelectedJobsTableComponent } from './manage-jobs/scheduler-jobs/run-
     CustomParametersTableComponent,
     ErrorLogPopoverComponent,
     RunSelectedJobsPopoverComponent,
-    RunSelectedJobsTableComponent
+    RunSelectedJobsTableComponent,
+    TwoFactorConfigComponent,
+    EditTwoFactorEmailComponent,
+    EditTwoFactorSmsComponent,
+    EditTwoFactorTokenComponent
   ]
 })
 export class SystemModule {}

@@ -226,6 +226,63 @@ MIFOS_DISPLAY_BACKEND_INFO=false
 
 For more information look the env.sample file in the root directory of the project
 
+## Two-Factor Authentication (2FA)
+
+This application includes a complete Two-Factor Authentication system that provides an additional security layer after basic authentication.
+
+### Quick Start
+
+To test 2FA without backend configuration, enable mock mode:
+
+1. **Option A: Edit environment file**
+   ```typescript
+   // src/environments/environment.ts
+   mockTwoFactorAuth: true
+   ```
+
+3. **Option C: Use environment variable**
+   ```bash
+   MOCK_TWO_FACTOR_AUTH=true ng serve
+   ```
+
+4. Login with default credentials and use OTP: `123456`
+
+### Configuration is Completely Optional
+
+The mock 2FA interceptor is **tunable** and can be:
+- ✅ Enabled for testing (`mockTwoFactorAuth: true`)
+- ✅ Disabled for production (`mockTwoFactorAuth: false`)
+- ✅ Omitted entirely (defaults to `false`)
+- ✅ Removed from code if never needed
+
+**Default**: Disabled (uses real backend)
+
+### Features
+
+- ✅ Multiple delivery methods (SMS, Email)
+- ✅ OTP expiration handling
+- ✅ Resend OTP functionality
+- ✅ Token persistence with "Remember Me"
+- ✅ Mock mode for testing without backend (optional)
+- ✅ Automatic 2FA flow detection
+
+### Backend Configuration
+
+For production use, configure 2FA on the Fineract backend:
+
+```bash
+# Disable mock mode (or omit the config entirely)
+mockTwoFactorAuth: false
+
+# Required backend endpoints:
+GET  /api/v1/twofactor           # Get delivery methods
+POST /api/v1/twofactor           # Request OTP
+POST /api/v1/twofactor/validate  # Validate OTP
+POST /api/v1/twofactor/invalidate # Logout
+```
+
+Users must have `isTwoFactorAuthenticationRequired: true` in their profile and configured delivery methods (phone/email).
+
 # Jira Links
 
 Jira Board Link: [Kanban Board]

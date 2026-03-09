@@ -1,0 +1,38 @@
+<div class="container">
+  <form [formGroup]="smsConfigForm" (ngSubmit)="submit()">
+    <mat-card>
+      <mat-card-content>
+        <div fxLayout="column">
+          <mat-slide-toggle formControlName="otp-delivery-sms-enable" class="m-b-20">
+            {{ 'labels.inputs.Enable SMS Delivery' | translate }}
+          </mat-slide-toggle>
+
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.SMS Provider' | translate }}</mat-label>
+            <input matInput type="number" formControlName="otp-delivery-sms-provider" required>
+            <mat-error *ngIf="smsConfigForm.get('otp-delivery-sms-provider').hasError('required')">
+              {{ 'labels.inputs.SMS Provider' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field fxFlex="98%">
+            <mat-label>{{ 'labels.inputs.SMS Text' | translate }}</mat-label>
+            <textarea matInput formControlName="otp-delivery-sms-text" rows="3" required></textarea>
+            <mat-hint><span ngNonBindable>Use {{token}} for OTP token</span></mat-hint>
+            <mat-error *ngIf="smsConfigForm.get('otp-delivery-sms-text').hasError('required')">
+              {{ 'labels.inputs.SMS Text' | translate }} {{ 'labels.commons.is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+        <button mat-raised-button [routerLink]="['../']">{{ 'labels.buttons.Cancel' | translate }}</button>
+        <button mat-raised-button color="primary" [disabled]="!smsConfigForm.valid" type="submit">
+          {{ 'labels.buttons.Submit' | translate }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </form>
+</div>
+

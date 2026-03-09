@@ -2,9 +2,13 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { HttpBackend, HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpBackend, HttpClient, HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 
 /** Environment Configuration */
+import { environment } from '../environments/environment';
+
+/** Mock 2FA Interceptor */
+import { MockTwoFactorInterceptor } from './core/authentication/mock-two-factor.interceptor';
 
 /** Main Component */
 import { WebAppComponent } from './web-app.component';
@@ -101,7 +105,29 @@ export function HttpLoaderFactory(http: HttpClient) {
     WebAppComponent,
     NotFoundComponent
   ],
-  providers: [DatePipe],
+  providers: [
+    DatePipe,
+    /**
+     * Mock 2FA Interceptor (Optional)
+     *
+     * Enable mock 2FA for testing without backend by setting:
+     * environment.mockTwoFactorAuth = true
+     *
+     * When enabled:
+     * - Simulates 2FA backend responses
+     * - Test OTP: 123456
+     * - Console logs for debugging
+     *
+     * When disabled or undefined:
+     * - Uses real backend for 2FA
+     * - Normal production behavior
+     */
+    ...(environment.mockTwoFactorAuth === true ? [{
+      provide: HTTP_INTERCEPTORS,
+      useClass: MockTwoFactorInterceptor,
+      multi: true
+    }] : [])
+  ],
   bootstrap: [WebAppComponent]
 })
 export class AppModule {}
