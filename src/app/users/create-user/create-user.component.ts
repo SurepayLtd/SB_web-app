@@ -102,6 +102,7 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
         ],
         sendPasswordToEmail: [true],
         passwordNeverExpires: [false],
+        bypassTwoFactor: [false],
         officeId: [
           '',
           Validators.required

@@ -66,6 +66,14 @@
             {{ role.name }}
           </span>
         </div>
+
+        <div fxFlex="50%" class="mat-body-strong">
+          {{ 'labels.inputs.Bypass Two Factor' | translate }}
+        </div>
+
+        <div fxFlex="50%">
+          {{ userData.bypassTwoFactor ? ('Yes' | translate) : ('No' | translate) }}
+        </div>
       </div>
 
       <div fxLayout="row" fxLayoutAlign="center" fxLayoutGap="2%" fxLayout.lt-md="column">

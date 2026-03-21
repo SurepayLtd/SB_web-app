@@ -57,6 +57,12 @@
             </mat-checkbox>
           </div>
 
+          <div fxFlex="48%" class="bypass-two-factor-wrapper">
+            <mat-checkbox labelPosition="before" formControlName="bypassTwoFactor">
+              {{ 'labels.inputs.Bypass Two Factor' | translate }}
+            </mat-checkbox>
+          </div>
+
           <div fxFlex="48%" class="send-password-to-email-wrapper">
             <mat-checkbox labelPosition="before" formControlName="sendPasswordToEmail">
               {{ 'labels.inputs.Send password to email address' | translate }}
