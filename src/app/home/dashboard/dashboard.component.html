@@ -1,34 +1,57 @@
 <div class="container">
-  <mat-card class="card" fxLayout="column" fxLayoutGap="40px">
-    <div fxLayout="row" class="search">
-      <mat-card-content>
-        <mat-form-field>
-          <mat-label>{{ 'labels.placeholders.Search Activity' | translate }}</mat-label>
-          <input matInput [matAutocomplete]="activitySearch" [formControl]="searchText" />
-        </mat-form-field>
+  <mat-card class="card">
+    <mat-tab-group animationDuration="200ms" class="dashboard-tabs">
 
-        <mat-autocomplete #activitySearch="matAutocomplete">
-          <mat-option *ngFor="let activity of filteredActivities | async" [routerLink]="activity.path">
-            <span>{{ activity.activity }}</span>
-          </mat-option>
-        </mat-autocomplete>
-      </mat-card-content>
-    </div>
+      <!-- ── Tab 1: Overview ── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">dashboard</mat-icon>
+          Overview
+        </ng-template>
 
-    <div fxLayout="row" class="top-card">
-      <div class="trends-bar">
-        <mifosx-client-trends-bar></mifosx-client-trends-bar>
-      </div>
-    </div>
+        <div fxLayout="column" fxLayoutGap="40px" class="tab-content">
+          <div fxLayout="row" class="search">
+            <mat-card-content>
+              <mat-form-field>
+                <mat-label>{{ 'labels.placeholders.Search Activity' | translate }}</mat-label>
+                <input matInput [matAutocomplete]="activitySearch" [formControl]="searchText" />
+              </mat-form-field>
 
-    <div fxLayout="row" class="bottom-card">
-      <div class="amount-disbursed">
-        <mifosx-amount-disbursed-pie></mifosx-amount-disbursed-pie>
-      </div>
+              <mat-autocomplete #activitySearch="matAutocomplete">
+                <mat-option *ngFor="let activity of filteredActivities | async" [routerLink]="activity.path">
+                  <span>{{ activity.activity }}</span>
+                </mat-option>
+              </mat-autocomplete>
+            </mat-card-content>
+          </div>
 
-      <div class="amount-collected">
-        <mifosx-amount-collected-pie></mifosx-amount-collected-pie>
-      </div>
-    </div>
+          <div fxLayout="row" class="top-card">
+            <div class="trends-bar">
+              <mifosx-client-trends-bar></mifosx-client-trends-bar>
+            </div>
+          </div>
+
+          <div fxLayout="row" class="bottom-card">
+            <div class="amount-disbursed">
+              <mifosx-amount-disbursed-pie></mifosx-amount-disbursed-pie>
+            </div>
+
+            <div class="amount-collected">
+              <mifosx-amount-collected-pie></mifosx-amount-collected-pie>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- ── Tab 2: Advanced Analytics ── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">insights</mat-icon>
+          Advanced Analytics
+        </ng-template>
+        <mifosx-advanced-analytics></mifosx-advanced-analytics>
+      </mat-tab>
+
+    </mat-tab-group>
   </mat-card>
 </div>

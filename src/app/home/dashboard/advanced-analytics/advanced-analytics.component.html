@@ -1,0 +1,302 @@
+<div class="analytics-container">
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading analytics…</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="hasError && !isLoading" class="error-state">
+    <mat-icon class="error-icon">error_outline</mat-icon>
+    <p>Failed to load analytics data.</p>
+    <button mat-raised-button color="primary" (click)="loadAnalytics()">Retry</button>
+  </div>
+
+  <!-- Analytics Content -->
+  <ng-container *ngIf="!isLoading && !hasError && analyticsData">
+
+    <!-- Report Period Banner -->
+    <div class="report-period-banner">
+      <mat-icon>date_range</mat-icon>
+      <span>Report Date: <strong>{{ formatDate(analyticsData.reportDate) }}</strong></span>
+      <span class="separator">|</span>
+      <span>Period: <strong>{{ formatDate(analyticsData.periodStartDate) }} – {{ formatDate(analyticsData.periodEndDate) }}</strong></span>
+    </div>
+
+    <!-- ── 1. Executive Snapshot ── -->
+    <h2 class="section-title"><mat-icon>dashboard</mat-icon> Executive Snapshot</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">account_balance</mat-icon>
+          <div class="kpi-label">Total Loan Portfolio</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.executiveSnapshot.totalLoanPortfolio) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-green">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">savings</mat-icon>
+          <div class="kpi-label">Total Deposits</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.executiveSnapshot.totalDeposits) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">people</mat-icon>
+          <div class="kpi-label">Active Members</div>
+          <div class="kpi-value">{{ analyticsData.executiveSnapshot.activeMembers | number }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">trending_up</mat-icon>
+          <div class="kpi-label">Net Position</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.executiveSnapshot.netPosition) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-orange">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">payments</mat-icon>
+          <div class="kpi-label">Total New Deposits</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.executiveSnapshot.totalNewDeposits) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-indigo">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">money_off</mat-icon>
+          <div class="kpi-label">Total Disbursements</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.executiveSnapshot.totalDisbursements) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── 2. Portfolio Health ── -->
+    <h2 class="section-title"><mat-icon>health_and_safety</mat-icon> Portfolio Health</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-red">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">warning</mat-icon>
+          <div class="kpi-label">Portfolio at Risk (PAR30)</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.portfolioHealth.portfolioAtRisk30) }}</div>
+          <div class="kpi-sub">Amount: {{ formatCurrency(analyticsData.portfolioHealth.parAmount30) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-amber">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">percent</mat-icon>
+          <div class="kpi-label">Collection Efficiency Ratio</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.portfolioHealth.collectionEfficiencyRatio) }}</div>
+          <div class="kpi-sub">Expected: {{ formatCurrency(analyticsData.portfolioHealth.expectedCollections) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-blue-grey">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">shield</mat-icon>
+          <div class="kpi-label">Loan Loss Provision Coverage</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.portfolioHealth.loanLossProvisionCoverageRatio) }}</div>
+          <div class="kpi-sub">Provisions: {{ formatCurrency(analyticsData.portfolioHealth.loanLossProvisions) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Arrears Aging sub-card -->
+      <mat-card class="kpi-card wide-card accent-deep-orange">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">hourglass_empty</mat-icon>
+          <div class="kpi-label">Arrears Aging Breakdown</div>
+          <table class="aging-table">
+            <thead>
+              <tr><th>Bucket</th><th>Count</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1–30 Days</td>
+                <td>{{ analyticsData.portfolioHealth.arrearsAging.count1To30Days }}</td>
+                <td>{{ formatCurrency(analyticsData.portfolioHealth.arrearsAging.bucket1To30Days) }}</td>
+              </tr>
+              <tr>
+                <td>31–60 Days</td>
+                <td>{{ analyticsData.portfolioHealth.arrearsAging.count31To60Days }}</td>
+                <td>{{ formatCurrency(analyticsData.portfolioHealth.arrearsAging.bucket31To60Days) }}</td>
+              </tr>
+              <tr>
+                <td>61–90 Days</td>
+                <td>{{ analyticsData.portfolioHealth.arrearsAging.count61To90Days }}</td>
+                <td>{{ formatCurrency(analyticsData.portfolioHealth.arrearsAging.bucket61To90Days) }}</td>
+              </tr>
+              <tr class="highlight-row">
+                <td>90+ Days</td>
+                <td>{{ analyticsData.portfolioHealth.arrearsAging.count90PlusDays }}</td>
+                <td>{{ formatCurrency(analyticsData.portfolioHealth.arrearsAging.bucket90PlusDays) }}</td>
+              </tr>
+              <tr class="total-row">
+                <td><strong>Total</strong></td>
+                <td><strong>{{ analyticsData.portfolioHealth.arrearsAging.totalCount }}</strong></td>
+                <td><strong>{{ formatCurrency(analyticsData.portfolioHealth.arrearsAging.totalArrears) }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── 3. Liquidity & Funding ── -->
+    <h2 class="section-title"><mat-icon>water_drop</mat-icon> Liquidity &amp; Funding</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-cyan">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">liquidity_management</mat-icon>
+          <div class="kpi-label">Liquidity Ratio</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.liquidityFunding.liquidityRatio) }}</div>
+          <div class="kpi-sub">Liquid Assets: {{ formatCurrency(analyticsData.liquidityFunding.liquidAssets) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">compare_arrows</mat-icon>
+          <div class="kpi-label">Loan-to-Deposit Ratio</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.liquidityFunding.loanToDepositRatio) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-green">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">move_to_inbox</mat-icon>
+          <div class="kpi-label">Expected Net Cash Flow</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.liquidityFunding.expectedNetCashFlow) }}</div>
+          <div class="kpi-sub">Inflows: {{ formatCurrency(analyticsData.liquidityFunding.expectedInflows) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">account_balance_wallet</mat-icon>
+          <div class="kpi-label">Short-term Liabilities</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.liquidityFunding.shortTermLiabilities) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── 4. Business Performance ── -->
+    <h2 class="section-title"><mat-icon>bar_chart</mat-icon> Business Performance (MTD)</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-green">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">monetization_on</mat-icon>
+          <div class="kpi-label">Loans Disbursed (MTD)</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.businessPerformance.loansDisbursedMtd) }}</div>
+          <div class="kpi-sub">Count: {{ analyticsData.businessPerformance.loansDisbursedCountMtd }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections_bookmark</mat-icon>
+          <div class="kpi-label">Collections vs Target</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.businessPerformance.collectionVsTargetPercentage) }}</div>
+          <div class="kpi-sub">Target: {{ formatCurrency(analyticsData.businessPerformance.targetCollectionsMtd) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-orange">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">show_chart</mat-icon>
+          <div class="kpi-label">Average Loan Size</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.businessPerformance.averageLoanSize) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── 5. Member & Savings Insights ── -->
+    <h2 class="section-title"><mat-icon>group</mat-icon> Member &amp; Savings Insights</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">people_outline</mat-icon>
+          <div class="kpi-label">Total Members</div>
+          <div class="kpi-value">{{ analyticsData.memberSavingsInsights.totalMembers | number }}</div>
+          <div class="kpi-sub">Active Borrowers: {{ analyticsData.memberSavingsInsights.membersWithActiveLoans }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-red">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">person_off</mat-icon>
+          <div class="kpi-label">Dormant Members</div>
+          <div class="kpi-value">{{ analyticsData.memberSavingsInsights.dormantMembers | number }}</div>
+          <div class="kpi-sub">Dormancy Period: {{ analyticsData.memberSavingsInsights.dormancyPeriodDays }} days</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-indigo">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">person_check</mat-icon>
+          <div class="kpi-label">Active Borrower Ratio</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.memberSavingsInsights.activeBorrowerRatio) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-green">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">savings</mat-icon>
+          <div class="kpi-label">Total Savings</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.memberSavingsInsights.totalSavings) }}</div>
+          <div class="kpi-sub">Avg per Member: {{ formatCurrency(analyticsData.memberSavingsInsights.averageSavingsPerMember) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── 6. Profitability & Sustainability ── -->
+    <h2 class="section-title"><mat-icon>insights</mat-icon> Profitability &amp; Sustainability</h2>
+    <div class="cards-grid">
+
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">analytics</mat-icon>
+          <div class="kpi-label">Return on Assets (ROA)</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.profitabilitySustainability.returnOnAssets) }}</div>
+          <div class="kpi-sub">Total Assets: {{ formatCurrency(analyticsData.profitabilitySustainability.totalAssets) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-amber">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">balance</mat-icon>
+          <div class="kpi-label">Capital Adequacy Ratio</div>
+          <div class="kpi-value">{{ formatPercent(analyticsData.profitabilitySustainability.capitalAdequacyRatio) }}</div>
+          <div class="kpi-sub">Equity: {{ formatCurrency(analyticsData.profitabilitySustainability.equity) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">person_pin</mat-icon>
+          <div class="kpi-label">Portfolio per Loan Officer</div>
+          <div class="kpi-value">{{ formatCurrency(analyticsData.profitabilitySustainability.portfolioPerLoanOfficer) }}</div>
+          <div class="kpi-sub">Loan Officers: {{ analyticsData.profitabilitySustainability.numberOfLoanOfficers }}</div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+  </ng-container>
+</div>
+

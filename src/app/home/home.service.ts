@@ -88,4 +88,12 @@ export class HomeService {
     const httpParams = new HttpParams().set('R_officeId', officeId.toString()).set('genericResultSet', 'false');
     return this.http.get('/runreports/LoanTrendsByMonth', { params: httpParams });
   }
+
+  /**
+   * Fetches the advanced analytics dashboard data.
+   * @returns {Observable<any>} Dashboard analytics data.
+   */
+  getDashboardAnalytics(): Observable<any> {
+    return this.http.get('/dashboard');
+  }
 }
