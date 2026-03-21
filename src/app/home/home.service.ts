@@ -88,4 +88,27 @@ export class HomeService {
     const httpParams = new HttpParams().set('R_officeId', officeId.toString()).set('genericResultSet', 'false');
     return this.http.get('/runreports/LoanTrendsByMonth', { params: httpParams });
   }
+
+  /**
+   * Fetches all offices.
+   * @returns {Observable<any>} Offices list.
+   */
+  getOffices(): Observable<any> {
+    return this.http.get('/offices');
+  }
+
+  /**
+   * Fetches the advanced analytics dashboard data.
+   * @param {string} startDate Period start date (yyyy-MM-dd).
+   * @param {string} endDate Period end date (yyyy-MM-dd).
+   * @param {number} officeId Office Id.
+   * @returns {Observable<any>} Dashboard analytics data.
+   */
+  getDashboardAnalytics(startDate: string, endDate: string, officeId: number): Observable<any> {
+    let httpParams = new HttpParams()
+      .set('startDate', startDate)
+      .set('endDate', endDate)
+      .set('officeId', officeId.toString());
+    return this.http.get('/dashboard', { params: httpParams });
+  }
 }
