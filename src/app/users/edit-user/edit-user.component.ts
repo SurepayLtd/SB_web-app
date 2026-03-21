@@ -81,6 +81,7 @@ export class EditUserComponent implements OnInit {
           Validators.pattern('(^[A-z]).*')]
       ],
       passwordNeverExpires: [this.userData.passwordNeverExpires],
+      bypassTwoFactor: [this.userData.bypassTwoFactor || false],
       officeId: [
         this.userData.officeId,
         Validators.required

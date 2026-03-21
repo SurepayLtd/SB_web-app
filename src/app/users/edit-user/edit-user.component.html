@@ -57,6 +57,12 @@
             </mat-checkbox>
           </div>
 
+          <div class="bypass-two-factor-wrapper" fxFlex="48%">
+            <mat-checkbox labelPosition="before" formControlName="bypassTwoFactor">
+              {{ 'labels.inputs.Bypass Two Factor' | translate }}
+            </mat-checkbox>
+          </div>
+
           <mat-form-field fxFlex="48%">
             <mat-label>{{ 'labels.inputs.Office' | translate }}</mat-label>
             <mat-select required formControlName="officeId" (selectionChange)="officeChanged($event.value)">
