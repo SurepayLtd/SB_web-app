@@ -80,6 +80,7 @@ export class GeneralTabComponent {
     'Account Number',
     'Product',
     'Original Loan',
+    'Individual Loan',
     'Status'
   ];
   /** Boolean for toggling loan accounts table */

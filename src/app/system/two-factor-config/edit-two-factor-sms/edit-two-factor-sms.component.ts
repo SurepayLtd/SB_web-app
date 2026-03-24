@@ -38,8 +38,14 @@ export class EditTwoFactorSmsComponent implements OnInit {
   createSmsConfigForm() {
     this.smsConfigForm = this.formBuilder.group({
       'otp-delivery-sms-enable': [this.twoFactorConfig['otp-delivery-sms-enable']],
-      'otp-delivery-sms-provider': [this.twoFactorConfig['otp-delivery-sms-provider'], Validators.required],
-      'otp-delivery-sms-text': [this.twoFactorConfig['otp-delivery-sms-text'], Validators.required]
+      'otp-delivery-sms-provider': [
+        this.twoFactorConfig['otp-delivery-sms-provider'],
+        Validators.required
+      ],
+      'otp-delivery-sms-text': [
+        this.twoFactorConfig['otp-delivery-sms-text'],
+        Validators.required
+      ]
     });
   }
 
@@ -52,4 +58,3 @@ export class EditTwoFactorSmsComponent implements OnInit {
     });
   }
 }
-

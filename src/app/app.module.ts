@@ -122,11 +122,15 @@ export function HttpLoaderFactory(http: HttpClient) {
      * - Uses real backend for 2FA
      * - Normal production behavior
      */
-    ...(environment.mockTwoFactorAuth === true ? [{
-      provide: HTTP_INTERCEPTORS,
-      useClass: MockTwoFactorInterceptor,
-      multi: true
-    }] : [])
+    ...(environment.mockTwoFactorAuth === true
+      ? [
+          {
+            provide: HTTP_INTERCEPTORS,
+            useClass: MockTwoFactorInterceptor,
+            multi: true
+          }
+        ]
+      : [])
   ],
   bootstrap: [WebAppComponent]
 })

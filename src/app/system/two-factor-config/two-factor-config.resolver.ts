@@ -26,4 +26,3 @@ export class TwoFactorConfigResolver implements Resolve<Object> {
     return this.systemService.getTwoFactorConfiguration();
   }
 }
-

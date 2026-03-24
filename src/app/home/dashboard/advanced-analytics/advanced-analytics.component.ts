@@ -57,17 +57,27 @@ export class AdvancedAnalyticsComponent implements OnInit {
     const defaultOfficeId = credentials ? credentials.officeId : null;
 
     this.filterForm = this.fb.group({
-      startDate: [firstOfMonth, Validators.required],
-      endDate:   [today,        Validators.required],
-      officeId:  [defaultOfficeId]
+      startDate: [
+        firstOfMonth,
+        Validators.required
+      ],
+      endDate: [
+        today,
+        Validators.required
+      ],
+      officeId: [defaultOfficeId]
     });
   }
 
   /** Loads offices list from the API */
   loadOffices(): void {
     this.homeService.getOffices().subscribe({
-      next: (data: any[]) => { this.offices = data; },
-      error: () => { this.offices = []; }
+      next: (data: any[]) => {
+        this.offices = data;
+      },
+      error: () => {
+        this.offices = [];
+      }
     });
   }
 
@@ -78,24 +88,26 @@ export class AdvancedAnalyticsComponent implements OnInit {
 
   /** Reads the filter form and fires the API call */
   applyFilters(): void {
-    if (this.filterForm && this.filterForm.invalid) { return; }
+    if (this.filterForm && this.filterForm.invalid) {
+      return;
+    }
     const { startDate, endDate, officeId } = this.filterForm
       ? this.filterForm.value
       : { startDate: new Date(), endDate: new Date(), officeId: null };
 
     const start = this.toApiDate(startDate);
-    const end   = this.toApiDate(endDate);
+    const end = this.toApiDate(endDate);
     const office = officeId ? Number(officeId) : 0;
 
     this.isLoading = true;
-    this.hasError  = false;
+    this.hasError = false;
     this.homeService.getDashboardAnalytics(start, end, office).subscribe({
       next: (data: any) => {
         this.analyticsData = data;
         this.isLoading = false;
       },
       error: () => {
-        this.hasError  = true;
+        this.hasError = true;
         this.isLoading = false;
       }
     });
@@ -105,33 +117,37 @@ export class AdvancedAnalyticsComponent implements OnInit {
   resetFilters(): void {
     const today = this.settingsService.businessDate || new Date();
     const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const credentials  = this.authenticationService.getCredentials();
+    const credentials = this.authenticationService.getCredentials();
     this.filterForm.patchValue({
       startDate: firstOfMonth,
-      endDate:   today,
-      officeId:  credentials ? credentials.officeId : null
+      endDate: today,
+      officeId: credentials ? credentials.officeId : null
     });
     this.applyFilters();
   }
 
   /** Format array date [yyyy, m, d] to readable string */
   formatDate(dateArr: number[]): string {
-    if (!dateArr || dateArr.length < 3) { return '—'; }
+    if (!dateArr || dateArr.length < 3) {
+      return '—';
+    }
     const d = new Date(dateArr[0], dateArr[1] - 1, dateArr[2]);
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   /** Format currency values */
   formatCurrency(value: number): string {
-    if (value == null) { return '—'; }
+    if (value == null) {
+      return '—';
+    }
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   }
 
   /** Format percentage values */
   formatPercent(value: number): string {
-    if (value == null) { return '—'; }
+    if (value == null) {
+      return '—';
+    }
     return value.toFixed(2) + '%';
   }
 }
-
-

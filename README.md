@@ -235,21 +235,24 @@ This application includes a complete Two-Factor Authentication system that provi
 To test 2FA without backend configuration, enable mock mode:
 
 1. **Option A: Edit environment file**
+
    ```typescript
    // src/environments/environment.ts
-   mockTwoFactorAuth: true
+   mockTwoFactorAuth: true;
    ```
 
-3. **Option C: Use environment variable**
+2. **Option C: Use environment variable**
+
    ```bash
    MOCK_TWO_FACTOR_AUTH=true ng serve
    ```
 
-4. Login with default credentials and use OTP: `123456`
+3. Login with default credentials and use OTP: `123456`
 
 ### Configuration is Completely Optional
 
 The mock 2FA interceptor is **tunable** and can be:
+
 - ✅ Enabled for testing (`mockTwoFactorAuth: true`)
 - ✅ Disabled for production (`mockTwoFactorAuth: false`)
 - ✅ Omitted entirely (defaults to `false`)

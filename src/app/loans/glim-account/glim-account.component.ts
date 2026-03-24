@@ -20,7 +20,8 @@ export class GlimAccountComponent implements OnInit {
     'clientName',
     'loanAccountNumber',
     'clientPrincipalLoan',
-    'groupPrincipalLoan'
+    'groupPrincipalLoan',
+    'loanStatus'
   ];
   /** Data source for charge overview table. */
   dataSource: MatTableDataSource<any>;
