@@ -9,7 +9,7 @@
 
           <mat-form-field fxFlex="98%">
             <mat-label>{{ 'labels.inputs.SMS Provider' | translate }}</mat-label>
-            <input matInput type="number" formControlName="otp-delivery-sms-provider" required>
+            <input matInput type="number" formControlName="otp-delivery-sms-provider" required />
             <mat-error *ngIf="smsConfigForm.get('otp-delivery-sms-provider').hasError('required')">
               {{ 'labels.inputs.SMS Provider' | translate }} {{ 'labels.commons.is required' | translate }}
             </mat-error>
@@ -18,7 +18,9 @@
           <mat-form-field fxFlex="98%">
             <mat-label>{{ 'labels.inputs.SMS Text' | translate }}</mat-label>
             <textarea matInput formControlName="otp-delivery-sms-text" rows="3" required></textarea>
-            <mat-hint><span ngNonBindable>Use {{token}} for OTP token</span></mat-hint>
+            <mat-hint
+              ><span ngNonBindable>Use {{ token }} for OTP token</span></mat-hint
+            >
             <mat-error *ngIf="smsConfigForm.get('otp-delivery-sms-text').hasError('required')">
               {{ 'labels.inputs.SMS Text' | translate }} {{ 'labels.commons.is required' | translate }}
             </mat-error>
@@ -35,4 +37,3 @@
     </mat-card>
   </form>
 </div>
-

@@ -37,10 +37,31 @@ export class EditTwoFactorTokenComponent implements OnInit {
 
   createTokenConfigForm() {
     this.tokenConfigForm = this.formBuilder.group({
-      'otp-token-length': [this.twoFactorConfig['otp-token-length'], [Validators.required, Validators.min(4), Validators.max(10)]],
-      'otp-token-live-time': [this.twoFactorConfig['otp-token-live-time'], [Validators.required, Validators.min(60)]],
-      'access-token-live-time': [this.twoFactorConfig['access-token-live-time'], [Validators.required, Validators.min(300)]],
-      'access-token-live-time-extended': [this.twoFactorConfig['access-token-live-time-extended'], [Validators.required, Validators.min(300)]]
+      'otp-token-length': [
+        this.twoFactorConfig['otp-token-length'],
+        [
+          Validators.required,
+          Validators.min(4),
+          Validators.max(10)]
+      ],
+      'otp-token-live-time': [
+        this.twoFactorConfig['otp-token-live-time'],
+        [
+          Validators.required,
+          Validators.min(60)]
+      ],
+      'access-token-live-time': [
+        this.twoFactorConfig['access-token-live-time'],
+        [
+          Validators.required,
+          Validators.min(300)]
+      ],
+      'access-token-live-time-extended': [
+        this.twoFactorConfig['access-token-live-time-extended'],
+        [
+          Validators.required,
+          Validators.min(300)]
+      ]
     });
   }
 
@@ -53,4 +74,3 @@ export class EditTwoFactorTokenComponent implements OnInit {
     });
   }
 }
-

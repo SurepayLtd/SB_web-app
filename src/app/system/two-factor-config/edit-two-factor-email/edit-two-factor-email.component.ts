@@ -51,8 +51,14 @@ export class EditTwoFactorEmailComponent implements OnInit {
   createEmailConfigForm() {
     this.emailConfigForm = this.formBuilder.group({
       'otp-delivery-email-enable': [this.twoFactorConfig['otp-delivery-email-enable']],
-      'otp-delivery-email-subject': [this.twoFactorConfig['otp-delivery-email-subject'], Validators.required],
-      'otp-delivery-email-body': [this.twoFactorConfig['otp-delivery-email-body'], Validators.required]
+      'otp-delivery-email-subject': [
+        this.twoFactorConfig['otp-delivery-email-subject'],
+        Validators.required
+      ],
+      'otp-delivery-email-body': [
+        this.twoFactorConfig['otp-delivery-email-body'],
+        Validators.required
+      ]
     });
   }
 
@@ -68,4 +74,3 @@ export class EditTwoFactorEmailComponent implements OnInit {
     });
   }
 }
-

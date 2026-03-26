@@ -9,7 +9,7 @@
 
           <mat-form-field fxFlex="98%">
             <mat-label>{{ 'labels.inputs.Email Subject' | translate }}</mat-label>
-            <input matInput formControlName="otp-delivery-email-subject" required>
+            <input matInput formControlName="otp-delivery-email-subject" required />
             <mat-error *ngIf="emailConfigForm.get('otp-delivery-email-subject').hasError('required')">
               {{ 'labels.inputs.Email Subject' | translate }} {{ 'labels.commons.is required' | translate }}
             </mat-error>
@@ -18,7 +18,9 @@
           <mat-form-field fxFlex="98%">
             <mat-label>{{ 'labels.inputs.Email Body' | translate }}</mat-label>
             <textarea matInput formControlName="otp-delivery-email-body" rows="5" required></textarea>
-            <mat-hint><span ngNonBindable>Use {{username}} for username and {{token}} for OTP token</span></mat-hint>
+            <mat-hint
+              ><span ngNonBindable>Use {{ username }} for username and {{ token }} for OTP token</span></mat-hint
+            >
             <mat-error *ngIf="emailConfigForm.get('otp-delivery-email-body').hasError('required')">
               {{ 'labels.inputs.Email Body' | translate }} {{ 'labels.commons.is required' | translate }}
             </mat-error>
@@ -35,4 +37,3 @@
     </mat-card>
   </form>
 </div>
-

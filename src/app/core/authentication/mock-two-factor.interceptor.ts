@@ -78,7 +78,12 @@ export class MockTwoFactorInterceptor implements HttpInterceptor {
     }
 
     // Mock request OTP endpoint
-    if (url.includes('/twofactor') && request.method === 'POST' && !url.includes('validate') && !url.includes('invalidate')) {
+    if (
+      url.includes('/twofactor') &&
+      request.method === 'POST' &&
+      !url.includes('validate') &&
+      !url.includes('invalidate')
+    ) {
       this.otpRequested = true;
       this.otpRequestTime = Date.now();
 
@@ -129,7 +134,7 @@ export class MockTwoFactorInterceptor implements HttpInterceptor {
 
       // Validate OTP
       if (token === this.mockOTP) {
-        const validTo = currentTime + (this.OTP_VALIDITY_SECONDS * 1000);
+        const validTo = currentTime + this.OTP_VALIDITY_SECONDS * 1000;
         const mockTwoFactorToken = {
           token: 'mock-2fa-token-' + Date.now(),
           validTo: validTo
@@ -161,4 +166,3 @@ export class MockTwoFactorInterceptor implements HttpInterceptor {
     return next.handle(request);
   }
 }
-

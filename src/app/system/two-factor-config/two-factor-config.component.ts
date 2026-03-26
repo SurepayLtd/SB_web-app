@@ -34,7 +34,10 @@ export class TwoFactorConfigComponent implements OnInit {
   getEmailDataSource(): any[] {
     if (!this.twoFactorConfig) return [];
     return [
-      { name: 'Enable Email Delivery', value: this.twoFactorConfig['otp-delivery-email-enable'] ? 'Enabled' : 'Disabled' },
+      {
+        name: 'Enable Email Delivery',
+        value: this.twoFactorConfig['otp-delivery-email-enable'] ? 'Enabled' : 'Disabled'
+      },
       { name: 'Email Subject', value: this.twoFactorConfig['otp-delivery-email-subject'] || '' },
       { name: 'Email Body', value: this.twoFactorConfig['otp-delivery-email-body'] || '' }
     ];
@@ -61,8 +64,10 @@ export class TwoFactorConfigComponent implements OnInit {
       { name: 'OTP Token Length', value: this.twoFactorConfig['otp-token-length'] || '' },
       { name: 'OTP Token Live Time (seconds)', value: this.twoFactorConfig['otp-token-live-time'] || '' },
       { name: 'Access Token Live Time (seconds)', value: this.twoFactorConfig['access-token-live-time'] || '' },
-      { name: 'Extended Access Token Live Time (seconds)', value: this.twoFactorConfig['access-token-live-time-extended'] || '' }
+      {
+        name: 'Extended Access Token Live Time (seconds)',
+        value: this.twoFactorConfig['access-token-live-time-extended'] || ''
+      }
     ];
   }
 }
-
