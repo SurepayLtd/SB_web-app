@@ -35,6 +35,7 @@ export class OfficesComponent implements OnInit, AfterViewInit {
   /** Columns to be displayed in offices table. */
   displayedColumns: string[] = [
     'name',
+    'shortName',
     'externalId',
     'parentName',
     'openingDate'
