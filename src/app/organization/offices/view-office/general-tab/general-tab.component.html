@@ -30,6 +30,13 @@
     </div>
 
     <div fxFlex="45%" class="mat-body-strong left">
+      {{ 'labels.inputs.Short Name' | translate }}
+    </div>
+    <div fxFlex="50%" class="right">
+      {{ officeData.shortName ? officeData.shortName : 'Unassigned' }}
+    </div>
+
+    <div fxFlex="45%" class="mat-body-strong left">
       {{ 'labels.inputs.External Id' | translate }}
     </div>
     <div fxFlex="50%" class="right" *ngIf="officeData.externalId">

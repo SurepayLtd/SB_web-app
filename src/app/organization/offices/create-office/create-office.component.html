@@ -13,6 +13,11 @@
           </mat-form-field>
 
           <mat-form-field>
+            <mat-label>{{ 'labels.inputs.Short Name' | translate }}</mat-label>
+            <input matInput formControlName="shortName" />
+          </mat-form-field>
+
+          <mat-form-field>
             <mat-label>{{ 'labels.inputs.Parent Office' | translate }}</mat-label>
             <mat-select required formControlName="parentId">
               <mat-option *ngFor="let office of officeData" [value]="office.id">
