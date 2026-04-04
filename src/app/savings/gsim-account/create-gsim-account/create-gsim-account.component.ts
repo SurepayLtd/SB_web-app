@@ -137,7 +137,7 @@ export class CreateGsimAccountComponent {
   buildRequestData(): any[] {
     const requestData = [];
     const memberSelected = this.selectedMembers.selectedMembers;
-    for (let index = 0; index < 1; index++) {
+    for (let index = 0; index < memberSelected.length; index++) {
       requestData.push(this.setData(memberSelected[index]));
     }
     return requestData;
@@ -154,8 +154,7 @@ export class CreateGsimAccountComponent {
     this.savingsService.createGsimAcccount(gsimData).subscribe((response: any) => {
       this.router.navigate(
         [
-          '../',
-          response.resourceId
+          '../../../'
         ],
         { relativeTo: this.route }
       );
