@@ -1,6 +1,7 @@
 /** Angular Imports */
 import { Component, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 /** Custom Services */
 import { LoansService } from '../loans.service';
@@ -58,6 +59,7 @@ export class CreateLoansAccountComponent {
     private router: Router,
     private loansService: LoansService,
     private settingsService: SettingsService,
+    private snackBar: MatSnackBar,
     private clientService: ClientsService
   ) {
     this.route.data.subscribe((data: { loansAccountTemplate: any }) => {
@@ -151,6 +153,18 @@ export class CreateLoansAccountComponent {
     }
 
     this.loansService.createLoansAccount(payload).subscribe((response: any) => {
+      if (!response.resourceId) {
+        this.snackBar.open('Loan Account submitted for approval', 'Close', {
+          duration: 3000
+        });
+        this.router.navigate(
+          [
+            '../../',
+            'general'
+          ],
+          { relativeTo: this.route }
+        );
+      }
       this.router.navigate(
         [
           '../',

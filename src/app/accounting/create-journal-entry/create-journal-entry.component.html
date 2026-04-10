@@ -186,7 +186,7 @@
         <button
           mat-raised-button
           color="primary"
-          [disabled]="!journalEntryForm.valid"
+          [disabled]="isSubmitting || !journalEntryForm.valid"
           *mifosxHasPermission="'CREATE_JOURNALENTRY'"
         >
           {{ 'labels.buttons.Submit' | translate }}
