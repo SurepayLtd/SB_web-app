@@ -138,6 +138,7 @@
             class="account-action-button"
             mat-raised-button
             color="primary"
+            (click)="navigateToApprove(element, $event)"
           >
             <i class="fa fa-check" matTooltip="{{ 'tooltips.Approve' | translate }}"></i>
           </button>
@@ -146,6 +147,7 @@
             class="account-action-button"
             mat-raised-button
             color="primary"
+            (click)="navigateToDisburse(element, $event)"
           >
             <i class="fa fa-flag" matTooltip="{{ 'tooltips.Disburse' | translate }}"></i>
           </button>

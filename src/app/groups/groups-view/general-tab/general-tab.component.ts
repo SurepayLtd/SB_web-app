@@ -149,4 +149,36 @@ export class GeneralTabComponent {
       }
     );
   }
+
+  navigateToApprove(loan: any, $event: MouseEvent) {
+    $event.preventDefault();
+    $event.stopPropagation();
+
+    this.router.navigate(
+      [
+        '../',
+        'loans-accounts',
+        loan.id,
+        'actions',
+        'Approve'
+      ],
+      { relativeTo: this.route, state: { data: loan } }
+    );
+  }
+
+  navigateToDisburse(loan: any, $event: MouseEvent) {
+    $event.preventDefault();
+    $event.stopPropagation();
+
+    this.router.navigate(
+      [
+        '../',
+        'loans-accounts',
+        loan.id,
+        'actions',
+        'Disburse'
+      ],
+      { relativeTo: this.route, state: { data: loan } }
+    );
+  }
 }

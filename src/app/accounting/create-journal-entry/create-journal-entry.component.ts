@@ -3,6 +3,7 @@ import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } 
 import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormArray } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 /** Custom Services */
 import { AccountingService } from '../accounting.service';
@@ -37,6 +38,8 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
   /** Gl Account data. */
   glAccountData: any;
 
+  isSubmitting = false;
+
   /* Reference of create journal form */
   @ViewChild('createJournalFormRef') createJournalFormRef: ElementRef<any>;
   /* Template for popover on create journal form */
@@ -60,6 +63,7 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private dialog: MatDialog,
+    private snackBar: MatSnackBar,
     private configurationWizardService: ConfigurationWizardService,
     private popoverService: PopoverService
   ) {
@@ -164,6 +168,9 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    * if successful redirects to view created transaction.
    */
   submit() {
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     const journalEntry = this.journalEntryForm.value;
     // TODO: Update once language and date settings are setup
     journalEntry.locale = this.settingsService.language.code;
@@ -175,6 +182,16 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
       );
     }
     this.accountingService.createJournalEntry(journalEntry).subscribe((response) => {
+      this.isSubmitting = false;
+
+      if (!response.transactionId) {
+        this.snackBar.open('Journal entry submitted for approval', 'Close', {
+          duration: 3000
+        });
+
+        this.router.navigate(['/accounting/journal-entries']);
+        return;
+      }
       this.router.navigate(
         [
           '../transactions/view',
