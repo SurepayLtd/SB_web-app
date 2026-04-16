@@ -200,12 +200,30 @@ export class TransactionsTabComponent implements OnInit {
       }
     });
   }
+  private getEntityId(): { type: 'client' | 'group'; id: string } {
+    let route = this.route.snapshot;
+
+    while (route) {
+      if (route.params['clientId']) {
+        return { type: 'client', id: route.params['clientId'] };
+      }
+      if (route.params['groupId']) {
+        return { type: 'group', id: route.params['groupId'] };
+      }
+      route = route.parent!;
+    }
+
+    throw new Error('No clientId or groupId found in route');
+  }
 
   private reload() {
-    const clientId = this.route.parent.parent.snapshot.params['clientId'];
-    const url: string = this.router.url;
-    this.router
-      .navigateByUrl(`/clients/${clientId}/savings-accounts`, { skipLocationChange: true })
-      .then(() => this.router.navigate([url]));
+    const entity = this.getEntityId();
+
+    const baseUrl =
+      entity.type === 'client' ? `/clients/${entity.id}/savings-accounts` : `/groups/${entity.id}/savings-accounts`;
+
+    const currentUrl = this.router.url;
+
+    this.router.navigateByUrl(baseUrl, { skipLocationChange: true }).then(() => this.router.navigateByUrl(currentUrl));
   }
 }
