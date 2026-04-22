@@ -118,16 +118,25 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    * @returns {FormGroup} Affected gl entry form.
    */
   createAffectedGLEntryForm(): UntypedFormGroup {
-    return this.formBuilder.group({
-      glAccountId: [
-        '',
-        Validators.required
-      ],
-      amount: [
-        '',
-        Validators.required
-      ]
+    const group = this.formBuilder.group({
+      glAccountId: ['', Validators.required],
+      glAccountName: [''],
+      amount: ['', Validators.required]
     });
+
+    // Pick GL Name
+    group.get('glAccountId')?.valueChanges.subscribe((id) => {
+      const account = this.glAccountData?.find((a: any) => a.id === id);
+
+      if (account) {
+        group.patchValue(
+          { glAccountName: `(${account.glCode || ''})-${account.name || ''}` },
+          { emitEvent: false }
+        );
+      }
+    });
+
+    return group;
   }
 
   /**
