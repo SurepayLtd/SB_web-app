@@ -2,12 +2,14 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
 import { LoansService } from 'app/loans/loans.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
 import { Currency } from 'app/shared/models/general.model';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 /**
  * Loan Make Repayment Component
@@ -32,6 +34,7 @@ export class MakeRepaymentComponent implements OnInit {
   /** Repayment Loan Form */
   repaymentLoanForm: UntypedFormGroup;
   currency: Currency | null = null;
+  isSubmitting = false;
 
   /**
    * @param {FormBuilder} formBuilder Form Builder.
@@ -45,6 +48,7 @@ export class MakeRepaymentComponent implements OnInit {
     private loanService: LoansService,
     private route: ActivatedRoute,
     private router: Router,
+    private snackBar: MatSnackBar,
     private dateUtils: Dates,
     private settingsService: SettingsService
   ) {
@@ -117,6 +121,9 @@ export class MakeRepaymentComponent implements OnInit {
 
   /** Submits the repayment form */
   submit() {
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     const repaymentLoanFormData = this.repaymentLoanForm.value;
     const locale = this.settingsService.language.code;
     const dateFormat = this.settingsService.dateFormat;
@@ -131,8 +138,18 @@ export class MakeRepaymentComponent implements OnInit {
     };
     const command = this.dataObject.type.code.split('.')[1];
     data['transactionAmount'] = data['transactionAmount'] * 1;
+
     this.loanService.submitLoanActionButton(this.loanId, data, command).subscribe((response: any) => {
-      this.router.navigate(['../../transactions'], { relativeTo: this.route });
+      this.isSubmitting = false;
+      if (!response.transactionId){
+        this.snackBar.open('Loan Repayment submitted for approval', 'Close', {
+          duration: 3000
+        });
+        this.router.navigate(['../../transactions'], {relativeTo: this.route});
+        return;
+      }else{
+        this.router.navigate(['../../transactions'], { relativeTo: this.route });
+      }
     });
   }
 }
