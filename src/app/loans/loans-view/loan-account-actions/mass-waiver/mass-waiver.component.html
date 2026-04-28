@@ -1,0 +1,73 @@
+<div class="container mat-elevation-z8">
+  <mat-card>
+    <form [formGroup]="massWaiverForm" (ngSubmit)="submit()">
+      <!-- HEADER -->
+      <mat-card-title class="centered-title"> Mass Penalty Waiver </mat-card-title>
+
+      <mat-card-content>
+        <!-- PENALTY SUMMARY -->
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="label">Total Penalties</span>
+            <span class="value">{{ dataObject.totalPenaltiesDerived | formatNumber }} UGX</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="label">Paid</span>
+            <span class="value">{{ dataObject.totalPenaltiesPaid | formatNumber }} UGX</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="label">Waived</span>
+            <span class="value">{{ dataObject.totalPenaltiesWaived | formatNumber }} UGX</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="label">Written Off</span>
+            <span class="value">{{ dataObject.totalPenaltiesWrittenOff | formatNumber }} UGX</span>
+          </div>
+
+          <div class="summary-item highlight">
+            <span class="label">Outstanding</span>
+            <span class="value">{{ dataObject.totalPenaltiesOutstanding | formatNumber }} UGX</span>
+          </div>
+        </div>
+
+        <!-- INSTRUCTION -->
+        <p class="info-text">
+          <strong>Note:</strong> You can only waive penalties in batches of <strong>500,000 UGX</strong> per
+          transaction. If the total penalties exceed this amount, submit multiple waivers.
+        </p>
+
+        <!-- INPUT -->
+        <mifosx-input-amount
+          [currency]="currency"
+          [isRequired]="true"
+          [inputFormControl]="massWaiverForm.controls.amount"
+          [inputLabel]="'Amount to Waive'"
+        >
+        </mifosx-input-amount>
+
+        <mat-error *ngIf="massWaiverForm.controls.amount.hasError('max')">
+          Maximum allowed per transaction is 500,000 UGX
+        </mat-error>
+      </mat-card-content>
+
+      <!-- ACTIONS -->
+      <mat-card-actions fxLayout="row" fxLayoutAlign="center" fxLayoutGap="10px">
+        <button type="button" mat-raised-button [routerLink]="['../../general']">
+          {{ 'labels.buttons.Cancel' | translate }}
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="isSubmitting || !massWaiverForm.valid"
+          *mifosxHasPermission="'BULKWAIVER_LOANCHARGE'"
+        >
+          {{ 'labels.buttons.Submit' | translate }}
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card>
+</div>

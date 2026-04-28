@@ -74,6 +74,8 @@ export class LoanActionButtonResolver implements Resolve<Object> {
       return this.loansService.getLoanForeclosureActionTemplate(loanId);
     } else if (loanActionButton === 'Charge-Off') {
       return this.loansService.getLoanActionTemplate(loanId, 'charge-off');
+    } else if (loanActionButton === 'Mass Penalty Waiver') {
+      return this.loansService.getLoanPenaltyActionTemplate(loanId, 'mass-waiver');
     } else {
       return undefined;
     }
