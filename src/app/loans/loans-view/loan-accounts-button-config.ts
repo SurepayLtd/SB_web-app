@@ -56,6 +56,11 @@ export class LoansAccountButtonConfiguration {
             name: 'Undo Disbursal',
             icon: 'undo',
             taskPermissionName: 'DISBURSALUNDO_LOAN'
+          },
+          {
+            name: 'Mass Penalty Waiver',
+            icon: 'coins',
+            taskPermissionName: 'BULKWAIVER_LOANCHARGE'
           }
         ];
         break;

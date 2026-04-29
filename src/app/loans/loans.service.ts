@@ -32,6 +32,11 @@ export class LoansService {
     return this.http.get(`/loans/${loanId}/transactions/template`, { params: httpParams });
   }
 
+  getLoanPenaltyActionTemplate(loanId: string, command: string): Observable<any> {
+    const httpParams = new HttpParams().set('command', command);
+    return this.http.get(`/loans/${loanId}/penalties/template`, { params: httpParams });
+  }
+
   getLoanPrepayLoanActionTemplate(loanId: string, transactionDate: string): Observable<any> {
     if (!transactionDate) {
       transactionDate = this.dateUtils.formatDate(this.settingsService.businessDate, this.settingsService.dateFormat);
@@ -275,6 +280,11 @@ export class LoansService {
   loanActionButtons(loanId: any, command: any, data?: any): Observable<any> {
     const httpParams = new HttpParams().set('command', command);
     return this.http.post(`/loans/${loanId}`, data, { params: httpParams });
+  }
+
+  massWaiver(loanId: any, command: any, data?: any): Observable<any> {
+    const httpParams = new HttpParams().set('command', command);
+    return this.http.post(`/loans/${loanId}/charges/mass-waiver`, data, { params: httpParams });
   }
 
   addInterestPauseToLoan(loanId: any, data?: any): Observable<any> {
