@@ -38,7 +38,7 @@
       />
     </mat-form-field>
 
-    <mat-form-field fxFlex="48%">
+    <mat-form-field fxFlex="38%">
       <mat-label>{{ 'labels.inputs.Fund' | translate }}</mat-label>
       <mat-select matTooltip="{{ 'tooltips.Loan products may be assigned' | translate }}" formControlName="fundId">
         <mat-option *ngFor="let fund of fundData" [value]="fund.id">
@@ -51,9 +51,18 @@
       labelPosition="before"
       matTooltip="{{ 'tooltips.A borrower loan counter (cycle)' | translate }}"
       formControlName="includeInBorrowerCycle"
-      fxFlex="48%"
+      fxFlex="28%"
     >
       {{ 'labels.inputs.Include in Customer Loan Counter' | translate }}
+    </mat-checkbox>
+
+    <mat-checkbox
+      labelPosition="before"
+      matTooltip="{{ 'tooltips.This makes it a USSD Product' | translate }}"
+      formControlName="isUssd"
+      fxFlex="28%"
+    >
+      {{ 'labels.inputs.USSD Product' | translate }}
     </mat-checkbox>
 
     <mat-form-field fxFlex="48%" (click)="startDatePicker.open()">

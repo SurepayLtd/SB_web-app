@@ -128,7 +128,11 @@
                 completed="true"
               ></mifosx-external-identifier>
             </span>
-            <span *ngIf="!loanDetails.externalId"> {{ 'labels.inputs.Not Available' | translate }} </span>
+            <span *ngIf="!loanDetails.externalId">{{ 'labels.inputs.Not Available' | translate }} </span>
+          </ng-container>
+
+          <ng-container *ngIf="ele.key === 'Loan Channel'">
+            <span>{{ loanDetails.loanChannel.value || ('labels.inputs.Not Available' | translate) }} </span>
           </ng-container>
 
           <ng-container
@@ -181,6 +185,10 @@
               ></mifosx-external-identifier>
             </span>
             <span *ngIf="!loanDetails.externalId"> {{ 'labels.inputs.Not Available' | translate }} </span>
+          </ng-container>
+
+          <ng-container *ngIf="ele.key === 'Loan Channel'">
+            <span>{{ loanDetails.loanChannel.value || ('labels.inputs.Not Available' | translate) }} </span>
           </ng-container>
         </td>
       </ng-container>

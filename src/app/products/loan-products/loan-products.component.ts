@@ -20,7 +20,8 @@ export class LoanProductsComponent implements OnInit, AfterViewInit {
     'name',
     'shortName',
     'closeDate',
-    'status'
+    'status',
+    'ussd'
   ];
   dataSource: MatTableDataSource<any>;
 
