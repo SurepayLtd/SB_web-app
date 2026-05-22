@@ -152,6 +152,9 @@ export class GeneralTabComponent implements OnInit {
         key: 'External Id'
       },
       {
+        key: 'Loan Channel'
+      },
+      {
         key: 'Proposed Amount',
         value: this.loanDetails.proposedPrincipal
       },
@@ -180,6 +183,9 @@ export class GeneralTabComponent implements OnInit {
       },
       {
         key: 'External Id'
+      },
+      {
+        key: 'Loan Channel'
       }
     ];
     this.detailsDataSource = new MatTableDataSource(this.loanDetailsTableData);

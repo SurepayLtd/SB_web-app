@@ -52,6 +52,16 @@
         >
           {{ 'labels.inputs.Reschedule Loan' | translate }}
         </a>
+        <a
+          mat-tab-link
+          [routerLink]="['./ussd-loan']"
+          routerLinkActive
+          #ussdLoan="routerLinkActive"
+          [active]="ussdLoan.isActive"
+          *mifosxHasPermission="'READ_LOAN'"
+        >
+          {{ 'labels.inputs.USSD Loan Approval' | translate }}
+        </a>
       </nav>
 
       <router-outlet></router-outlet>

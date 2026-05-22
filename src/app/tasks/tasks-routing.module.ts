@@ -23,6 +23,8 @@ import { GetLoansToBeDisbursed } from './common-resolvers/getLoansToBeDisbursed.
 import { GetRescheduleLoans } from './common-resolvers/getRescheduleLoans.resolver';
 import { MakerCheckerTemplate } from './common-resolvers/makerCheckerTemplate.resolver';
 import { GetCheckerInboxDetailResolver } from './common-resolvers/getCheckerInboxDetail.resolver';
+import { GetUssdLoansToBeApproved } from './common-resolvers/getUssdLoansToBeApproved.resolver';
+import { UssdApprovalComponent } from './checker-inbox-and-tasks-tabs/ussd-approval/ussd-approval.component';
 
 /** Tasks Routes */
 const routes: Routes = [
@@ -73,6 +75,15 @@ const routes: Routes = [
           resolve: {
             recheduleLoansData: GetRescheduleLoans
           }
+        },
+        {
+          path: 'ussd-loan',
+          component: UssdApprovalComponent,
+          data: { title: 'USSD Loan Approval' },
+          resolve: {
+            officesData: GetOffices,
+            ussdLoansData: GetUssdLoansToBeApproved
+          }
         }
       ]
     },
@@ -104,7 +115,8 @@ const routes: Routes = [
     GetLoansToBeDisbursed,
     GetRescheduleLoans,
     MakerCheckerTemplate,
-    GetCheckerInboxDetailResolver
+    GetCheckerInboxDetailResolver,
+    GetUssdLoansToBeApproved
   ]
 })
 export class TasksRoutingModule {}

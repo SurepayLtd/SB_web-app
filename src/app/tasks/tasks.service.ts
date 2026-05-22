@@ -61,7 +61,7 @@ export class TasksService {
    * Get all loans to be approved
    */
   getAllLoansToBeApproved(): Observable<any> {
-    const httpParams = new HttpParams().set('limit', '1000').set('status', '100');
+    const httpParams = new HttpParams().set('limit', '1000').set('status', '100').set('channel', '1');
     return this.http.get('/loans', { params: httpParams });
   }
 
@@ -71,6 +71,14 @@ export class TasksService {
   getAllLoansToBeDisbursed(): Observable<any> {
     const httpParams = new HttpParams().set('limit', '1000').set('status', '200');
     return this.http.get('/loans', { params: httpParams });
+  }
+
+  /**
+   * Get all Ussd loans to be approved
+   */
+  getAllUssdLoansToBeApproved(): Observable<any> {
+    const httpParams = new HttpParams().set('limit', '1000');
+    return this.http.get('/loans/ussd-loans', { params: httpParams });
   }
 
   /**
