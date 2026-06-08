@@ -444,5 +444,89 @@
         </mat-card-content>
       </mat-card>
     </div>
+
+    <!-- ── 8. Share Insights ── -->
+    <h2 class="section-title"><mat-icon>insights</mat-icon> Shares</h2>
+    <div class="cards-grid">
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">share</mat-icon>
+          <div class="kpi-label">Total Share Accounts</div>
+          <div class="kpi-value">{{ analyticsData.sharesInsightsData.totalShareAccounts }}</div>
+          <div class="kpi-sub">
+            Active Shares Accounts: {{ formatCurrency(analyticsData.sharesInsightsData.activeShareAccounts) }}
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-amber">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">person_pin</mat-icon>
+          <div class="kpi-label">Members with Shares</div>
+          <div class="kpi-value">
+            {{ analyticsData.sharesInsightsData.membersWithShares }}
+          </div>
+          <div class="kpi-sub">
+            Share Participation Rate: {{ formatPercent(analyticsData.sharesInsightsData.shareParticipationRate) }}
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">balance</mat-icon>
+          <div class="kpi-label">Total Share Capital</div>
+          <div class="kpi-value">
+            {{ formatCurrency(analyticsData.sharesInsightsData.totalShareCapitalValue) }}
+          </div>
+          <div class="kpi-sub">Total Aproved Shares: {{ analyticsData.sharesInsightsData.totalApprovedShares }}</div>
+          <div class="kpi-sub">Total Pending Shares: {{ analyticsData.sharesInsightsData.totalPendingShares }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">analytics</mat-icon>
+          <div class="kpi-label">Total Share Products</div>
+          <div class="kpi-value">
+            {{ analyticsData.sharesInsightsData.totalShareProducts }}
+          </div>
+          <div class="kpi-sub">Total Issued Shares: {{ analyticsData.sharesInsightsData.totalIssuedShares }}</div>
+          <div class="kpi-sub">
+            Total Subscribed Shares: {{ analyticsData.sharesInsightsData.totalSubscribedShares }}
+          </div>
+          <div class="kpi-sub">Total Available Shares: {{ analyticsData.sharesInsightsData.availableShares }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-amber">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">person_pin</mat-icon>
+          <div class="kpi-label">Share Portfolio</div>
+          <div class="kpi-value">
+            {{ analyticsData.sharesInsightsData.largestShareholderShares }}
+          </div>
+          <div class="kpi-sub">Largest ShareHolder: {{ analyticsData.sharesInsightsData.largestShareholderName }}</div>
+          <div class="kpi-sub">
+            Owernship Percentage:
+            {{ formatPercent(analyticsData.sharesInsightsData.ownershipConcentrationPercentage) }}
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">analytics</mat-icon>
+          <div class="kpi-label">Share Performance Monthly</div>
+          <div class="kpi-sub">
+            New Share Accounts: {{ analyticsData.sharesInsightsData.newShareAccountsThisMonth }}
+          </div>
+          <div class="kpi-sub">Shares Purchased: {{ analyticsData.sharesInsightsData.sharesPurchasedThisMonth }}</div>
+          <div class="kpi-sub">
+            Share Capital Growth: {{ formatCurrency(analyticsData.sharesInsightsData.shareCapitalGrowthThisMonth) }}
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
   </ng-container>
 </div>
