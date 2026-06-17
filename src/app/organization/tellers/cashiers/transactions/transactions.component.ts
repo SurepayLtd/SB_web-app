@@ -8,6 +8,7 @@ import { UntypedFormControl } from '@angular/forms';
 
 /** Custom Services */
 import { OrganizationService } from 'app/organization/organization.service';
+import { E } from '@angular/cdk/keycodes';
 
 /**
  * Cashier Transactions Component.
@@ -67,6 +68,22 @@ export class TransactionsComponent implements OnInit {
    */
   applyFilter(filterValue: string) {
     this.dataSource.filter = filterValue.trim().toLowerCase();
+  }
+
+  /**
+   * Filters data in transactions table based on date.
+   */
+  filterByDate(event: any) {
+    const date = event.value;
+
+    const filter =
+      date.getFullYear() +
+      '-' +
+      String(date.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(date.getDay()).padStart(2, '0');
+
+    this.dataSource.filter = filter;
   }
 
   /**
