@@ -62,9 +62,11 @@
 <div class="container">
   <mat-card fxLayout="column" fxLayoutGap="2%" class="mat-elevation-z8">
     <div fxLayout="row" fxLayoutGap="2%">
-      <mat-form-field fxFlex>
-        <mat-label>{{ 'labels.inputs.Filter' | translate }}</mat-label>
-        <input matInput (keyup)="applyFilter($event.target.value)" />
+      <mat-form-field class="filter-field" (click)="picker.open()">
+        <mat-label>Transation Date</mat-label>
+        <input matInput [matDatepicker]="picker" (dateChange)="filterByDate($event)" />
+         <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
       </mat-form-field>
 
       <mat-form-field>

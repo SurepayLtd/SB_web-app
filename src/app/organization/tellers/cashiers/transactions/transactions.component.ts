@@ -8,6 +8,7 @@ import { UntypedFormControl } from '@angular/forms';
 
 /** Custom Services */
 import { OrganizationService } from 'app/organization/organization.service';
+import { E } from '@angular/cdk/keycodes';
 
 /**
  * Cashier Transactions Component.
@@ -70,6 +71,25 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
+   * Filters data in transactions table based on date.
+   */
+  filterByDate(event: any) {
+    const date: Date = event.value;
+
+    if (!date || !this.dataSource) {
+      return;
+    }
+    const filter =
+      date.getFullYear() +
+      '-' +
+      String(date.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(date.getDate()).padStart(2, '0');
+
+    this.dataSource.filter = filter;
+  }
+
+  /**
    * Retrieves transactions data on changing currency.
    */
   ngOnInit() {
@@ -97,5 +117,14 @@ export class TransactionsComponent implements OnInit {
     this.dataSource = new MatTableDataSource(this.cashierData.cashierTransactions.pageItems);
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
+
+    this.dataSource.filterPredicate = (data: any, filter: string) => {
+      const txnDate = this.formatTxnDate(data.txnDate);
+      return txnDate === filter;
+    };
+  }
+
+  private formatTxnDate(txnDate: number[]): string {
+    return txnDate[0] + '-' + String(txnDate[1]).padStart(2, '0') + '-' + String(txnDate[2]).padStart(2, '0');
   }
 }
