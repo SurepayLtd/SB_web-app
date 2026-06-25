@@ -169,6 +169,107 @@
           <div class="kpi-value">{{ analyticsData.executiveSnapshot.totalCollections | number }}</div>
         </mat-card-content>
       </mat-card>
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Momo Transactions</div>
+          <div class="kpi-value">Amount: {{ formatCurrency(analyticsData.executiveSnapshot.overallMomoTransactions) }}</div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- ── Momo Snapshot ── -->
+    <h2 class="section-title"><mat-icon>dashboard</mat-icon> Momo Transactions Snapshot</h2>
+    <div class="cards-grid">
+      <mat-card class="kpi-card accent-blue">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Transactions (Daily)</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.transactionsToday | number }}</div>
+          <div class="kpi-sub">Amount: {{ formatCurrency(analyticsData.momoTransactions.totalTransactionsToday) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-green">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Transactions (Weekly)</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.transactionsThisWeek | number }}</div>
+          <div class="kpi-sub">Amount: {{ formatCurrency(analyticsData.momoTransactions.totalTransactionsThisWeek) }}</div>        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Transactions (Monthly)</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.transactionsThisMonth | number }}</div>
+          <div class="kpi-sub">Amount: {{ formatCurrency(analyticsData.momoTransactions.totalTransactionsThisMonth) }}</div>        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-blue-300">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">people</mat-icon>
+          <div class="kpi-label">Active Clients</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.activeMomoClients | number }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-orange">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">payments</mat-icon>
+          <div class="kpi-label">Total Momo Deposits</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.savingsDepositTransactions | number }}</div>
+          <div class="kpi-sub">Deposits: {{ formatCurrency(analyticsData.momoTransactions.savingsDeposits) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">trending_down</mat-icon>
+          <div class="kpi-label">Total Momo Withdraws</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.savingsWithdrawTransactions | number }}</div>
+          <div class="kpi-sub">Withdraws: {{ formatCurrency(analyticsData.momoTransactions.savingsWithdrawals) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-indigo">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">money_off</mat-icon>
+          <div class="kpi-label">Total Momo Disbursements</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.loanDisbursementTransactions | number }}</div>
+          <div class="kpi-sub">Disbursements: {{ formatCurrency(analyticsData.momoTransactions.totalLoanDisbursements) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-teal">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Momo Repayments</div>
+          <div class="kpi-value">{{ analyticsData.momoTransactions.loanRepaymentTransactions | number }}</div>
+          <div class="kpi-sub">Repayments: {{ formatCurrency(analyticsData.momoTransactions.totalLoanRepayments) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">trending_up</mat-icon>
+          <div class="kpi-label">Net Movement</div>
+          <div class="kpi-sub">Savings: {{ formatCurrency(analyticsData.momoTransactions.netSavingsMovement) }}</div>
+          <div class="kpi-sub">Loans: {{ formatCurrency(analyticsData.momoTransactions.netLoanMovement) }}</div>
+        </mat-card-content>
+      </mat-card>
+
+
+      <mat-card class="kpi-card accent-purple">
+        <mat-card-content>
+          <mat-icon class="kpi-icon">collections</mat-icon>
+          <div class="kpi-label">Total Momo Transactions</div>
+          <div class="kpi-value">{{ analyticsData.executiveSnapshot.totalTransactions | number }}</div>
+          <div class="kpi-sub">Overall: {{ formatCurrency(analyticsData.momoTransactions.overallTransactions) }}</div>
+          <div class="kpi-sub">Average: {{ formatCurrency(analyticsData.momoTransactions.averageTransactionValue) }}</div>
+        </mat-card-content>
+      </mat-card>
     </div>
 
     <!-- ── 2. Portfolio Health ── -->
