@@ -145,7 +145,7 @@ export class TableAndSmsComponent implements OnChanges {
     const data = this.csvData.map((object: any) => {
       const row = {};
       for (let i = 0; i < this.displayedColumns.length; i++) {
-        row[this.displayedColumns[i]] = object.row[i];
+        row[this.displayedColumns[i]] = this.formatValue(object.row[i], i);
       }
       return row;
     });
@@ -160,7 +160,11 @@ export class TableAndSmsComponent implements OnChanges {
    */
   downloadCSV(fileName: string, delimiter: string) {
     const headers = this.displayedColumns;
-    let csv = this.csvData.map((object: any) => object.row.join(delimiter));
+    let csv = this.csvData.map((object: any) => {
+      return object.row
+        .map((value: any, index: number) => this.formatValue(value, index))
+        .join(delimiter);
+    });
     csv.unshift(`data:text/csv;charset=utf-8,${headers.join(delimiter)}`);
     csv = csv.join('\r\n');
     const link = document.createElement('a');
@@ -186,5 +190,36 @@ export class TableAndSmsComponent implements OnChanges {
    */
   isDecimal(index: number) {
     return this.columnTypes[index] === 'DECIMAL';
+  }
+
+  /**
+   * Date Formatter
+   */
+  formatValue(value:any, columnIndex: number): any{
+    if (value == null){
+      return '';
+    }
+
+    // LocalDate [yyyy, MM, dd]
+    if (Array.isArray(value) && value.length === 3) {
+      return `${value[2].toString().padStart(2,'0')}/${
+        value[1].toString().padStart(2,'0')
+      }/${value[0]}`;
+    }
+
+    // LocalDateTime [yyyy,MM,dd,HH,mm,ss]
+    if (Array.isArray(value) && value.length >= 6) {
+      return `${value[2].toString().padStart(2,'0')}/${
+        value[1].toString().padStart(2,'0')
+      }/${value[0]} ${
+        value[3].toString().padStart(2,'0')
+      }:${value[4].toString().padStart(2,'0')}`;
+    }
+
+    if (this.isDecimal(columnIndex)) {
+      return this.toDecimal(value);
+    }
+
+    return value;
   }
 }
