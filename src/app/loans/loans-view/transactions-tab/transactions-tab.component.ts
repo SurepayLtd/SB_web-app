@@ -281,12 +281,22 @@ export class TransactionsTabComponent implements OnInit {
         if (this.isChargeOff(transaction.type)) {
           transactionId = null;
         }
+        if (transaction.transfer){
+          this.loansService
+            .executeLoansAccountTransactionsCommand(loanId, command, payload, undefined, transaction.transfer.id)
+            .subscribe((responseCmd: any) => {
+              transaction.manuallyReversed = true;
+              this.reload();
+            });
+
+        }else{
         this.loansService
           .executeLoansAccountTransactionsCommand(loanId, command, payload, transactionId)
           .subscribe((responseCmd: any) => {
             transaction.manuallyReversed = true;
             this.reload();
           });
+        }
       }
     });
   }

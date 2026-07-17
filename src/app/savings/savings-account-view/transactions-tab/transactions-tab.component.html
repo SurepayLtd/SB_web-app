@@ -128,10 +128,22 @@
               <mat-icon><fa-icon icon="eye" size="sm"></fa-icon></mat-icon>
               <span>{{ 'labels.text.View Transaction' | translate }}</span>
             </button>
-            <button mat-menu-item *mifosxHasPermission="'ADJUST_LOAN'" (click)="undoTransaction(transaction, $event)">
-              <mat-icon><fa-icon icon="undo" size="sm"></fa-icon></mat-icon>
-              <span>{{ 'tooltips.Undo Transaction' | translate }}</span>
-            </button>
+
+            <ng-container *ngIf="transaction.transfer; else normalUndo">
+
+              <button mat-menu-item *mifosxHasPermission="'ACTION_UNDO_ACCOUNTTRANSFER'" (click)="undoTransaction(transaction, $event)">
+                <mat-icon><fa-icon icon="undo" size="sm"></fa-icon></mat-icon>
+                <span>{{ 'tooltips.Undo Transfer' | translate }}</span>
+              </button>
+
+            </ng-container>
+
+            <ng-template #normalUndo>
+              <button mat-menu-item *mifosxHasPermission="'ADJUST_LOAN'" (click)="undoTransaction(transaction, $event)">
+                <mat-icon><fa-icon icon="undo" size="sm"></fa-icon></mat-icon>
+                <span>{{ 'tooltips.Undo Transaction' | translate }}</span>
+              </button>
+            </ng-template>
             <button
               mat-menu-item
               class="account-action-button"

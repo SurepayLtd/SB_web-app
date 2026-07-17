@@ -67,11 +67,20 @@ export class SavingsTransactionGeneralTabComponent {
           dateFormat,
           locale
         };
-        this.savingsService
-          .executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, this.transactionData.id)
-          .subscribe(() => {
-            this.router.navigate(['../..'], { relativeTo: this.route });
-          });
+        if (this.transactionData.transfer) {
+
+          this.savingsService.executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, undefined, this.transactionData.transfer.id)
+            .subscribe(() => {
+              this.router.navigate(['../..'], { relativeTo: this.route });
+            });
+
+        }else{
+          this.savingsService
+            .executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, this.transactionData.id)
+            .subscribe(() => {
+              this.router.navigate(['../..'], { relativeTo: this.route });
+            });
+        }
       }
     });
   }
