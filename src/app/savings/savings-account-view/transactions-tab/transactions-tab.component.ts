@@ -194,13 +194,7 @@ export class TransactionsTabComponent implements OnInit {
         };
         if (transactionData.transfer) {
 
-          this.savingsService.executeSavingsAccountTransactionsCommand(
-            this.accountId,
-            'undo',
-            data,
-            undefined,
-            transactionData.transfer.id
-          )
+          this.savingsService.executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, undefined, transactionData.transfer.id)
             .subscribe(() => {
               this.reload();
             });
