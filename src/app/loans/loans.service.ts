@@ -547,15 +547,20 @@ export class LoansService {
    * @param {string} command Command
    * @param {any} data Data
    * @param {string} transactionId Transaction Id
+   * @param {string} accountTransferTransactionId Account Transfer Transaction Id
    * @returns {Observable<any>}
    */
   executeLoansAccountTransactionsCommand(
     accountId: string,
     command: string,
     data: any,
-    transactionId?: any
+    transactionId?: any,
+    accountTransferTransactionId?: any,
   ): Observable<any> {
     const httpParams = new HttpParams().set('command', command);
+    if (accountTransferTransactionId){
+      return this.http.post(`/accounttransfers/${accountTransferTransactionId}`, data, {params: httpParams});
+    }
     if (transactionId) {
       return this.http.post(`/loans/${accountId}/transactions/${transactionId}`, data, { params: httpParams });
     }

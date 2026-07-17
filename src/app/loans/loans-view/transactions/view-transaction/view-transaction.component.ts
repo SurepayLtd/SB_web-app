@@ -186,11 +186,19 @@ export class ViewTransactionComponent implements OnInit {
           dateFormat,
           locale
         };
+        if (this.transactionData.transfer){
+          this.loansService
+            .executeLoansAccountTransactionsCommand(accountId, 'undo', data, undefined, this.transactionData.transfer.id)
+                .subscribe(() => {
+                  this.router.navigate(['../'], { relativeTo: this.route });
+                });
+        }else{
         this.loansService
           .executeLoansAccountTransactionsCommand(accountId, 'undo', data, this.transactionData.id)
           .subscribe(() => {
             this.router.navigate(['../'], { relativeTo: this.route });
           });
+        }
       }
     });
   }

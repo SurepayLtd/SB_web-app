@@ -24,4 +24,12 @@ export interface LoanTransaction {
   loanChargePaidByList: any[];
   numberOfRepayments: number;
   transactionRelations: any[];
+  transfer: Transfer;
+}
+export interface Transfer {
+  id: number;
+  reversed: boolean;
+  transferAmount: number;
+  transferDate: number[];
+  transferDescription: string;
 }

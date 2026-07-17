@@ -172,7 +172,7 @@ export class TransactionsTabComponent implements OnInit {
     if (transaction.reversed) {
       return 'strike';
     } else if (transaction.transfer) {
-      return 'transfer';
+      return transaction.reversed ? 'strike transfer' : 'transfer';
     } else if (transaction.transactionType.accrual) {
       return 'accrual';
     } else {
@@ -192,11 +192,26 @@ export class TransactionsTabComponent implements OnInit {
           dateFormat,
           locale
         };
-        this.savingsService
-          .executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, transactionData.id)
-          .subscribe(() => {
-            this.reload();
-          });
+        if (transactionData.transfer) {
+
+          this.savingsService.executeSavingsAccountTransactionsCommand(
+            this.accountId,
+            'undo',
+            data,
+            undefined,
+            transactionData.transfer.id
+          )
+            .subscribe(() => {
+              this.reload();
+            });
+
+        }else{
+          this.savingsService
+            .executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, transactionData.id)
+            .subscribe(() => {
+              this.reload();
+            });
+        }
       }
     });
   }
