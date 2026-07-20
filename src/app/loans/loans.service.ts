@@ -559,7 +559,7 @@ export class LoansService {
   ): Observable<any> {
     const httpParams = new HttpParams().set('command', command);
     if (accountTransferTransactionId){
-      return this.http.post(`/accounttransfers/${accountTransferTransactionId}`, data, {params: httpParams});
+      return this.http.post(`/accounttransfers/${accountId}/reverse/${accountTransferTransactionId}`, data, {params: httpParams});
     }
     if (transactionId) {
       return this.http.post(`/loans/${accountId}/transactions/${transactionId}`, data, { params: httpParams });
