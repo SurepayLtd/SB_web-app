@@ -319,6 +319,39 @@ export class ClientsViewComponent implements OnInit {
     });
   }
 
+  unblockClientPin() {
+    const dialogRef = this.dialog.open(MomoActivationDialogComponent, {
+      data: {
+        title: 'Unblock Client PIN',
+        message: 'Are you sure you want to unblock this client\'s PIN? The client will be able to transact via USSD again.'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+
+        if (this.clientViewData.pinBlocked) {
+
+          this.clientsService.unblockClientPin(this.clientViewData.id).subscribe(
+            (response: any) => {
+              this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
+                  this.clientViewData = clientData;}
+              );
+
+              this.snackBar.open('Client PIN unblocked successfully.', 'Close', {
+                  duration: 3000 });
+            },
+            (error: any) => {
+              this.snackBar.open('Failed to unblock client PIN.', 'Close', {
+                  duration: 3000 });
+            }
+          );
+
+        }
+      }
+    });
+  }
+
   validateOtp() {
     this.clientsService.validateOtp(this.clientViewData.id, this.otpCode).subscribe(
       (response: any) => {

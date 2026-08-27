@@ -182,6 +182,21 @@
                         <button mat-button (click)="validateOtp()" class="validate-otp-button">Validate OTP</button>
                       </td>
                     </tr>
+                    <tr *ngIf="clientViewData.pinBlocked">
+                      <td>
+                        <b>Mobile Banking PIN</b>
+                      </td>
+                      <td>
+                        <mat-slide-toggle
+                          [checked]="false"
+                          (click)="$event.preventDefault(); unblockClientPin()"
+                          *mifosxHasPermission="'UNBLOCKCLIENTPIN_CLIENT'"
+                        >
+                          Unblock PIN
+
+                        </mat-slide-toggle>
+                      </td>
+                    </tr>
                   </ng-container>
                 </tbody>
               </table>
