@@ -427,4 +427,8 @@ export class ClientsService {
   validateOtp(clientId: string, otpCode: string): Observable<any> {
     return this.http.post(`/clients/${clientId}/validateotp`, { otpCode, locale: 'en' });
   }
+
+  unblockClientPin(clientId: string): Observable<any> {
+    return this.http.post(`/clients/${clientId}/unblockClientPin`, {});
+  }
 }
