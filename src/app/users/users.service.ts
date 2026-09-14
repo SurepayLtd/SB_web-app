@@ -48,6 +48,15 @@ export class UsersService {
     return this.http.put(`/users/${userId}`, user);
   }
 
+
+  /**
+   * @param {string} userId user ID of user.
+   * @returns {Observable<any>} User.
+   */
+  unblockUser(userId: string): Observable<any> {
+    return this.http.put(`/users/${userId}/unblock`, null);
+  }
+
   /**
    * @param {string} userId user ID of user.
    * @returns {Observable<any>} User.
