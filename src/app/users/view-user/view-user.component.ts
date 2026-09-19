@@ -9,6 +9,7 @@ import { UsersService } from '../users.service';
 /** Custom Components */
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import { ChangePasswordDialogComponent } from 'app/shared/change-password-dialog/change-password-dialog.component';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 
 /**
  * View user component.
@@ -50,6 +51,26 @@ export class ViewUserComponent {
     deleteUserDialogRef.afterClosed().subscribe((response: any) => {
       if (response.delete) {
         this.usersService.deleteUser(this.userData.id).subscribe(() => {
+          this.router.navigate(['/appusers']);
+        });
+      }
+    });
+  }
+
+
+  /**
+   * Unblocks the user and redirects to users.
+   */
+  unblock() {
+    const unBlockUserDialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        heading: 'Unblock User',
+        dialogContext: `Are you sure you want to unblock user ${this.userData.username}`
+      }
+    });
+    unBlockUserDialogRef.afterClosed().subscribe((response: any) => {
+      if (response.confirm) {
+        this.usersService.unblockUser(this.userData.id).subscribe(() => {
           this.router.navigate(['/appusers']);
         });
       }
