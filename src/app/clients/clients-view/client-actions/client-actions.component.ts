@@ -30,6 +30,8 @@ export class ClientActionsComponent {
     'Client Screen Reports': boolean;
     'Create Self Service User': boolean;
     'Create Collateral': boolean;
+    'Crb Consent': boolean;
+    'Crb Check': boolean;
   } = {
     'Assign Staff': false,
     Close: false,
@@ -47,7 +49,9 @@ export class ClientActionsComponent {
     'Take Survey': false,
     'Client Screen Reports': false,
     'Create Self Service User': false,
-    'Create Collateral': false
+    'Create Collateral': false,
+    'Crb Consent': false,
+    'Crb Check': false,
   };
 
   /**

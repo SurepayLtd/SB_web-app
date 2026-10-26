@@ -1,0 +1,34 @@
+<h2 mat-dialog-title>
+  {{ 'Revoke CRB Consent' | translate }}
+</h2>
+
+<mat-dialog-content>
+  <p>
+    {{ 'Select the reason for revoking this consent.' | translate }}
+  </p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>{{ 'Revocation Reason' | translate }}</mat-label>
+
+    <mat-select [formControl]="reasonControl" required>
+      <mat-option *ngFor="let narration of data.narrations" [value]="narration.id">
+        {{ narration.name }}
+        <span *ngIf="narration.mandatory">*</span>
+      </mat-option>
+    </mat-select>
+
+    <mat-error *ngIf="reasonControl.hasError('required')">
+      {{ 'A revocation reason is required.' | translate }}
+    </mat-error>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">
+    {{ 'Cancel' | translate }}
+  </button>
+
+  <button mat-raised-button color="warn" type="button" [disabled]="reasonControl.invalid" (click)="confirmRevocation()">
+    {{ 'Confirm Revocation' | translate }}
+  </button>
+</mat-dialog-actions>

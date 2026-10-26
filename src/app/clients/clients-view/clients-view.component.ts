@@ -59,6 +59,10 @@ export class ClientsViewComponent implements OnInit {
     return this.clientViewData.status.value === 'Active';
   }
 
+  isCrbPending(): boolean{
+    return this.clientViewData.status.value === 'Crb Pending';
+  }
+
   /**
    * Performs action button/option action.
    * @param {string} name action name.
@@ -71,6 +75,8 @@ export class ClientsViewComponent implements OnInit {
       case 'Reject':
       case 'Activate':
       case 'Withdraw':
+      case 'Crb Consent':
+      case 'Crb Check':
       case 'Update Default Savings':
       case 'Transfer Client':
       case 'Undo Transfer':

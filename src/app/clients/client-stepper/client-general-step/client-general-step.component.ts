@@ -6,6 +6,7 @@ import { Dates } from 'app/core/utils/dates';
 
 /** Custom Services */
 import { SettingsService } from 'app/settings/settings.service';
+import { SystemService } from '../../../system/system.service';
 
 /**
  * Create Client Component
@@ -46,18 +47,22 @@ export class ClientGeneralStepComponent implements OnInit {
   genderOptions: any;
   /** Saving Product Options */
   savingProductOptions: any;
+  /** CRB **/
+  isCrbEnabled = false;
 
   /**
    * @param {FormBuilder} formBuilder Form Builder
    * @param {Dates} dateUtils Date Utils
    * @param {SettingsService} settingsService Setting service
    * @param {ClientsService} clientService Client service
+   * @param configurationService
    */
   constructor(
     private formBuilder: UntypedFormBuilder,
     private dateUtils: Dates,
     private settingsService: SettingsService,
-    private clientService: ClientsService
+    private clientService: ClientsService,
+    private configurationService: SystemService
   ) {
     this.setClientForm();
   }
@@ -66,6 +71,7 @@ export class ClientGeneralStepComponent implements OnInit {
     this.maxDate = this.settingsService.businessDate;
     this.setOptions();
     this.buildDependencies();
+    this.checkCrbConfiguration();
   }
 
   /**
@@ -88,12 +94,18 @@ export class ClientGeneralStepComponent implements OnInit {
       accountNo: [''],
       externalId: [''],
       genderId: [''],
-      mobileNo: [''],
+      mobileNo: [
+        '',
+        Validators.required
+      ],
       emailAddress: [
         '',
         Validators.email
       ],
-      dateOfBirth: [''],
+      dateOfBirth: [
+        '',
+        Validators.required
+      ],
       clientTypeId: [''],
       clientClassificationId: [''],
       submittedOnDate: [
@@ -140,10 +152,24 @@ export class ClientGeneralStepComponent implements OnInit {
             Validators.required,
             Validators.pattern('(^[A-z]).*')])
         );
+        this.createClientForm.addControl(
+          'ninNumber',
+          new UntypedFormControl('', [
+            Validators.required,
+            Validators.pattern(/^(CM|CF)[A-Za-z0-9]*$/)])
+        );
+        this.createClientForm.addControl(
+          'cardNumber',
+          new UntypedFormControl('', [
+            Validators.required,
+            Validators.pattern(/^\d{1,9}$/)])
+        );
       } else {
         this.createClientForm.removeControl('firstname');
         this.createClientForm.removeControl('middlename');
         this.createClientForm.removeControl('lastname');
+        this.createClientForm.removeControl('ninNumber');
+        this.createClientForm.removeControl('cardNumber');
         this.createClientForm.addControl(
           'fullname',
           new UntypedFormControl('', [
@@ -222,5 +248,17 @@ export class ClientGeneralStepComponent implements OnInit {
       };
     }
     return generalDetails;
+  }
+
+  private checkCrbConfiguration(): void {
+    this.configurationService.getConfigurationByName('enable-surepay-crb').subscribe({
+      next: (configuration: any) => {
+        this.isCrbEnabled = configuration.enabled === true || configuration.enabled === 'true';
+      },
+      error: (error) => {
+        console.error('Failed to retrieve CRB configuration', error);
+        this.isCrbEnabled = false;
+      }
+    });
   }
 }

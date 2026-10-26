@@ -12,6 +12,18 @@
     >
   </div>
 
+  <ng-container *ngIf="client.legalFormId === 1">
+    <div fxFlexFill>
+      <span fxFlex="40%">{{ 'labels.inputs.NIN Number' | translate }}</span>
+      <span fxFlex="60%">{{ client.ninNumber || 'N/A' }}</span>
+    </div>
+
+    <div fxFlexFill>
+      <span fxFlex="40%">{{ 'labels.inputs.Card Number' | translate }}</span>
+      <span fxFlex="60%">{{ client.cardNumber || 'N/A' }}</span>
+    </div>
+  </ng-container>
+
   <div fxFlexFill>
     <span fxFlex="40%">{{ 'labels.inputs.Office' | translate }}</span>
     <span fxFlex="60%">{{ client.officeId | find: clientTemplate.officeOptions : 'id' : 'name' }}</span>
@@ -71,7 +83,7 @@
     <span fxFlex="60%">{{ client.submittedOnDate | dateFormat }}</span>
   </div>
 
-  <div fxFlexFill>
+  <div fxFlexFill *ngIf="!isCrbEnabled">
     <span fxFlex="40%">{{ 'labels.inputs.Active' | translate }}?</span>
     <span fxFlex="60%">{{ client.active | yesNo }}</span>
   </div>

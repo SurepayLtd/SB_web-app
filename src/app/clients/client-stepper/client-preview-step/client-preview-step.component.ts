@@ -20,6 +20,9 @@ export class ClientPreviewStepComponent {
   /** Form submission event */
   @Output() submitEvent = new EventEmitter();
 
+  /** CRB Status **/
+  @Input() isCrbEnabled!: boolean;
+
   constructor() {}
 
   /**

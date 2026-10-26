@@ -59,6 +59,8 @@ export class ClientActionsResolver implements Resolve<Object> {
         return this.clientsService.getClientTransferProposalDate(clientId);
       case 'Create Self Service User':
         return this.clientsService.getClientData(clientId);
+      case 'Crb Consent':
+        return this.clientsService.getCrbConsentTemplate();
       default:
         return undefined;
     }

@@ -1,0 +1,69 @@
+<div class="container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        {{ 'CRB Consent' | translate }}
+      </mat-card-title>
+      <mat-card-subtitle>
+        {{ 'Review the consent details and select a consent channel.' | translate }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="crbConsentForm" (ngSubmit)="submit()">
+
+        <div class="consent-section">
+          <h3>{{ 'Consent Information' | translate }}</h3>
+
+          <mat-form-field fxFlex>
+            <mat-label>{{ 'Channel Type' | translate }}</mat-label>
+
+            <mat-select formControlName="consentChannel" required>
+              <mat-option *ngFor="let channel of consentChannels" [value]="channel.id">
+                {{ channel.value | translate }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error
+              *ngIf="crbConsentForm.controls.consentChannel.hasError('required')">
+              {{ 'Channel Type is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field fxFlex class="consent-text-field">
+            <mat-label>{{ 'Consent Text' | translate }}</mat-label>
+
+            <textarea matInput formControlName="consentText" rows="5" required></textarea>
+
+            <mat-hint>
+              {{ 'Please review the consent statement before proceeding.' | translate }}
+            </mat-hint>
+
+            <mat-error
+              *ngIf="crbConsentForm.controls.consentText.hasError('required')">
+              {{ 'Consent Text is required' | translate }}
+            </mat-error>
+          </mat-form-field>
+
+          <div class="consent-notice">
+            <mat-icon>info</mat-icon>
+            <span>
+              {{ 'OTP consent sends a verification code to the client’s registered phone number. Paper consent is recorded as verified.' | translate }}
+            </span>
+          </div>
+        </div>
+
+        <mat-card-actions class="form-actions">
+          <button type="button" mat-raised-button [routerLink]="['../../']">
+            {{ 'Cancel' | translate }}
+          </button>
+
+          <button type="submit" mat-raised-button color="primary" [disabled]="crbConsentForm.invalid">
+            {{ 'Submit' | translate }}
+          </button>
+        </mat-card-actions>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -58,6 +58,10 @@ import { CreateSelfServiceUserComponent } from './clients-view/client-actions/cr
 import { AddClientCollateralComponent } from './clients-view/client-actions/add-client-collateral/add-client-collateral.component';
 import { ClientDatatableStepComponent } from './client-stepper/client-datatable-step/client-datatable-step.component';
 import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/momo-activation-dialog/momo-activation-dialog.component';
+import { CrbConsentComponent } from './clients-view/client-actions/crb-consent/crb-consent.component';
+import { CrbConsentOtpDialogComponent } from './clients-view/custom-dialogs/crb-consent-otp-dialog/crb-consent-otp-dialog.component';
+import { CrbConsentTabComponent } from './clients-view/crb-consent-tab/crb-consent-tab.component';
+import { CrbConsentRevokeDialogComponent } from './clients-view/custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
 
 /**
  * Clients Module
@@ -121,7 +125,11 @@ import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/mom
     CreateSelfServiceUserComponent,
     AddClientCollateralComponent,
     ClientDatatableStepComponent,
-    MomoActivationDialogComponent
+    MomoActivationDialogComponent,
+    CrbConsentComponent,
+    CrbConsentOtpDialogComponent,
+    CrbConsentTabComponent,
+    CrbConsentRevokeDialogComponent
   ],
   entryComponents: [MomoActivationDialogComponent],
   providers: []

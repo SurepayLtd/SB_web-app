@@ -1,0 +1,153 @@
+<div class="crb-container mat-typography">
+
+  <div class="loading-message" *ngIf="isLoading">
+    {{ 'Loading CRB consent...' | translate }}
+  </div>
+
+  <div class="alert alert-info" *ngIf="!isLoading && !consentData">
+    {{ 'No CRB consent record is available.' | translate }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && consentData">
+
+    <!-- Header and Actions -->
+    <div class="consent-header">
+      <h3>{{ 'CRB Consent' | translate }}</h3>
+
+      <div class="consent-actions">
+        <button mat-icon-button type="button" [disabled]="isProcessing || isLoading" (click)="loadConsentData()"
+          [matTooltip]="'Refresh' | translate">
+          <fa-icon icon="refresh"></fa-icon>
+        </button>
+
+        <button mat-raised-button color="primary" type="button" *ngIf="canValidateOtp" [disabled]="isProcessing" (click)="validateOtp()">
+          {{ 'Validate OTP' | translate }}
+        </button>
+
+        <button mat-stroked-button type="button" *ngIf="canResendOtp" [disabled]="isProcessing" (click)="resendOtp()">
+          {{ 'Resend OTP' | translate }}
+        </button>
+
+        <button mat-raised-button color="warn" type="button" *ngIf="canRevokeConsent" [disabled]="isProcessing" (click)="revokeConsent()">
+          {{ 'Revoke Consent' | translate }}
+        </button>
+
+        <button mat-raised-button color="primary" type="button" *ngIf="canReactivateConsent" [disabled]="isProcessing" (click)="reactivateConsent()">
+          {{ 'Reactivate Consent' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Consent Details -->
+    <div class="layout-row-wrap consent-details">
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Client Name' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.clientName || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Consent Status' | translate }}</span>
+        <span
+          class="status-value"
+          [ngClass]="{
+            'status-pending': consentData.consentStatus?.id === PENDING,
+            'status-verified': consentData.consentStatus?.id === VERIFIED,
+            'status-reactivated': consentData.consentStatus?.id === REACTIVATED,
+            'status-revoked': consentData.consentStatus?.id === REVOKED
+          }">
+          {{ getConsentStatus() | translate }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Consent Channel' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.consentChannel?.value || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Phone Number' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.phoneNumber || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Consent Version' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.consentVersion || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Consented At' | translate }}</span>
+        <span class="detail-value">
+          {{ formatConsentDate(consentData.consentedAt) }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Consented By' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.consentedByName || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item">
+        <span class="detail-label">{{ 'Verified By' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.verifiedByName || '-' }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item" *ngIf="consentData.verifiedAt">
+        <span class="detail-label">{{ 'Verified At' | translate }}</span>
+        <span class="detail-value">
+          {{ formatConsentDate(consentData.verifiedAt) }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item" *ngIf="consentData.revokedByName">
+        <span class="detail-label">{{ 'Revoked By' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.revokedByName }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item" *ngIf="consentData.revokedAt">
+        <span class="detail-label">{{ 'Revoked At' | translate }}</span>
+        <span class="detail-value">
+          {{ formatConsentDate(consentData.revokedAt) }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item" *ngIf="consentData.reactivatedByName">
+        <span class="detail-label">{{ 'Reactivated By' | translate }}</span>
+        <span class="detail-value">
+          {{ consentData.reactivatedByName }}
+        </span>
+      </div>
+
+      <div class="flex-50 detail-item" *ngIf="consentData.reactivatedAt">
+        <span class="detail-label">{{ 'Reactivated At' | translate }}</span>
+        <span class="detail-value">
+          {{ formatConsentDate(consentData.reactivatedAt) }}
+        </span>
+      </div>
+
+    </div>
+
+
+    <div class="processing-message" *ngIf="isProcessing">
+      {{ 'Processing...' | translate }}
+    </div>
+
+  </ng-container>
+
+</div>

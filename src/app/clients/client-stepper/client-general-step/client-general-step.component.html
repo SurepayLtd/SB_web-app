@@ -77,6 +77,37 @@
       </mat-error>
     </mat-form-field>
 
+    <mat-form-field *ngIf="createClientForm.contains('ninNumber')" fxFlex="48%">
+      <mat-label>{{ 'labels.inputs.NIN Number' | translate }}</mat-label>
+      <input matInput formControlName="ninNumber" maxlength="14" required />
+
+      <mat-error *ngIf="createClientForm.controls.ninNumber.hasError('required')">
+        {{ 'labels.inputs.NIN Number' | translate }}
+        {{ 'labels.commons.is' | translate }}
+        <strong>{{ 'labels.commons.required' | translate }}</strong>
+      </mat-error>
+
+      <mat-error *ngIf="createClientForm.controls.ninNumber.hasError('pattern')">
+        {{ 'labels.inputs.NIN Number' | translate }}
+        must start with CM or CF and contain at most 14 characters.
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field *ngIf="createClientForm.contains('cardNumber')" fxFlex="48%">
+      <mat-label>{{ 'labels.inputs.Card Number' | translate }}</mat-label>
+      <input matInput formControlName="cardNumber" maxlength="9" required />
+
+      <mat-error *ngIf="createClientForm.controls.cardNumber.hasError('required')">
+        {{ 'labels.inputs.Card Number' | translate }}
+        {{ 'labels.commons.is' | translate }}
+        <strong>{{ 'labels.commons.required' | translate }}</strong>
+      </mat-error>
+
+      <mat-error *ngIf="createClientForm.controls.cardNumber.hasError('pattern')">
+        Card Number must contain digits only and have at most 9 digits.
+      </mat-error>
+    </mat-form-field>
+
     <mat-divider></mat-divider>
 
     <mat-form-field fxFlex="48%" (click)="dateOfBirthDatePicker.open()">
@@ -84,7 +115,7 @@
         'labels.inputs.' + getDateLabel(createClientForm.value.legalFormId, ['Date of Birth', 'Incorporation Date'])
           | translate
       }}</mat-label>
-      <input matInput [max]="maxDate" [matDatepicker]="dateOfBirthDatePicker" formControlName="dateOfBirth" />
+      <input matInput [max]="maxDate" [matDatepicker]="dateOfBirthDatePicker" formControlName="dateOfBirth" required/>
       <mat-datepicker-toggle matSuffix [for]="dateOfBirthDatePicker"></mat-datepicker-toggle>
       <mat-datepicker #dateOfBirthDatePicker></mat-datepicker>
     </mat-form-field>
@@ -171,7 +202,12 @@
 
     <mat-form-field fxFlex="48%">
       <mat-label>{{ 'labels.inputs.Mobile No' | translate }}</mat-label>
-      <input matInput type="number" formControlName="mobileNo" />
+      <input matInput type="tel" formControlName="mobileNo" maxlength="12" required/>
+      <mat-error *ngIf="createClientForm.controls.mobileNo.hasError('required')">
+        {{ 'labels.inputs.Mobile No' | translate }}
+        {{ 'labels.commons.is' | translate }}
+        <strong>{{ 'labels.commons.required' | translate }}</strong>
+      </mat-error>
     </mat-form-field>
 
     <mat-form-field fxFlex="48%">
@@ -219,7 +255,7 @@
 
     <br />
 
-    <mat-checkbox fxFlex="48%" labelPosition="before" formControlName="active" class="margin-v">
+    <mat-checkbox *ngIf="!isCrbEnabled" fxFlex="48%" labelPosition="before" formControlName="active" class="margin-v">
       {{ 'labels.inputs.Active' | translate }}?
     </mat-checkbox>
 
@@ -245,7 +281,7 @@
       </mat-error>
     </mat-form-field>
 
-    <mat-checkbox fxFlex="48%" labelPosition="before" formControlName="addSavings" class="margin-v">
+    <mat-checkbox *ngIf="!isCrbEnabled" fxFlex="48%" labelPosition="before" formControlName="addSavings" class="margin-v">
       {{ 'labels.inputs.Open Savings Account' | translate }}?
     </mat-checkbox>
 

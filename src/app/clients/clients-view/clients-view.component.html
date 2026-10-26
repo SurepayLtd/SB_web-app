@@ -147,6 +147,28 @@
                       ></mifosx-external-identifier>
                     </td>
                   </tr>
+                  <tr>
+                    <td>
+                      <b>{{ 'labels.inputs.NIN Number' | translate }}</b>
+                    </td>
+                    <td>
+                      <mifosx-external-identifier
+                        externalId="{{ clientViewData.ninNumber }}"
+                        completed="true"
+                      ></mifosx-external-identifier>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <b>{{ 'labels.inputs.Card Number' | translate }}</b>
+                    </td>
+                    <td>
+                      <mifosx-external-identifier
+                        externalId="{{ clientViewData.cardNumber }}"
+                        completed="true"
+                      ></mifosx-external-identifier>
+                    </td>
+                  </tr>
                   <ng-container *ngIf="isActive()">
                     <tr>
                       <td>
@@ -281,6 +303,16 @@
         <button mat-menu-item (click)="doAction('Transfer Client')">
           {{ 'labels.buttons.Transfer Client' | translate }}
         </button>
+        <span *ngIf="clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Not Started'"
+        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBCONSENT'" (click)="doAction('Crb Consent')">
+            {{ 'labels.buttons.CRB Consent' | translate }}
+          </button>
+        </span>
+        <span *ngIf="clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Pending'"
+        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBCHECK'" (click)="doAction('Crb Check')">
+            {{ 'labels.buttons.CRB Check' | translate }}
+          </button>
+        </span>
         <span *ngIf="clientViewData.status.value === 'Pending'"
           ><button mat-menu-item (click)="doAction('Activate')">
             {{ 'labels.buttons.Activate' | translate }}
@@ -383,6 +415,16 @@
         [active]="general.isActive"
       >
         {{ 'labels.inputs.General' | translate }}
+      </a>
+
+      <a
+        mat-tab-link
+        [routerLink]="['./crb-consent']"
+        routerLinkActive
+        #crb="routerLinkActive"
+        [active]="crb.isActive"
+      >
+        {{ 'labels.inputs.Crb Consent' | translate }}
       </a>
       <a
         mat-tab-link
