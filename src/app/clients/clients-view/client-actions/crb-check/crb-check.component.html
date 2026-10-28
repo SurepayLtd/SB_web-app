@@ -1,0 +1,70 @@
+<div class="container">
+
+  <div class="page-header">
+    <div>
+      <h3>{{ 'CRB Check' | translate }}</h3>
+      <p class="muted">
+        {{ 'Run an initial CRB validation or revalidate a previous check.' | translate }}
+      </p>
+    </div>
+
+  </div>
+
+  <mat-card>
+    <mat-card-content>
+
+      <div *ngIf="isLoading" class="loading">
+        {{ 'Loading CRB options...' | translate }}
+      </div>
+
+      <form *ngIf="!isLoading" (ngSubmit)="submitCheck()">
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'Request Type' | translate }}</mat-label>
+
+          <mat-select name="requestType" [(ngModel)]="selectedRequestType" required>
+
+            <mat-option *ngFor="let type of requestTypes" [value]="type.id">
+              {{ type.value | translate }}
+            </mat-option>
+          </mat-select>
+
+          <mat-hint>
+            {{ 'Choose initial validation or revalidation.' | translate }}
+          </mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'Validation Type' | translate }}</mat-label>
+
+          <mat-select name="validationType" [(ngModel)]="selectedValidationType" required>
+
+            <mat-option *ngFor="let type of validationTypes" [value]="type.id">
+              {{ type.value | translate }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="info-panel">
+          <mat-icon>info</mat-icon>
+          <span>{{ 'Revalidation uses your previous verification details.' | translate }}</span>
+        </div>
+
+        <div class="form-actions">
+
+          <button mat-stroked-button type="button" (click)="cancel()">
+            {{ 'Cancel' | translate }}
+          </button>
+
+          <button mat-raised-button color="primary" type="submit" [disabled]="isSubmitting || !requestTypes.length || !validationTypes.length">
+            <mat-icon>fact_check</mat-icon>
+            {{isSubmitting ? ('Processing...' | translate) : ('Submit CRB Check' | translate) }}
+          </button>
+        </div>
+
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

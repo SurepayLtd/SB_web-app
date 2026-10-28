@@ -416,15 +416,25 @@
       >
         {{ 'labels.inputs.General' | translate }}
       </a>
-
       <a
         mat-tab-link
         [routerLink]="['./crb-consent']"
         routerLinkActive
         #crb="routerLinkActive"
         [active]="crb.isActive"
+        *mifosxHasPermission="'READ_CRBCONSENT'"
       >
         {{ 'labels.inputs.Crb Consent' | translate }}
+      </a>
+      <a
+        mat-tab-link
+        [routerLink]="['./crb-check']"
+        routerLinkActive
+        #crb="routerLinkActive"
+        [active]="crb.isActive"
+        *mifosxHasPermission="'READ_CRBCHECK'"
+      >
+        {{ 'labels.inputs.Crb Check' | translate }}
       </a>
       <a
         mat-tab-link

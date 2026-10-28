@@ -1,0 +1,245 @@
+
+<div class="crb-checks-page">
+
+  <div class="page-header">
+    <div>
+      <h3>{{ 'CRB Verification History' | translate }}</h3>
+      <p>{{ 'View verification results and previous attempts.' | translate }}</p>
+    </div>
+
+    <button mat-stroked-button type="button" (click)="refreshHistory()" [disabled]="loading">
+      <mat-icon>refresh</mat-icon>
+      {{ 'labels.buttons.Refresh' | translate }}
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="36"></mat-spinner>
+    <span>{{ 'Loading verification history...' | translate }}</span>
+  </div>
+
+  <div *ngIf="!loading && errorMessage" class="error-message">
+    {{ errorMessage | translate }}
+  </div>
+
+  <div *ngIf="!loading && loaded && !errorMessage">
+
+    <mat-tab-group animationDuration="200ms">
+
+      <!-- Overview -->
+      <mat-tab label="{{ 'Overview' | translate }}">
+        <div class="tab-content">
+
+          <div class="summary-grid">
+            <mat-card class="summary-card">
+              <mat-card-content>
+                <span class="summary-label">
+                  {{ 'Consent Status' | translate }}
+                </span>
+                <strong>{{ latestConsentStatus }}</strong>
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card class="summary-card">
+              <mat-card-content>
+                <span class="summary-label">
+                  {{ 'Total Attempts' | translate }}
+                </span>
+                <strong>{{ checks.length }}</strong>
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card class="summary-card">
+              <mat-card-content>
+                <span class="summary-label">
+                  {{ 'Verified Attempts' | translate }}
+                </span>
+                <strong>{{ verifiedCount }}</strong>
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card class="summary-card">
+              <mat-card-content>
+                <span class="summary-label">
+                  {{ 'Total Cost' | translate }}
+                </span>
+                <strong>{{ totalCost | number:'1.2-2' }}</strong>
+                <small>{{ checks[0]?.currency ?? '' }}</small>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
+          <h4>{{ 'Latest Verification Results' | translate }}</h4>
+
+          <div *ngIf="latestChecks.length === 0" class="empty-state">
+            {{ 'No verification attempts have been recorded.' | translate }}
+          </div>
+
+          <div class="result-grid">
+            <mat-card *ngFor="let check of latestChecks">
+              <mat-card-header>
+                <mat-card-title>
+                  {{ check.validationType?.value }}
+                </mat-card-title>
+                <mat-card-subtitle>
+                  {{ check.requestType?.value }}
+                </mat-card-subtitle>
+              </mat-card-header>
+
+              <mat-card-content>
+                <p>
+                  <span class="field-label">{{ 'Status' | translate }}</span>
+                  <span class="status-chip" [ngClass]="statusClass(check.status?.value)">
+                    {{ check.status?.value ?? '—' }}
+                  </span>
+                </p>
+
+                <p>
+                  <span class="field-label">{{ 'Message' | translate }}</span>
+                  {{ check.message || '—' }}
+                </p>
+
+                <p>
+                  <span class="field-label">{{ 'Last Attempt' | translate }}</span>
+                  {{ formatDate(check.createdAt) }}
+                </p>
+
+                <p>
+                  <span class="field-label">{{ 'Cost' | translate }}</span>
+                  {{ formatCost(check) }}
+                </p>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
+        </div>
+      </mat-tab>
+
+      <!-- Personal Details -->
+      <mat-tab label="{{ 'Personal Details' | translate }}">
+        <div class="tab-content">
+          <ng-container
+            *ngTemplateOutlet="attemptList; context: { $implicit: detailsChecks }">
+          </ng-container>
+        </div>
+      </mat-tab>
+
+      <!-- NIN -->
+      <mat-tab label="{{ 'NIN' | translate }}">
+        <div class="tab-content">
+          <ng-container
+            *ngTemplateOutlet="attemptList; context: { $implicit: ninChecks }">
+          </ng-container>
+        </div>
+      </mat-tab>
+
+      <!-- Phone -->
+      <mat-tab label="{{ 'Phone' | translate }}">
+        <div class="tab-content">
+          <ng-container
+            *ngTemplateOutlet="attemptList; context: { $implicit: phoneChecks }">
+          </ng-container>
+        </div>
+      </mat-tab>
+
+      <!-- All Attempts -->
+      <mat-tab label="{{ 'All Attempts' | translate }}">
+        <div class="tab-content">
+          <ng-container
+            *ngTemplateOutlet="attemptList; context: { $implicit: checks }">
+          </ng-container>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  </div>
+</div>
+
+<!-- Shared attempt list used by each validation tab -->
+<ng-template #attemptList let-attempts>
+  <div *ngIf="attempts.length === 0" class="empty-state">
+    {{ 'No attempts found for this verification type.' | translate }}
+  </div>
+
+  <mat-accordion *ngIf="attempts.length > 0">
+    <mat-expansion-panel
+      *ngFor="let check of attempts; trackBy: trackByCheckId">
+
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          {{ check.requestType?.value }} — {{ check.status?.value }}
+        </mat-panel-title>
+
+        <mat-panel-description>
+          {{ formatDate(check.createdAt) }}
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="attempt-details">
+
+        <div class="detail-row">
+          <span>{{ 'Validation Type' | translate }}</span>
+          <strong>{{ check.validationType?.value ?? '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Request Type' | translate }}</span>
+          <strong>{{ check.requestType?.value ?? '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Status' | translate }}</span>
+          <strong class="status-chip" [ngClass]="statusClass(check.status?.value)">
+            {{ check.status?.value ?? '—' }}
+          </strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Message' | translate }}</span>
+          <strong>{{ check.message || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Provider Validation ID' | translate }}</span>
+          <strong class="break-word">{{ check.providerValidationId || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Provider Reference' | translate }}</span>
+          <strong>{{ check.providerReference || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Cost' | translate }}</span>
+          <strong>{{ formatCost(check) }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Created At' | translate }}</span>
+          <strong>{{ formatDate(check.createdAt) }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Completed At' | translate }}</span>
+          <strong>{{ formatDate(check.completedAt) }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>{{ 'Consent Status' | translate }}</span>
+          <strong>{{ check.consentStatus?.value || '—' }}</strong>
+        </div>
+
+        <div class="response-section">
+          <h4>{{ 'Response Details' | translate }}</h4>
+          <pre>{{ check.responseDetails | json }}</pre>
+        </div>
+
+        <div class="response-section">
+          <h4>{{ 'Raw Provider Response' | translate }}</h4>
+          <pre>{{ parseResponsePayload(check) | json }}</pre>
+        </div>
+
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</ng-template>

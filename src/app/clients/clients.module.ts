@@ -62,6 +62,8 @@ import { CrbConsentComponent } from './clients-view/client-actions/crb-consent/c
 import { CrbConsentOtpDialogComponent } from './clients-view/custom-dialogs/crb-consent-otp-dialog/crb-consent-otp-dialog.component';
 import { CrbConsentTabComponent } from './clients-view/crb-consent-tab/crb-consent-tab.component';
 import { CrbConsentRevokeDialogComponent } from './clients-view/custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
+import { CrbCheckComponent } from './clients-view/client-actions/crb-check/crb-check.component';
+import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-tab.component';
 
 /**
  * Clients Module
@@ -129,7 +131,9 @@ import { CrbConsentRevokeDialogComponent } from './clients-view/custom-dialogs/c
     CrbConsentComponent,
     CrbConsentOtpDialogComponent,
     CrbConsentTabComponent,
-    CrbConsentRevokeDialogComponent
+    CrbConsentRevokeDialogComponent,
+    CrbCheckComponent,
+    CrbChecksTabComponent
   ],
   entryComponents: [MomoActivationDialogComponent],
   providers: []

@@ -441,6 +441,19 @@ export class ClientsService {
     return this.http.get('/crbconsents/template', {params})
   }
 
+
+  getCrbCheckTemplate(): Observable<any>{
+    return this.http.get('/crbchecks/template')
+  }
+
+  createCrbCheck(clientId: string, data: any) {
+    return this.http.post(`/crbchecks/${clientId}`, data);
+  }
+
+  getCrbCheckHistory(clientId: string): Observable<any> {
+    return this.http.get(`/crbchecks/${clientId}`);
+  }
+
   createCrbConsent(clientId: string, data: any) {
     return this.http.post(`/crbconsents/${clientId}`, data);
   }
