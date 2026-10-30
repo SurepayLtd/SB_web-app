@@ -308,8 +308,9 @@
             {{ 'labels.buttons.CRB Consent' | translate }}
           </button>
         </span>
-        <span *ngIf="clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Pending'"
-        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBCHECK'" (click)="doAction('Crb Check')">
+        <span *ngIf="(clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Pending') ||
+        (clientViewData.status.value === 'Pending' && clientViewData.crbVerificationStatus.value === 'Verified')">
+          <button mat-menu-item *mifosxHasPermission="'CREATE_CRBCHECK'" (click)="doAction('Crb Check')">
             {{ 'labels.buttons.CRB Check' | translate }}
           </button>
         </span>
