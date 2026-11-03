@@ -79,7 +79,7 @@
 
     <mat-form-field *ngIf="createClientForm.contains('ninNumber')" fxFlex="48%">
       <mat-label>{{ 'labels.inputs.NIN Number' | translate }}</mat-label>
-      <input matInput formControlName="ninNumber" maxlength="14" required />
+      <input matInput formControlName="ninNumber" maxlength="14" placeholder="CM00000000MMMM" required />
 
       <mat-error *ngIf="createClientForm.controls.ninNumber.hasError('required')">
         {{ 'labels.inputs.NIN Number' | translate }}
@@ -95,7 +95,7 @@
 
     <mat-form-field *ngIf="createClientForm.contains('cardNumber')" fxFlex="48%">
       <mat-label>{{ 'labels.inputs.Card Number' | translate }}</mat-label>
-      <input matInput formControlName="cardNumber" maxlength="9" required />
+      <input matInput formControlName="cardNumber" maxlength="9" placeholder="012345678" required />
 
       <mat-error *ngIf="createClientForm.controls.cardNumber.hasError('required')">
         {{ 'labels.inputs.Card Number' | translate }}
@@ -202,7 +202,7 @@
 
     <mat-form-field fxFlex="48%">
       <mat-label>{{ 'labels.inputs.Mobile No' | translate }}</mat-label>
-      <input matInput type="tel" formControlName="mobileNo" maxlength="12" required/>
+      <input matInput type="tel" formControlName="mobileNo" maxlength="12" placeholder="2567********" required/>
       <mat-error *ngIf="createClientForm.controls.mobileNo.hasError('required')">
         {{ 'labels.inputs.Mobile No' | translate }}
         {{ 'labels.commons.is' | translate }}

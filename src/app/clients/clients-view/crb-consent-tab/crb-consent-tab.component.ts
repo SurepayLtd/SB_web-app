@@ -25,6 +25,7 @@ export class CrbConsentTabComponent implements OnInit {
 
   /** Component Properties */
   consentData: any;
+  clientViewData: any;
   consentTemplateData: any;
   isLoading = false;
   isProcessing = false;
@@ -47,8 +48,9 @@ export class CrbConsentTabComponent implements OnInit {
     public dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
-    this.route.data.subscribe((data: { consentData: any }) => {
+    this.route.data.subscribe((data: { consentData: any; clientViewData: any }) => {
       this.consentData = data.consentData;
+      this.clientViewData = data.clientViewData;
       this.clientId = this.route.parent.snapshot.paramMap.get('clientId');
     });
   }
@@ -168,6 +170,9 @@ export class CrbConsentTabComponent implements OnInit {
 
     this.clientsService.getCrbConsent(this.clientId).subscribe({
       next: (response: any) => {
+        this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
+          this.clientViewData = clientData;
+        });
         this.consentData = response;
         this.isLoading = false;
       },
@@ -235,6 +240,9 @@ export class CrbConsentTabComponent implements OnInit {
           this.isProcessing = false;
           this.snackBar.open('CRB consent revoked successfully.', 'Close', { duration: 5000 });
           this.loadConsentData();
+          this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
+            this.clientViewData = clientData;
+          });
         },
         error: (error) => {
           this.isProcessing = false;
@@ -272,6 +280,9 @@ export class CrbConsentTabComponent implements OnInit {
             this.isProcessing = false;
             this.snackBar.open('CRB consent reactivated successfully.', 'Close', { duration: 5000 });
             this.loadConsentData();
+            this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
+              this.clientViewData = clientData;
+            });
           },
           error: (error) => {
             this.isProcessing = false;
