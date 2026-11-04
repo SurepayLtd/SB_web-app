@@ -27,8 +27,8 @@ export class CrbConsentComponent implements OnInit {
   /** Indicates whether the consent request is being submitted. */
   isSubmitting = false;
 
-  readonly consentText = 'I consent to the verification of my identity and personal information through the Credit Reference Bureau for the purposes of this application.';
-
+  /** CRB consent template name. */
+  readonly consentTemplateName = 'CRB_CONSENT';
 
   /**
    * @param {FormBuilder} formBuilder Form Builder
@@ -54,6 +54,7 @@ export class CrbConsentComponent implements OnInit {
   ngOnInit(): void {
     this.createCrbConsentForm();
     this.loadConsentTemplate();
+    this.loadConsentTemplateText();
   }
 
   /**
@@ -62,7 +63,7 @@ export class CrbConsentComponent implements OnInit {
   createCrbConsentForm(): void {
     this.crbConsentForm = this.formBuilder.group({
       consentChannel: ['', Validators.required],
-      consentText: [this.consentText, Validators.required]
+      consentText: ['', Validators.required]
     });
   }
 
@@ -79,6 +80,32 @@ export class CrbConsentComponent implements OnInit {
       },
       error: () => {
         this.isLoading = false;
+      }
+    });
+  }
+  /**
+    * Loads the CRB consent text from the templates API.
+  */
+  loadConsentTemplateText(): void {
+    this.isLoading = true;
+
+    this.clientsService.getCrbConsentTemplateName().subscribe({
+      next: (templates: any[]) => {
+        const consentTemplate = templates.find(
+          (template: any) => template.name === this.consentTemplateName
+        );
+
+        if (consentTemplate) {
+          this.crbConsentForm.patchValue({
+            consentText: consentTemplate.text
+          });
+        }
+
+        this.isLoading = false;
+      },
+      error: (error: any) => {
+        this.isLoading = false;
+        console.error('Failed to load CRB consent template:', error);
       }
     });
   }

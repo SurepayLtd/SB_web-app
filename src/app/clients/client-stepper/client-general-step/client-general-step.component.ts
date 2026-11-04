@@ -168,7 +168,6 @@ export class ClientGeneralStepComponent implements OnInit {
         this.createClientForm.removeControl('firstname');
         this.createClientForm.removeControl('middlename');
         this.createClientForm.removeControl('lastname');
-        this.createClientForm.removeControl('ninNumber');
         this.createClientForm.removeControl('cardNumber');
         this.createClientForm.addControl(
           'fullname',

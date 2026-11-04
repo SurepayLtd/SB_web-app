@@ -30,7 +30,7 @@
             </mat-error>
           </mat-form-field>
 
-          <mat-form-field fxFlex class="consent-text-field">
+          <mat-form-field fxFlex class="consent-text-field" *ngIf="!isLoading">
             <mat-label>{{ 'Consent Text' | translate }}</mat-label>
 
             <textarea matInput formControlName="consentText" rows="5" required></textarea>
@@ -58,7 +58,7 @@
             {{ 'Cancel' | translate }}
           </button>
 
-          <button type="submit" mat-raised-button color="primary" [disabled]="crbConsentForm.invalid">
+          <button type="submit" mat-raised-button color="primary" [disabled]="isLoading || isSubmitting || crbConsentForm.invalid">
             {{ 'Submit' | translate }}
           </button>
         </mat-card-actions>

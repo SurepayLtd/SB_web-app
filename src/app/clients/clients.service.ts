@@ -441,6 +441,12 @@ export class ClientsService {
     return this.http.get('/crbconsents/template', {params})
   }
 
+  getCrbConsentTemplateName(): Observable<any>{
+    return this.http.get('/templates', {  params:
+        {typeId: '2', entityId: '0'}
+    })
+  }
+
 
   getCrbCheckTemplate(): Observable<any>{
     return this.http.get('/crbchecks/template')
