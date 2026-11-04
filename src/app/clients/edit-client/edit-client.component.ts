@@ -7,6 +7,7 @@ import { UntypedFormBuilder, UntypedFormGroup, Validators, UntypedFormControl } 
 import { ClientsService } from '../clients.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { SystemService } from '../../system/system.service';
 
 /**
  * Edit Client Component
@@ -44,6 +45,8 @@ export class EditClientComponent implements OnInit {
   /** Gender Options */
   genderOptions: any;
   legalFormId = 1;
+  /** CRB **/
+  isCrbEnabled = false;
 
   /**
    * Fetches client template data from `resolve`
@@ -53,6 +56,7 @@ export class EditClientComponent implements OnInit {
    * @param {ClientsService} clientsService Clients Service
    * @param {Dates} dateUtils Date Utils
    * @param {SettingsService} settingsService Settings Service
+   * @param configurationService
    */
   constructor(
     private formBuilder: UntypedFormBuilder,
@@ -60,7 +64,8 @@ export class EditClientComponent implements OnInit {
     private router: Router,
     private clientsService: ClientsService,
     private dateUtils: Dates,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private configurationService: SystemService
   ) {
     this.route.data.subscribe((data: { clientDataAndTemplate: any }) => {
       this.clientDataAndTemplate = data.clientDataAndTemplate;
@@ -72,6 +77,7 @@ export class EditClientComponent implements OnInit {
     this.createEditClientForm();
     this.setOptions();
     this.buildDependencies();
+    this.checkCrbConfiguration();
     this.legalFormId = 1;
     this.editClientForm.patchValue({
       officeId: this.clientDataAndTemplate.officeId,
@@ -83,6 +89,8 @@ export class EditClientComponent implements OnInit {
       isStaff: this.clientDataAndTemplate.isStaff,
       active: this.clientDataAndTemplate.active,
       mobileNo: this.clientDataAndTemplate.mobileNo,
+      ninNumber: this.clientDataAndTemplate.ninNumber,
+      cardNumber: this.clientDataAndTemplate.cardNumber,
       emailAddress: this.clientDataAndTemplate.emailAddress,
       dateOfBirth: this.clientDataAndTemplate.dateOfBirth && new Date(this.clientDataAndTemplate.dateOfBirth),
       clientTypeId: this.clientDataAndTemplate.clientType && this.clientDataAndTemplate.clientType.id,
@@ -113,12 +121,18 @@ export class EditClientComponent implements OnInit {
       accountNo: [{ value: '', disabled: true }],
       externalId: [''],
       genderId: [''],
-      mobileNo: [''],
+      mobileNo: [
+        '',
+        Validators.required
+      ],
       emailAddress: [
         '',
         Validators.email
       ],
-      dateOfBirth: [''],
+      dateOfBirth: [
+        '',
+        Validators.required
+      ],
       clientTypeId: [''],
       clientClassificationId: [''],
       submittedOnDate: [
@@ -160,10 +174,24 @@ export class EditClientComponent implements OnInit {
           'lastname',
           new UntypedFormControl(this.clientDataAndTemplate.lastname, Validators.required)
         );
+        this.editClientForm.addControl(
+          'ninNumber',
+        new UntypedFormControl(this.clientDataAndTemplate.ninNumber, [
+          Validators.required,
+          Validators.pattern(/^(CM|CF)[A-Za-z0-9]*$/)])
+        );
+        this.editClientForm.addControl(
+          'cardNumber',
+          new UntypedFormControl(this.clientDataAndTemplate.cardNumber, [
+            Validators.required,
+            Validators.pattern(/^\d{1,9}$/)])
+        );
       } else {
         this.editClientForm.removeControl('firstname');
         this.editClientForm.removeControl('middlename');
         this.editClientForm.removeControl('lastname');
+        this.editClientForm.removeControl('ninNumber');
+        this.editClientForm.removeControl('cardNumber');
         this.editClientForm.addControl(
           'fullname',
           new UntypedFormControl(this.clientDataAndTemplate.fullname, Validators.required)
@@ -228,6 +256,18 @@ export class EditClientComponent implements OnInit {
     }
     this.clientsService.updateClient(this.clientDataAndTemplate.id, clientData).subscribe(() => {
       this.router.navigate(['../'], { relativeTo: this.route });
+    });
+  }
+
+  private checkCrbConfiguration(): void {
+    this.configurationService.getConfigurationByName('enable-surepay-crb').subscribe({
+      next: (configuration: any) => {
+        this.isCrbEnabled = configuration.enabled === true || configuration.enabled === 'true';
+      },
+      error: (error) => {
+        console.error('Failed to retrieve CRB configuration', error);
+        this.isCrbEnabled = false;
+      }
     });
   }
 }

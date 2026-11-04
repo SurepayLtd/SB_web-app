@@ -1,0 +1,113 @@
+.crb-container {
+  padding: 1%;
+  margin: 1%;
+
+
+  mat-card {
+    border-radius: 8px;
+  }
+
+  mat-card-header {
+    margin-bottom: 1rem;
+  }
+
+  .consent-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0 1rem;
+
+    h3 {
+      margin: 0;
+    }
+  }
+
+  .consent-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+
+  .consent-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    padding: 1rem 0 3.5rem;
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .detail-label {
+    color: #595556;
+    font-size: 0.875rem;
+  }
+
+  .detail-value {
+    overflow-wrap: anywhere;
+    font-weight: 500;
+  }
+
+  .status-value {
+    display: inline-block;
+    align-self: flex-start;
+    width: fit-content;
+    padding: 0.25rem 0.65rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .status-pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  .status-verified {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .status-revoked {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .status-reactivated {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+
+
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+
+  @media (max-width: 600px) {
+    .consent-actions {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .consent-actions button:not([mat-icon-button]) {
+      width: 100%;
+    }
+
+    .consent-details {
+      grid-template-columns: 1fr;
+    }
+  }
+}

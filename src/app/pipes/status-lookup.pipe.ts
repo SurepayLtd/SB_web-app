@@ -28,6 +28,7 @@ export class StatusLookupPipe implements PipeTransform {
       'shareAccountStatusType.rejected': 'status-rejected',
       'loanProduct.active': 'status-active',
       'loanProduct.inActive': 'status-inactive',
+      'clientStatusType.crb.pending': 'status-crb-pending',
       'clientStatusType.pending': 'status-pending',
       'clientStatusType.closed': 'status-closed',
       'clientStatusType.rejected': 'status-rejected', // write
@@ -44,7 +45,14 @@ export class StatusLookupPipe implements PipeTransform {
       'smsCampaignStatus.active': 'status-active',
       'smsCampaignStatus.pending': 'status-pending',
       'smsCampaignStatus.closed': 'status-closed',
-      'purchasedSharesStatusType.applied': 'status-pending'
+      'purchasedSharesStatusType.applied': 'status-pending',
+      'crb.notStarted': 'status-not-started',
+      'crb.Pending': 'status-pending',
+      'crb.Verified': 'status-verified',
+      'crb.Failed': 'status-failed',
+      'crb.Manual': 'status-manual',
+      'crb.Overriden': 'status-overriden',
+      'crb.Error': 'status-failed'
     };
     return cssClassNameLookup[status];
   }

@@ -431,4 +431,46 @@ export class ClientsService {
   unblockClientPin(clientId: string): Observable<any> {
     return this.http.post(`/clients/${clientId}/unblockClientPin`, {});
   }
+
+  getCrbConsentTemplate(command?: string): Observable<any>{
+    let params = new HttpParams();
+
+    if (command) {
+      params = params.set('command', command);
+    }
+    return this.http.get('/crbconsents/template', {params})
+  }
+
+  getCrbConsentTemplateName(): Observable<any>{
+    return this.http.get('/templates', {  params:
+        {typeId: '2', entityId: '0'}
+    })
+  }
+
+
+  getCrbCheckTemplate(): Observable<any>{
+    return this.http.get('/crbchecks/template')
+  }
+
+  createCrbCheck(clientId: string, data: any) {
+    return this.http.post(`/crbchecks/${clientId}`, data);
+  }
+
+  getCrbCheckHistory(clientId: string): Observable<any> {
+    return this.http.get(`/crbchecks/${clientId}`);
+  }
+
+  createCrbConsent(clientId: string, data: any) {
+    return this.http.post(`/crbconsents/${clientId}`, data);
+  }
+
+  getCrbConsent(clientId: string): Observable<any> {
+    return this.http.get(`/crbconsents/${clientId}`);
+  }
+
+  updateCrbConsent(consentId: string, command: string, data: any = {}) {
+    const params = new HttpParams().set('command', command);
+
+    return this.http.put(`/crbconsents/${consentId}`, data, { params });
+  }
 }

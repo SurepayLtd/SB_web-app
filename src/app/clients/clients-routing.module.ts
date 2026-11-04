@@ -46,6 +46,10 @@ import { ClientChargeViewResolver } from './common-resolvers/client-charge-view.
 import { ClientTransactionPayResolver } from './common-resolvers/client-transaction-pay.resolver';
 import { ClientDataAndTemplateResolver } from './common-resolvers/client-and-template.resolver';
 import { ClientCollateralResolver } from './common-resolvers/client-collateral.resolver';
+import { CrbConsentTabComponent } from './clients-view/crb-consent-tab/crb-consent-tab.component';
+import { ClientCrbConsentResolver } from './common-resolvers/client-crb-consent.resolver';
+import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-tab.component';
+import { ClientCrbCheckResolver } from './common-resolvers/client-crb-check.resolver';
 
 const routes: Routes = [
   Route.withShell([
@@ -89,6 +93,22 @@ const routes: Routes = [
                 clientAccountsData: ClientAccountsResolver,
                 clientChargesData: ClientChargesResolver,
                 clientCollateralData: ClientCollateralResolver
+              }
+            },
+            {
+              path: 'crb-consent',
+              component: CrbConsentTabComponent,
+              data: { title: 'Crb Consent', breadcrumb: 'Crb Consent', routeParamBreadcrumb: false },
+              resolve: {
+                consentData: ClientCrbConsentResolver,
+              }
+            },
+            {
+              path: 'crb-check',
+              component: CrbChecksTabComponent,
+              data: { title: 'Crb Check', breadcrumb: 'Crb Check', routeParamBreadcrumb: false },
+              resolve: {
+                consentData: ClientCrbCheckResolver,
               }
             },
             {
@@ -305,7 +325,8 @@ const routes: Routes = [
     ClientChargeViewResolver,
     ClientTransactionPayResolver,
     ClientDataAndTemplateResolver,
-    ClientCollateralResolver
+    ClientCollateralResolver,
+    ClientCrbConsentResolver
   ]
 })
 export class ClientsRoutingModule {}
