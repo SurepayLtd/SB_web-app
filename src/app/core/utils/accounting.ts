@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { Injectable } from '@angular/core';
 import { AccountingMapping, GLAccount } from 'app/shared/models/general.model';
 import { OptionData } from 'app/shared/models/option-data.model';
@@ -21,13 +29,20 @@ export class Accounting {
     ];
   }
 
-  public getAccountingRulesForLoans(): string[] {
-    return [
-      'NONE',
-      'Cash',
-      'Accrual (periodic)',
-      'Accrual (upfront)'
-    ];
+  public getAccountingRulesForLoans(isLoanProduct: boolean): string[] {
+    if (isLoanProduct) {
+      return [
+        'NONE',
+        'Cash',
+        'Accrual (periodic)',
+        'Accrual (upfront)'
+      ];
+    } else {
+      return [
+        'NONE',
+        'ACC_DEF_REV_AM'
+      ];
+    }
   }
 
   public getAccountRuleName(value: string): string {
@@ -41,8 +56,10 @@ export class Accounting {
         'ACCRUAL (UPFRONT)'
       ].includes(value)) {
       return 'Accrual (upfront)';
-    } else if (value === 'CASH BASED') {
+    } else if (value.startsWith('CASH')) {
       return 'Cash';
+    } else if (value === 'ACC_DEF_REV_AM') {
+      return 'ACC_DEF_REV_AM';
     } else if (value === 'NONE') {
       return 'NONE';
     }
@@ -79,9 +96,9 @@ export class Accounting {
     } else if (accountingRuleId === 2) {
       return { code: 'CASH', id: accountingRuleId, value: 'Cash' };
     } else if (accountingRuleId === 3) {
-      return { code: 'ACCRUAL_PERIODIC', id: accountingRuleId, value: 'Accural (periodic)' };
+      return { code: 'ACCRUAL_PERIODIC', id: accountingRuleId, value: 'Accrual (periodic)' };
     } else if (accountingRuleId === 4) {
-      return { code: 'ACCRUAL_UPFRONT', id: accountingRuleId, value: 'Accural (upfront)' };
+      return { code: 'ACCRUAL_UPFRONT', id: accountingRuleId, value: 'Accrual (upfront)' };
     }
     return { code: 'INVALID', id: accountingRuleId, value: 'Invalid' };
   }

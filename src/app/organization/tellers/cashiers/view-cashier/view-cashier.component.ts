@@ -1,6 +1,16 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports. */
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 /** Custom Dialogs */
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
@@ -8,6 +18,9 @@ import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
 import { OrganizationService } from 'app/organization/organization.service';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { DateFormatPipe } from '../../../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * View Cashier component.
@@ -15,9 +28,21 @@ import { OrganizationService } from 'app/organization/organization.service';
 @Component({
   selector: 'mifosx-view-cashier',
   templateUrl: './view-cashier.component.html',
-  styleUrls: ['./view-cashier.component.scss']
+  styleUrls: ['./view-cashier.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViewCashierComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private organizationService = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+  dialog = inject(MatDialog);
+
   /** Cashier data. */
   cashierData: any;
 
@@ -28,13 +53,8 @@ export class ViewCashierComponent {
    * @param {OrganizationService} organizationService Organization Service
    * @param {MatDialog} dialog Mat Dialog
    */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private organizationService: OrganizationService,
-    public dialog: MatDialog
-  ) {
-    this.route.data.subscribe((data: { cashier: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { cashier: any }) => {
       this.cashierData = data.cashier;
     });
   }
@@ -48,9 +68,12 @@ export class ViewCashierComponent {
     });
     deleteCashierDialogRef.afterClosed().subscribe((response: any) => {
       if (response.delete) {
-        this.organizationService.deleteCashier(this.cashierData.tellerId, this.cashierData.id).subscribe(() => {
-          this.router.navigate(['../'], { relativeTo: this.route });
-        });
+        this.organizationService
+          .deleteCashier(this.cashierData.tellerId, this.cashierData.id)
+          .pipe(take(1))
+          .subscribe(() => {
+            this.router.navigate(['../'], { relativeTo: this.route });
+          });
       }
     });
   }

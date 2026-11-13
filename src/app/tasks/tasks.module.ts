@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { NgModule } from '@angular/core';
 
 /** Custom Modules */
@@ -11,8 +19,11 @@ import { CheckerInboxAndTasksComponent } from './checker-inbox-and-tasks/checker
 import { CheckerInboxComponent } from './checker-inbox-and-tasks-tabs/checker-inbox/checker-inbox.component';
 import { ClientApprovalComponent } from './checker-inbox-and-tasks-tabs/client-approval/client-approval.component';
 import { LoanApprovalComponent } from './checker-inbox-and-tasks-tabs/loan-approval/loan-approval.component';
+import { CreditApplicationsComponent } from './checker-inbox-and-tasks-tabs/credit-applications/credit-applications.component';
+import { PendingProspectsComponent } from './checker-inbox-and-tasks-tabs/pending-prospects/pending-prospects.component';
 import { LoanDisbursalComponent } from './checker-inbox-and-tasks-tabs/loan-disbursal/loan-disbursal.component';
 import { RescheduleLoanComponent } from './checker-inbox-and-tasks-tabs/reschedule-loan/reschedule-loan.component';
+import { CouncilApprovalComponent } from './checker-inbox-and-tasks-tabs/council-approval/council-approval.component';
 import { ViewCheckerInboxComponent } from './view-checker-inbox/view-checker-inbox.component';
 import { UssdApprovalComponent } from './checker-inbox-and-tasks-tabs/ussd-approval/ussd-approval.component';
 
@@ -24,15 +35,16 @@ import { UssdApprovalComponent } from './checker-inbox-and-tasks-tabs/ussd-appro
     SharedModule,
     TasksRoutingModule,
     DirectivesModule,
-    PipesModule
-  ],
-  declarations: [
+    PipesModule,
     CheckerInboxAndTasksComponent,
     CheckerInboxComponent,
     ClientApprovalComponent,
     LoanApprovalComponent,
+    CreditApplicationsComponent,
+    PendingProspectsComponent,
     LoanDisbursalComponent,
     RescheduleLoanComponent,
+    CouncilApprovalComponent,
     ViewCheckerInboxComponent,
     UssdApprovalComponent
   ],

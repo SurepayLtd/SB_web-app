@@ -1,10 +1,21 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
 /** Custom Services */
 import { UsersService } from '../users.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit User Component.
@@ -12,9 +23,20 @@ import { UsersService } from '../users.service';
 @Component({
   selector: 'mifosx-edit-user',
   templateUrl: './edit-user.component.html',
-  styleUrls: ['./edit-user.component.scss']
+  styleUrls: ['./edit-user.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditUserComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private usersService = inject(UsersService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+
   /** User Data */
   userData: any;
   /** Offices Data */
@@ -24,7 +46,7 @@ export class EditUserComponent implements OnInit {
   /** Roles Data */
   rolesData: any;
   /** Edit User form. */
-  editUserForm: UntypedFormGroup;
+  editUserForm: FormGroup;
 
   /**
    * Retrieves the offices data from `resolve`.
@@ -33,13 +55,8 @@ export class EditUserComponent implements OnInit {
    * @param {ActivatedRoute} route Activated Route.
    * @param {Router} router Router for navigation.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private usersService: UsersService,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { user: any; usersTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { user: any; usersTemplate: any }) => {
       this.userData = data.user;
       this.officesData = data.usersTemplate.allowedOffices;
       this.rolesData = data.usersTemplate.availableRoles;
@@ -72,13 +89,15 @@ export class EditUserComponent implements OnInit {
         this.userData.firstname,
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       lastname: [
         this.userData.lastname,
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       passwordNeverExpires: [this.userData.passwordNeverExpires],
       bypassTwoFactor: [this.userData.bypassTwoFactor || false],

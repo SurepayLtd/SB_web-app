@@ -1,12 +1,23 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { OrganizationService } from '../../organization.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create teller component.
@@ -15,15 +26,27 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-edit-teller',
   templateUrl: './edit-teller.component.html',
-  styleUrls: ['./edit-teller.component.scss']
+  styleUrls: ['./edit-teller.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditTellerComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private settingsService = inject(SettingsService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private destroyRef = inject(DestroyRef);
+
   /** Minimum date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum date allowed. */
   maxDate = new Date();
   /** Teller form. */
-  tellerForm: UntypedFormGroup;
+  tellerForm: FormGroup;
   /** Office data. */
   officeData: any;
   /** TellerStatuses data. */
@@ -40,15 +63,8 @@ export class EditTellerComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {Dates} dateUtils Date Utils to format date.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService,
-    private settingsService: SettingsService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates
-  ) {
-    this.route.data.subscribe((data: { teller: any; offices: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { teller: any; offices: any }) => {
       this.tellerData = data.teller;
       this.officeData = data.offices;
     });
@@ -84,14 +100,15 @@ export class EditTellerComponent implements OnInit {
         this.tellerData.name,
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       description: [this.tellerData.description],
       startDate: [
-        this.tellerData.startDate && new Date(this.tellerData.startDate),
+        this.tellerData.startDate && this.dateUtils.parseDate(this.tellerData.startDate),
         Validators.required
       ],
-      endDate: [this.tellerData.endDate && new Date(this.tellerData.endDate)],
+      endDate: [this.tellerData.endDate && this.dateUtils.parseDate(this.tellerData.endDate)],
       status: [
         this.tellerData.status,
         Validators.required
@@ -121,14 +138,17 @@ export class EditTellerComponent implements OnInit {
       dateFormat,
       locale
     };
-    this.organizationService.updateTeller(this.tellerData.id, data).subscribe((response: any) => {
-      this.router.navigate(
-        [
-          '../../',
-          response.resourceId
-        ],
-        { relativeTo: this.route }
-      );
-    });
+    this.organizationService
+      .updateTeller(this.tellerData.id, data)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.router.navigate(
+          [
+            '../../',
+            response.resourceId
+          ],
+          { relativeTo: this.route }
+        );
+      });
   }
 }

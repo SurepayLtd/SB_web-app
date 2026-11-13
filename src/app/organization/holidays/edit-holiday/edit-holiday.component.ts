@@ -1,12 +1,25 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports. */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormGroup, Validators, UntypedFormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
 
 /** Custom Services. */
 import { OrganizationService } from 'app/organization/organization.service';
 import { SettingsService } from 'app/settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { AlertService } from 'app/core/alert/alert.service';
+import { TranslateService } from '@ngx-translate/core';
 
 /**
  * Edit Holiday component.
@@ -14,11 +27,25 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-edit-holiday',
   templateUrl: './edit-holiday.component.html',
-  styleUrls: ['./edit-holiday.component.scss']
+  styleUrls: ['./edit-holiday.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditHolidayComponent implements OnInit {
+  private alertService = inject(AlertService);
+  private formBuilder = inject(FormBuilder);
+  private destroyRef = inject(DestroyRef);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private organizatioService = inject(OrganizationService);
+  private settingsService = inject(SettingsService);
+  private router = inject(Router);
+  private translateService = inject(TranslateService);
+
   /** Edit Holiday form. */
-  holidayForm: UntypedFormGroup;
+  holidayForm: FormGroup;
   /** Holiday data. */
   holidayData: any;
   /** Rescheduling Type. */
@@ -27,8 +54,7 @@ export class EditHolidayComponent implements OnInit {
   isActiveHoliday = true;
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
-  /** Maximum Date allowed. */
-  maxDate = new Date();
+  maxDate = new Date(2100, 0, 1);
 
   /**
    * Get holiday and holiday template from `Resolver`.
@@ -38,28 +64,23 @@ export class EditHolidayComponent implements OnInit {
    * @param {OrganizationService} organizatioService Organization Service.
    * @param {Router} router Router.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    private organizatioService: OrganizationService,
-    private settingsService: SettingsService,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { holiday: any; holidayTemplate: any }) => {
-      this.holidayData = data.holiday;
-      this.holidayData.repaymentSchedulingTypes = data.holidayTemplate;
-      this.reSchedulingType = this.holidayData.reschedulingType;
-      if (this.holidayData.status.value === 'Active') {
-        this.isActiveHoliday = true;
-      } else {
-        this.isActiveHoliday = false;
-      }
-    });
+  constructor() {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { holiday: any; holidayTemplate: any }) => {
+        this.holidayData = data.holiday;
+        this.holidayData.repaymentSchedulingTypes = data.holidayTemplate;
+        this.reSchedulingType = this.holidayData.reschedulingType;
+        if (this.holidayData.status.value === 'Active') {
+          this.isActiveHoliday = true;
+        } else {
+          this.isActiveHoliday = false;
+        }
+      });
   }
 
   ngOnInit() {
-    this.maxDate = this.settingsService.businessDate;
+    this.maxDate = new Date(2100, 0, 1);
     this.setEditForm();
     if (!this.isActiveHoliday) {
       this.getReschedulingType();
@@ -80,21 +101,28 @@ export class EditHolidayComponent implements OnInit {
     if (!this.isActiveHoliday) {
       this.holidayForm.addControl(
         'fromDate',
-        new UntypedFormControl(this.holidayData.fromDate && new Date(this.holidayData.fromDate), Validators.required)
+        new FormControl(
+          this.holidayData.fromDate && this.dateUtils.parseDate(this.holidayData.fromDate),
+          Validators.required
+        )
       );
       this.holidayForm.addControl(
         'toDate',
-        new UntypedFormControl(this.holidayData.toDate && new Date(this.holidayData.toDate), Validators.required)
+        new FormControl(
+          this.holidayData.toDate && this.dateUtils.parseDate(this.holidayData.toDate),
+          Validators.required
+        )
       );
       this.holidayForm.addControl(
         'reschedulingType',
-        new UntypedFormControl(this.holidayData.reschedulingType, Validators.required)
+        new FormControl(this.holidayData.reschedulingType, Validators.required)
       );
       if (this.reSchedulingType === 2) {
         this.holidayForm.addControl(
           'repaymentsRescheduledTo',
-          new UntypedFormControl(
-            this.holidayData.repaymentsRescheduledTo && new Date(this.holidayData.repaymentsRescheduledTo),
+          new FormControl(
+            this.holidayData.repaymentsRescheduledTo &&
+              this.dateUtils.parseDate(this.holidayData.repaymentsRescheduledTo),
             Validators.required
           )
         );
@@ -106,14 +134,17 @@ export class EditHolidayComponent implements OnInit {
    * Get Rescheduling Type.
    */
   getReschedulingType() {
-    this.holidayForm.get('reschedulingType').valueChanges.subscribe((option: any) => {
-      this.reSchedulingType = option;
-      if (option === 2) {
-        this.holidayForm.addControl('repaymentsRescheduledTo', new UntypedFormControl(new Date(), Validators.required));
-      } else {
-        this.holidayForm.removeControl('repaymentsRescheduledTo');
-      }
-    });
+    this.holidayForm
+      .get('reschedulingType')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((option: any) => {
+        this.reSchedulingType = option;
+        if (option === 2) {
+          this.holidayForm.addControl('repaymentsRescheduledTo', new FormControl(new Date(), Validators.required));
+        } else {
+          this.holidayForm.removeControl('repaymentsRescheduledTo');
+        }
+      });
   }
 
   /**
@@ -122,19 +153,39 @@ export class EditHolidayComponent implements OnInit {
   submit() {
     const holidayFormData = this.holidayForm.value;
     const locale = this.settingsService.language.code;
-    const dateFormat = this.settingsService.dateFormat;
+    const dateFormat = 'dd MMMM yyyy';
+    const momentFormat = 'DD MMMM YYYY';
+    const coerceDate = (value: unknown): Date | null => {
+      if (value instanceof Date) return value;
+      if (value == null || value === '') return null;
+      const d = new Date(value as any);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
     if (!this.isActiveHoliday) {
+      const fromDate = coerceDate(this.holidayForm.value.fromDate);
+      const toDate = coerceDate(this.holidayForm.value.toDate);
+      if (!fromDate || !toDate) {
+        this.alertService.alert({
+          type: this.translateService.instant('errors.http.default.title'),
+          message: this.translateService.instant('errors.holiday.invalidDate')
+        });
+        return;
+      }
+      holidayFormData.fromDate = this.dateUtils.formatDateAsString(fromDate, momentFormat);
+      holidayFormData.toDate = this.dateUtils.formatDateAsString(toDate, momentFormat);
       if (this.reSchedulingType === 2) {
-        const repaymentScheduledTo: Date = this.holidayForm.value.repaymentsRescheduledTo;
-        holidayFormData.repaymentsRescheduledTo = this.dateUtils.formatDate(repaymentScheduledTo, dateFormat);
-      }
-      const prevFromDate: Date = this.holidayForm.value.fromDate;
-      const prevToDate: Date = this.holidayForm.value.toDate;
-      if (holidayFormData.closureDate instanceof Date) {
-        holidayFormData.fromDate = this.dateUtils.formatDate(prevFromDate, dateFormat);
-      }
-      if (holidayFormData.closureDate instanceof Date) {
-        holidayFormData.toDate = this.dateUtils.formatDate(prevToDate, dateFormat);
+        const repaymentsRescheduledTo = coerceDate(this.holidayForm.value.repaymentsRescheduledTo);
+        if (!repaymentsRescheduledTo) {
+          this.alertService.alert({
+            type: this.translateService.instant('errors.http.default.title'),
+            message: this.translateService.instant('errors.holiday.invalidRepaymentDate')
+          });
+          return;
+        }
+        holidayFormData.repaymentsRescheduledTo = this.dateUtils.formatDateAsString(
+          repaymentsRescheduledTo,
+          momentFormat
+        );
       }
     }
     const data = {
@@ -142,9 +193,12 @@ export class EditHolidayComponent implements OnInit {
       dateFormat,
       locale
     };
-    this.organizatioService.updateHoliday(this.holidayData.id, data).subscribe((response) => {
-      /** TODO Add Redirects to ViewMakerCheckerTask page. */
-      this.router.navigate(['../'], { relativeTo: this.route });
-    });
+    this.organizatioService
+      .updateHoliday(this.holidayData.id, data)
+      .pipe(take(1))
+      .subscribe((response) => {
+        /** TODO Add Redirects to ViewMakerCheckerTask page. */
+        this.router.navigate(['../'], { relativeTo: this.route });
+      });
   }
 }

@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
 /** rxjs Imports */
 import { BehaviorSubject } from 'rxjs';
@@ -16,6 +24,8 @@ import { GLAccount } from 'app/shared/models/general.model';
   providedIn: 'root'
 })
 export class GlAccountTreeService {
+  private translateService = inject(TranslateService);
+
   /** GL Account data. */
   glAccountData: any;
   /** Chart of accounts tree data behavior subject to represent chart of accounts tree nodes. */
@@ -27,8 +37,6 @@ export class GlAccountTreeService {
   get treeData(): GLAccountNode[] {
     return this.treeDataChange.value;
   }
-
-  constructor(private translateService: TranslateService) {}
 
   /**
    * Builds the chart of accounts tree and emits the value.
@@ -59,6 +67,10 @@ export class GlAccountTreeService {
       new GLAccountNode(this.translateService.instant('labels.inputs.accounting.LIABILITY'))
     );
 
+    if (glAccountData.length === 0) {
+      return glAccountTree;
+    }
+
     // Sort by parent id (so that child nodes can be added properly)
     if (!glAccountData[0].parentId) {
       glAccountData[0].parentId = 0;
@@ -88,7 +100,6 @@ export class GlAccountTreeService {
     // and rest as children to respective parent nodes.
     for (const glAccount of glAccountData) {
       if (glAccount.parentId === 0) {
-        console.log(glAccount.type.value);
         if (glAccount.type.value === 'ASSET') {
           glAccountTree[0].children[0].children.push(glAccounts[glAccount.id]);
         } else if (glAccount.type.value === 'EQUITY') {

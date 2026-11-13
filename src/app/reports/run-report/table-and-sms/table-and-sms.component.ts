@@ -1,7 +1,28 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, Input, ViewChild, OnChanges } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, Input, ViewChild, OnChanges, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatTableDataSource } from '@angular/material/table';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
 import { DecimalPipe } from '@angular/common';
 
 /** Custom Servies */
@@ -11,10 +32,15 @@ import { FormfieldBase } from 'app/shared/form-dialog/formfield/model/formfield-
 import { SelectBase } from 'app/shared/form-dialog/formfield/model/select-base';
 import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
 import { FormDialogComponent } from 'app/shared/form-dialog/form-dialog.component';
-import { environment } from 'environments/environment';
+import { environment } from '../../../../environments/environment';
 import { ProgressBarService } from 'app/core/progress-bar/progress-bar.service';
+import { sanitizeCsvValue } from 'app/core/utils/csv.utils';
+import { downloadBlob } from 'app/core/utils/file-download.utils';
 
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatIcon } from '@angular/material/icon';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Table and SMS Component
@@ -22,9 +48,32 @@ import * as XLSX from 'xlsx';
 @Component({
   selector: 'mifosx-table-and-sms',
   templateUrl: './table-and-sms.component.html',
-  styleUrls: ['./table-and-sms.component.scss']
+  styleUrls: ['./table-and-sms.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    FaIconComponent,
+    MatIcon
+  ]
 })
 export class TableAndSmsComponent implements OnChanges {
+  private reportsService = inject(ReportsService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+  dialog = inject(MatDialog);
+  private decimalPipe = inject(DecimalPipe);
+  private progressBarService = inject(ProgressBarService);
+
   /** Run Report Data */
   @Input() dataObject: any;
 
@@ -39,27 +88,18 @@ export class TableAndSmsComponent implements OnChanges {
   /** Data to be converted into CSV file */
   csvData: any;
   notExistsReportData = false;
+  hasError = false;
   toBeExportedToRepo = false;
 
   /** Paginator for run-report table. */
   @ViewChild(MatPaginator) paginator: MatPaginator;
 
   /**
-   * @param {ReportsService} reportsService Reports Service
-   * @param {DecimalPipe} decimalPipe Decimal Pipe
-   */
-  constructor(
-    private reportsService: ReportsService,
-    public dialog: MatDialog,
-    private decimalPipe: DecimalPipe,
-    private progressBarService: ProgressBarService
-  ) {}
-
-  /**
    * Fetches run report data post changes in run report form.
    */
   ngOnChanges() {
     this.hideOutput = true;
+    this.hasError = false;
     this.columnTypes = [];
     this.displayedColumns = [];
     this.getRunReportData();
@@ -69,19 +109,31 @@ export class TableAndSmsComponent implements OnChanges {
     const exportS3 = this.dataObject.formData.exportS3;
     this.reportsService
       .getRunReportData(this.dataObject.report.name, this.dataObject.formData)
-      .subscribe((res: any) => {
-        this.toBeExportedToRepo = exportS3;
-        if (!this.toBeExportedToRepo) {
-          this.csvData = res.data;
-          this.notExistsReportData = res.data.length === 0;
-          this.setOutputTable(res.data);
-          res.columnHeaders.forEach((header: any) => {
-            this.columnTypes.push(header.columnDisplayType);
-            this.displayedColumns.push(header.columnName);
-          });
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: any) => {
+          this.toBeExportedToRepo = exportS3;
+          if (!this.toBeExportedToRepo) {
+            this.csvData = res.data;
+            this.notExistsReportData = res.data.length === 0;
+            if (!this.notExistsReportData) {
+              this.setOutputTable(res.data);
+              res.columnHeaders.forEach((header: any) => {
+                this.columnTypes.push(header.columnDisplayType);
+                this.displayedColumns.push(header.columnName);
+              });
+            }
+          }
+          this.hideOutput = false;
+          this.progressBarService.decrease();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.hasError = true;
+          this.hideOutput = false;
+          this.progressBarService.decrease();
+          this.cdr.markForCheck();
         }
-        this.hideOutput = false;
-        this.progressBarService.decrease();
       });
   }
 
@@ -125,7 +177,6 @@ export class TableAndSmsComponent implements OnChanges {
         required: true,
         order: 2
       })
-
     ];
     const data = {
       title: 'Export data to File',
@@ -134,25 +185,37 @@ export class TableAndSmsComponent implements OnChanges {
     };
     const exportDialogRef = this.dialog.open(FormDialogComponent, { data });
     exportDialogRef.afterClosed().subscribe((response: { data: any }) => {
-      if (response.data) {
+      if (response?.data) {
         this.downloadCSV(response.data.value.fileName, response.data.value.delimiter);
       }
     });
   }
 
-  exportToXLS(): void {
+  async exportToXLS(): Promise<void> {
     const fileName = `${this.dataObject.report.name}.xlsx`;
+    // Sanitize all values to prevent formula injection in spreadsheet applications
     const data = this.csvData.map((object: any) => {
-      const row = {};
+      const row: { [key: string]: any } = {};
       for (let i = 0; i < this.displayedColumns.length; i++) {
-        row[this.displayedColumns[i]] = this.formatValue(object.row[i], i);
+        row[this.displayedColumns[i]] = sanitizeCsvValue(this.formatValue(object.row[i], i));
       }
       return row;
     });
-    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data, { header: this.displayedColumns });
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, fileName);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Report');
+
+    // Add header row
+    worksheet.addRow(this.displayedColumns.map(sanitizeCsvValue));
+
+    // Add data rows
+    data.forEach((rowObj: any) => {
+      worksheet.addRow(this.displayedColumns.map((col) => rowObj[col]));
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, fileName);
   }
 
   /**
@@ -160,12 +223,10 @@ export class TableAndSmsComponent implements OnChanges {
    */
   downloadCSV(fileName: string, delimiter: string) {
     const headers = this.displayedColumns;
-    let csv = this.csvData.map((object: any) => {
-      return object.row
-        .map((value: any, index: number) => this.formatValue(value, index))
-        .join(delimiter);
-    });
-    csv.unshift(`data:text/csv;charset=utf-8,${headers.join(delimiter)}`);
+    let csv = this.csvData.map((object: any) =>
+      object.row.map((cell: any, index: number) => sanitizeCsvValue(this.formatValue(cell, index))).join(delimiter)
+    );
+    csv.unshift(`data:text/csv;charset=utf-8,${headers.map(sanitizeCsvValue).join(delimiter)}`);
     csv = csv.join('\r\n');
     const link = document.createElement('a');
     link.setAttribute('href', encodeURI(csv));
@@ -195,25 +256,21 @@ export class TableAndSmsComponent implements OnChanges {
   /**
    * Date Formatter
    */
-  formatValue(value:any, columnIndex: number): any{
-    if (value == null){
+  formatValue(value: any, columnIndex: number): any {
+    if (value == null) {
       return '';
     }
 
     // LocalDate [yyyy, MM, dd]
     if (Array.isArray(value) && value.length === 3) {
-      return `${value[2].toString().padStart(2,'0')}/${
-        value[1].toString().padStart(2,'0')
-      }/${value[0]}`;
+      return `${value[2].toString().padStart(2, '0')}/${value[1].toString().padStart(2, '0')}/${value[0]}`;
     }
 
     // LocalDateTime [yyyy,MM,dd,HH,mm,ss]
     if (Array.isArray(value) && value.length >= 6) {
-      return `${value[2].toString().padStart(2,'0')}/${
-        value[1].toString().padStart(2,'0')
-      }/${value[0]} ${
-        value[3].toString().padStart(2,'0')
-      }:${value[4].toString().padStart(2,'0')}`;
+      return `${value[2].toString().padStart(2, '0')}/${value[1].toString().padStart(2, '0')}/${value[0]} ${value[3]
+        .toString()
+        .padStart(2, '0')}:${value[4].toString().padStart(2, '0')}`;
     }
 
     if (this.isDecimal(columnIndex)) {

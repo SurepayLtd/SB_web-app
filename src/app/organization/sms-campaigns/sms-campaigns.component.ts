@@ -1,12 +1,36 @@
-/** Angular Imports */
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
-import { ActivatedRoute } from '@angular/router';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-/** rxjs Imports */
-import { of } from 'rxjs';
+/** Angular Imports */
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatTooltip } from '@angular/material/tooltip';
+import { TitleCasePipe } from '@angular/common';
+import { StatusLookupPipe } from '../../pipes/status-lookup.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * SMS Campaigns component.
@@ -14,9 +38,33 @@ import { of } from 'rxjs';
 @Component({
   selector: 'mifosx-sms-campaigns',
   templateUrl: './sms-campaigns.component.html',
-  styleUrls: ['./sms-campaigns.component.scss']
+  styleUrls: ['./sms-campaigns.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatTooltip,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    TitleCasePipe,
+    StatusLookupPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SmsCampaignsComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+
   /** SMS Campaigns data. */
   smsCampaignsData: any;
   /** Columns to be displayed in sms campaigns table. */
@@ -40,8 +88,8 @@ export class SmsCampaignsComponent implements OnInit {
    * Retrieves the SMS campaigns data from `resolve`.
    * @param {ActivatedRoute} route Activated Route.
    */
-  constructor(private route: ActivatedRoute) {
-    this.route.data.subscribe((data: { smsCampaigns: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { smsCampaigns: any }) => {
       this.smsCampaignsData = data.smsCampaigns.pageItems;
     });
   }

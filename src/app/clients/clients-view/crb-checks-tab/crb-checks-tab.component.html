@@ -1,6 +1,12 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
 
 <div class="crb-checks-page">
-
   <div class="page-header">
     <div>
       <h3>{{ 'CRB Verification History' | translate }}</h3>
@@ -23,13 +29,10 @@
   </div>
 
   <div *ngIf="!loading && loaded && !errorMessage">
-
     <mat-tab-group animationDuration="200ms">
-
       <!-- Overview -->
       <mat-tab label="{{ 'Overview' | translate }}">
         <div class="tab-content">
-
           <div class="summary-grid">
             <mat-card class="summary-card">
               <mat-card-content>
@@ -63,7 +66,7 @@
                 <span class="summary-label">
                   {{ 'Total Cost' | translate }}
                 </span>
-                <strong>{{ totalCost | number:'1.2-2' }}</strong>
+                <strong>{{ totalCost | number: '1.2-2' }}</strong>
                 <small>{{ checks[0]?.currency ?? '' }}</small>
               </mat-card-content>
             </mat-card>
@@ -111,46 +114,36 @@
               </mat-card-content>
             </mat-card>
           </div>
-
         </div>
       </mat-tab>
 
       <!-- Personal Details -->
       <mat-tab label="{{ 'Personal Details' | translate }}">
         <div class="tab-content">
-          <ng-container
-            *ngTemplateOutlet="attemptList; context: { $implicit: detailsChecks }">
-          </ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: detailsChecks }"> </ng-container>
         </div>
       </mat-tab>
 
       <!-- NIN -->
       <mat-tab label="{{ 'NIN' | translate }}">
         <div class="tab-content">
-          <ng-container
-            *ngTemplateOutlet="attemptList; context: { $implicit: ninChecks }">
-          </ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: ninChecks }"> </ng-container>
         </div>
       </mat-tab>
 
       <!-- Phone -->
       <mat-tab label="{{ 'Phone' | translate }}">
         <div class="tab-content">
-          <ng-container
-            *ngTemplateOutlet="attemptList; context: { $implicit: phoneChecks }">
-          </ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: phoneChecks }"> </ng-container>
         </div>
       </mat-tab>
 
       <!-- All Attempts -->
       <mat-tab label="{{ 'All Attempts' | translate }}">
         <div class="tab-content">
-          <ng-container
-            *ngTemplateOutlet="attemptList; context: { $implicit: checks }">
-          </ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: checks }"> </ng-container>
         </div>
       </mat-tab>
-
     </mat-tab-group>
   </div>
 </div>
@@ -162,13 +155,9 @@
   </div>
 
   <mat-accordion *ngIf="attempts.length > 0">
-    <mat-expansion-panel
-      *ngFor="let check of attempts; trackBy: trackByCheckId">
-
+    <mat-expansion-panel *ngFor="let check of attempts; trackBy: trackByCheckId">
       <mat-expansion-panel-header>
-        <mat-panel-title>
-          {{ check.requestType?.value }} — {{ check.status?.value }}
-        </mat-panel-title>
+        <mat-panel-title> {{ check.requestType?.value }} — {{ check.status?.value }} </mat-panel-title>
 
         <mat-panel-description>
           {{ formatDate(check.createdAt) }}
@@ -176,7 +165,6 @@
       </mat-expansion-panel-header>
 
       <div class="attempt-details">
-
         <div class="detail-row">
           <span>{{ 'Validation Type' | translate }}</span>
           <strong>{{ check.validationType?.value ?? '—' }}</strong>
@@ -234,11 +222,10 @@
           <pre>{{ check.responseDetails | json }}</pre>
         </div>
 
-<!--        <div class="response-section">-->
-<!--          <h4>{{ 'Raw Provider Response' | translate }}</h4>-->
-<!--          <pre>{{ parseResponsePayload(check) | json }}</pre>-->
-<!--        </div>-->
-
+        <!--        <div class="response-section">-->
+        <!--          <h4>{{ 'Raw Provider Response' | translate }}</h4>-->
+        <!--          <pre>{{ parseResponsePayload(check) | json }}</pre>-->
+        <!--        </div>-->
       </div>
     </mat-expansion-panel>
   </mat-accordion>

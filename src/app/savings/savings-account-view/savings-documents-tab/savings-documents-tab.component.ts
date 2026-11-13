@@ -1,16 +1,38 @@
-import { Component } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute } from '@angular/router';
 import { SavingsService } from 'app/savings/savings.service';
 import { SettingsService } from 'app/settings/settings.service';
-import { environment } from 'environments/environment';
+import { environment } from '../../../../environments/environment';
+import { EntityDocumentsTabComponent } from '../../../shared/tabs/entity-documents-tab/entity-documents-tab.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-savings-documents-tab',
   templateUrl: './savings-documents-tab.component.html',
-  styleUrls: ['./savings-documents-tab.component.scss']
+  styleUrls: ['./savings-documents-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    EntityDocumentsTabComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavingsDocumentsTabComponent {
+  private route = inject(ActivatedRoute);
+  private savingsService = inject(SavingsService);
+  private settingsService = inject(SettingsService);
+  dialog = inject(MatDialog);
+  private destroyRef = inject(DestroyRef);
+
   /** Stores the resolved savings documents data */
   entityDocuments: any;
   /** Stores the saving Account Id */
@@ -21,13 +43,8 @@ export class SavingsDocumentsTabComponent {
    * Retrieves the savings data from `resolve`.
    * @param {ActivatedRoute} route Activated Route.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private savingsService: SavingsService,
-    private settingsService: SettingsService,
-    public dialog: MatDialog
-  ) {
-    this.route.data.subscribe((data: { savingsDocuments: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { savingsDocuments: any }) => {
       this.setSavingsDocumentsData(data.savingsDocuments);
     });
     this.entityId = this.route.parent.snapshot.paramMap.get('savingAccountId');
@@ -59,13 +76,6 @@ export class SavingsDocumentsTabComponent {
       }
     });
     this.entityDocuments = data;
-  }
-
-  downloadDocument(documentId: string) {
-    this.savingsService.downloadSavingsDocument(this.entityId, documentId).subscribe((res) => {
-      const url = window.URL.createObjectURL(res);
-      window.open(url);
-    });
   }
 
   uploadDocument(formData: FormData): any {

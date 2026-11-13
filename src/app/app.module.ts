@@ -1,11 +1,16 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { HttpBackend, HttpClient, HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-
-/** Environment Configuration */
-import { environment } from '../environments/environment';
+import { HttpBackend, HttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
 
 /** Mock 2FA Interceptor */
 import { MockTwoFactorInterceptor } from './core/authentication/mock-two-factor.interceptor';
@@ -19,45 +24,27 @@ import { NotFoundComponent } from './not-found/not-found.component';
 /** Custom Modules */
 import { CoreModule } from './core/core.module';
 import { HomeModule } from './home/home.module';
-import { LoginModule } from './login/login.module';
-import { SettingsModule } from './settings/settings.module';
-import { NavigationModule } from './navigation/navigation.module';
-import { ClientsModule } from './clients/clients.module';
-import { GroupsModule } from './groups/groups.module';
-import { CentersModule } from './centers/centers.module';
-import { AccountingModule } from './accounting/accounting.module';
-import { SelfServiceModule } from './self-service/self-service.module';
-import { SystemModule } from './system/system.module';
-import { ProductsModule } from './products/products.module';
-import { OrganizationModule } from './organization/organization.module';
-import { TemplatesModule } from './templates/templates.module';
-import { UsersModule } from './users/users.module';
-import { ReportsModule } from './reports/reports.module';
-import { SearchModule } from './search/search.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { CollectionsModule } from './collections/collections.module';
-import { ProfileModule } from './profile/profile.module';
-import { TasksModule } from './tasks/tasks.module';
 import { ConfigurationWizardModule } from './configuration-wizard/configuration-wizard.module';
 import { PortalModule } from '@angular/cdk/portal';
 
 /** Main Routing Module */
 import { AppRoutingModule } from './app-routing.module';
 import { DatePipe, LocationStrategy } from '@angular/common';
-import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
+import { TranslateLoader, TranslateModule, MissingTranslationHandler } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
-/**
- * App Module
- *
- * Core module and all feature modules should be imported here in proper order.
- */
-
-export function HttpLoaderFactory(http: HttpClient) {
-  return new TranslateHttpLoader(http);
-}
+import { AuthenticationInterceptor as TokenInterceptor } from './core/authentication/authentication.interceptor';
+import { TokenInterceptor as ZitadelTokenInterceptor } from './zitadel/token.interceptor';
+import { AuthService } from './zitadel/auth.service';
+import { environment } from '../environments/environment';
+import { CallbackComponent } from './zitadel/callback/callback.component';
+import { OAuthModule } from 'angular-oauth2-oidc';
+import { provideLottieOptions } from 'ngx-lottie';
+import { CustomMissingTranslationHandler } from './core/translation/missing-translation.handler';
 
 @NgModule({
+  declarations: [WebAppComponent],
+  bootstrap: [WebAppComponent],
   imports: [
     TranslateModule.forRoot({
       loader: {
@@ -70,43 +57,35 @@ export function HttpLoaderFactory(http: HttpClient) {
           HttpBackend,
           LocationStrategy
         ]
-      }
+      },
+      // Without a default language ngx-translate has no catalogue to fall back on, so any key a
+      // locale is missing reaches the missing-translation handler and renders as a raw dotted key.
+      // Falling back to en-US degrades a gap to English instead, which is the readable failure.
+      defaultLanguage: 'en-US',
+      missingTranslationHandler: { provide: MissingTranslationHandler, useClass: CustomMissingTranslationHandler }
     }),
     BrowserModule,
     BrowserAnimationsModule,
-    HttpClientModule,
     PortalModule,
     CoreModule,
     HomeModule,
-    LoginModule,
-    ProfileModule,
-    SettingsModule,
-    NavigationModule,
-    ClientsModule,
-    ReportsModule,
-    GroupsModule,
-    CentersModule,
-    AccountingModule,
-    SelfServiceModule,
-    SystemModule,
-    ProductsModule,
-    OrganizationModule,
-    TemplatesModule,
-    UsersModule,
-    NotificationsModule,
-    SearchModule,
-    CollectionsModule,
-    TasksModule,
     ConfigurationWizardModule,
-    AppRoutingModule
-
-  ],
-  declarations: [
-    WebAppComponent,
-    NotFoundComponent
+    AppRoutingModule,
+    NotFoundComponent,
+    CallbackComponent,
+    OAuthModule.forRoot()
   ],
   providers: [
     DatePipe,
+    AuthService,
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: !environment.OIDC.oidcServerEnabled ? TokenInterceptor : ZitadelTokenInterceptor,
+      multi: true
+    },
+    provideLottieOptions({
+      player: () => import('lottie-web')
+    }),
     /**
      * Mock 2FA Interceptor (Optional)
      *
@@ -131,7 +110,6 @@ export function HttpLoaderFactory(http: HttpClient) {
           }
         ]
       : [])
-  ],
-  bootstrap: [WebAppComponent]
+  ]
 })
 export class AppModule {}

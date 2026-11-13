@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 /** rxjs Imports */
@@ -12,10 +20,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class GroupsService {
-  /**
-   * @param {HttpClient} http Http Client to send requests.
-   */
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
 
   /**
    * @param {any} filterBy Properties by which entries should be filtered.
@@ -305,8 +310,23 @@ export class GroupsService {
    * @returns {Observable<any>} Staff Data for group.
    */
   getStaff(id: number): Observable<any> {
-    const httpParams = new HttpParams().set('officeId', id.toString()).set('staffInSelectedOfficeOnly', 'true');
-    return this.http.get('/groups/template', { params: httpParams });
+    return this.getGroupTemplate({ officeId: id, staffInSelectedOfficeOnly: true });
+  }
+
+  /**
+   * @param {number} centerId Center Id of center the new group will belong to.
+   * @returns {Observable<any>} Group template scoped to the center (its office, staff options and default staff).
+   */
+  getCenterGroupTemplate(centerId: number): Observable<any> {
+    return this.getGroupTemplate({ centerId });
+  }
+
+  /**
+   * @param {object} params Group template query parameters.
+   * @returns {Observable<any>} Group template.
+   */
+  private getGroupTemplate(params: Record<string, string | number | boolean>): Observable<any> {
+    return this.http.get('/groups/template', { params: new HttpParams({ fromObject: params }) });
   }
 
   /**

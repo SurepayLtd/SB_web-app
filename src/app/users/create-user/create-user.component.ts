@@ -1,11 +1,31 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject,
+  DestroyRef,
+  ChangeDetectorRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
-import { UsersService } from '../users.service';
+import { ActivePasswordPolicy, UsersService } from '../users.service';
 import { PopoverService } from '../../configuration-wizard/popover/popover.service';
 
 /** Custom Dialog Component */
@@ -13,6 +33,8 @@ import { PasswordsUtility } from 'app/core/utils/passwords-utility';
 import { confirmPasswordValidator } from 'app/login/reset-password/confirm-password.validator';
 import { ConfigurationWizardService } from 'app/configuration-wizard/configuration-wizard.service';
 import { ContinueSetupDialogComponent } from 'app/configuration-wizard/continue-setup-dialog/continue-setup-dialog.component';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create user component.
@@ -20,17 +42,35 @@ import { ContinueSetupDialogComponent } from 'app/configuration-wizard/continue-
 @Component({
   selector: 'mifosx-create-user',
   templateUrl: './create-user.component.html',
-  styleUrls: ['./create-user.component.scss']
+  styleUrls: ['./create-user.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateUserComponent implements OnInit, AfterViewInit {
+  private formBuilder = inject(FormBuilder);
+  private usersService = inject(UsersService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private popoverService = inject(PopoverService);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private dialog = inject(MatDialog);
+  private passwordsUtility = inject(PasswordsUtility);
+  private destroyRef = inject(DestroyRef);
+  private changeDetectorRef = inject(ChangeDetectorRef);
+
   /** User form. */
-  userForm: UntypedFormGroup;
+  userForm: FormGroup;
   /** Offices data. */
   officesData: any;
   /** Roles data. */
   rolesData: any;
   /** Staff data. */
   staffData: any;
+  /** Description of the active password policy. */
+  passwordPolicyDescription: string | null = null;
 
   /* Reference of create user form */
   @ViewChild('userFormRef') userFormRef: ElementRef<any>;
@@ -46,17 +86,8 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
    * @param {ConfigurationWizardService} configurationWizardService ConfigurationWizard Service.
    * @param {PopoverService} popoverService PopoverService.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private usersService: UsersService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private popoverService: PopoverService,
-    private configurationWizardService: ConfigurationWizardService,
-    private dialog: MatDialog,
-    private passwordsUtility: PasswordsUtility
-  ) {
-    this.route.data.subscribe((data: { usersTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { usersTemplate: any }) => {
       this.officesData = data.usersTemplate.allowedOffices;
       this.rolesData = data.usersTemplate.availableRoles;
     });
@@ -69,6 +100,28 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
     this.createUserForm();
     this.setStaffData();
     this.setConditionalControls();
+    this.setPasswordPolicy();
+  }
+
+  /**
+   * Gets the active password policy. Fineract checks the password against it,
+   * but only sends its description, so the description is shown as the rule.
+   */
+  setPasswordPolicy() {
+    this.usersService
+      .getActivePasswordPolicy()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (policy: ActivePasswordPolicy) => {
+          this.passwordPolicyDescription = policy?.description ?? null;
+          this.changeDetectorRef.markForCheck();
+        },
+        // Without READ_PASSWORD_PREFERENCES the hint is left out; Fineract still checks the password.
+        error: () => {
+          this.passwordPolicyDescription = null;
+          this.changeDetectorRef.markForCheck();
+        }
+      });
   }
 
   /**
@@ -92,13 +145,15 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
           '',
           [
             Validators.required,
-            Validators.pattern('(^[A-z]).*')]
+            Validators.pattern('(^[A-Za-z]).*')
+          ]
         ],
         lastname: [
           '',
           [
             Validators.required,
-            Validators.pattern('(^[A-z]).*')]
+            Validators.pattern('(^[A-Za-z]).*')
+          ]
         ],
         sendPasswordToEmail: [true],
         passwordNeverExpires: [false],
@@ -121,38 +176,53 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
    * Sets the staff data each time the user selects a new office
    */
   setStaffData() {
-    this.userForm.get('officeId').valueChanges.subscribe((officeId: string) => {
-      this.staffData = [];
-      this.usersService.getStaff(officeId).subscribe((staff: any) => {
-        this.staffData = staff;
+    this.userForm
+      .get('officeId')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((officeId: string) => {
+        this.staffData = [];
+        this.usersService.getStaff(officeId).subscribe((staff: any) => {
+          this.staffData = staff;
+        });
       });
-    });
   }
 
   /**
    * Sets the conditional controls of the user form
    */
   setConditionalControls() {
-    this.userForm.get('sendPasswordToEmail').valueChanges.subscribe((sendPasswordToEmail: boolean) => {
-      if (sendPasswordToEmail) {
-        this.userForm.removeControl('password');
-        this.userForm.removeControl('repeatPassword');
-        this.userForm.get('email').setValidators([
-          Validators.required,
-          Validators.email
-        ]);
-      } else {
-        this.userForm.addControl('password', new UntypedFormControl('', this.passwordsUtility.getPasswordValidators()));
-        this.userForm.addControl(
-          'repeatPassword',
-          new UntypedFormControl('', [
+    this.userForm
+      .get('sendPasswordToEmail')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((sendPasswordToEmail: boolean) => {
+        if (sendPasswordToEmail) {
+          this.userForm.removeControl('password');
+          this.userForm.removeControl('repeatPassword');
+          this.userForm.get('email').setValidators([
             Validators.required,
-            this.passwordsUtility.confirmPassword('password')])
-        );
-        this.userForm.get('email').setValidators([Validators.email]);
-      }
-      this.userForm.get('email').updateValueAndValidity();
-    });
+            Validators.email
+          ]);
+        } else {
+          // Fineract checks the password against the active password policy and
+          // returns the policy description when it does not match.
+          this.userForm.addControl(
+            'password',
+            new FormControl('', [
+              Validators.required,
+              Validators.maxLength(50)
+            ])
+          );
+          this.userForm.addControl(
+            'repeatPassword',
+            new FormControl('', [
+              Validators.required,
+              this.passwordsUtility.confirmPassword('password')
+            ])
+          );
+          this.userForm.get('email').setValidators([Validators.email]);
+        }
+        this.userForm.get('email').updateValueAndValidity();
+      });
   }
 
   /**
@@ -165,7 +235,7 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
       delete user.staffId;
     }
     this.usersService.createUser(user).subscribe((response: any) => {
-      if (this.configurationWizardService.showUsersForm === true) {
+      if (this.configurationWizardService.showUsersForm) {
         this.configurationWizardService.showUsersForm = false;
         this.openDialog();
       } else {
@@ -200,7 +270,7 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showUsersForm === true) {
+    if (this.configurationWizardService.showUsersForm) {
       setTimeout(() => {
         this.showPopover(this.templateUserFormRef, this.userFormRef.nativeElement, 'top', true);
       });
@@ -222,7 +292,7 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
   previousStep() {
     this.configurationWizardService.showUsersForm = false;
     this.configurationWizardService.showUsersList = true;
-    this.router.navigate(['/users']);
+    this.router.navigate(['/appusers']);
   }
 
   /**
@@ -242,7 +312,7 @@ export class CreateUserComponent implements OnInit, AfterViewInit {
         this.configurationWizardService.showUsersForm = true;
         this.router.routeReuseStrategy.shouldReuseRoute = () => false;
         this.router.onSameUrlNavigation = 'reload';
-        this.router.navigate(['/organization/users/create']);
+        this.router.navigate(['/appusers/create']);
       } else if (response.step === 3) {
         this.configurationWizardService.showUsersForm = false;
         this.configurationWizardService.showMakerCheckerTable = true;

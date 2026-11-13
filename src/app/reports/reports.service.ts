@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 /** rxjs Imports */
@@ -18,10 +26,7 @@ import { ChartData } from './common-models/chart-data.model';
   providedIn: 'root'
 })
 export class ReportsService {
-  /**
-   * @param {HttpClient} http Http Client to send requests.
-   */
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
 
   /**
    * @returns {Observable<any>} Reports data
@@ -31,42 +36,11 @@ export class ReportsService {
   }
 
   /**
-   * @returns {Observable<any>} Mix Taxonomy data
-   */
-  getMixTaxonomyArray(): Observable<any> {
-    return this.http.get('/mixtaxonomy');
-  }
-
-  /**
-   * @returns {Observable<any>} Mix Taxonomy data
-   */
-  getMixMappings(): Observable<any> {
-    return this.http.get('/mixmapping');
-  }
-
-  /**
-   * @param {any} mixMappingData Mix Mapping data to be posted
-   * @returns {Observable<any>} response code
-   */
-  editMixMappings(mixMappingData: any): Observable<any> {
-    return this.http.put('/mixmapping', mixMappingData);
-  }
-
-  /**
-   * @param {any} dates start date and end date
-   * @returns {Observable<any>} Mix Report
-   */
-  getMixReport(dates: any): Observable<any> {
-    const httpParams = new HttpParams().set('startDate', dates.startDate).set('endDate', dates.endDate);
-    return this.http.get('/mixreport', { params: httpParams, responseType: 'text' });
-  }
-
-  /**
    * @param {string} reportName Report name for which parameters are needed.
    * @returns {Observable<ReportParameter[]>}
    */
   getReportParams(reportName: string): Observable<ReportParameter[]> {
-    const httpParams = new HttpParams().set('R_reportListing', `'${reportName}'`).set('parameterType', 'true');
+    const httpParams = new HttpParams().set('R_reportListing', `${reportName}`).set('parameterType', 'true');
     return this.http
       .get(`/runreports/FullParameterList`, { params: httpParams })
       .pipe(map((response: any) => response.data.map((entry: any) => new ReportParameter(entry.row))));
@@ -137,6 +111,47 @@ export class ReportsService {
    * @returns {Observable<any>}
    */
   getPentahoRunReportData(
+    reportName: string,
+    formData: object,
+    tenantIdentifier: string,
+    locale: string,
+    dateFormat: string
+  ): Observable<any> {
+    let httpParams = new HttpParams()
+      .set('tenantIdentifier', tenantIdentifier)
+      .set('locale', locale)
+      .set('dateFormat', dateFormat);
+    for (const [
+      key,
+      value
+    ] of Object.entries(formData)) {
+      httpParams = httpParams.set(key, value);
+    }
+    return this.http.get(`/runreports/${reportName}`, {
+      responseType: 'arraybuffer',
+      observe: 'response',
+      params: httpParams
+    });
+  }
+
+  /**
+   * @param {number} reportId
+   * @returns {Observable<any>}
+   */
+  getBirtParams(reportId: number): Observable<any> {
+    const httpParams = new HttpParams().set('fields', 'reportParameters');
+    return this.http
+      .get(`/reports/${reportId}`, { params: httpParams })
+      .pipe(map((response: any) => response.reportParameters));
+  }
+
+  /**
+   * Run Report Data for BIRT.
+   * @param {any} reportName
+   * @param {object} formData
+   * @returns {Observable<any>}
+   */
+  getBirtRunReportData(
     reportName: string,
     formData: object,
     tenantIdentifier: string,

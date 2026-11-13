@@ -1,37 +1,96 @@
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import * as _ from 'lodash';
 
 /** Custom Services */
 import { PopoverService } from '../../configuration-wizard/popover/popover.service';
 import { ConfigurationWizardService } from '../../configuration-wizard/configuration-wizard.service';
 import { SystemService } from '../system.service';
+import { TranslateService } from '@ngx-translate/core';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatList, MatListItem } from '@angular/material/list';
+import { NgClass } from '@angular/common';
+import { MatDivider } from '@angular/material/divider';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+
+interface Permission {
+  code: string;
+  id: number;
+  selected: boolean;
+  grouping?: string;
+}
+
+interface PermissionGroup {
+  permissions: Permission[];
+}
+
+interface PermissionData {
+  [key: string]: PermissionGroup;
+}
+
+interface SubmitPermissionData {
+  permissions: {
+    [key: string]: boolean;
+  };
+}
 
 @Component({
   selector: 'mifosx-configure-maker-checker-tasks',
   templateUrl: './configure-maker-checker-tasks.component.html',
-  styleUrls: ['./configure-maker-checker-tasks.component.scss']
+  styleUrls: ['./configure-maker-checker-tasks.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatList,
+    MatListItem,
+    NgClass,
+    MatDivider,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConfigureMakerCheckerTasksComponent implements OnInit, AfterViewInit {
-  permissionsData: any;
+  private route = inject(ActivatedRoute);
+  private systemService = inject(SystemService);
+  private formBuilder = inject(UntypedFormBuilder);
+  private router = inject(Router);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  private translateService = inject(TranslateService);
+
+  permissionsData: Permission[] = [];
   groupings: string[] = [];
+  currentGrouping = '';
+  tempPermissionUIData: PermissionData = {};
+  permissions: PermissionGroup = { permissions: [] };
+
   formData = {};
   isDisabled = true;
   newEntry: any;
   selectedItem = '';
   previousGrouping = '';
   checkboxesChanged: Boolean = false;
-  currentGrouping: string;
   formGroup: UntypedFormGroup;
   backupform: UntypedFormGroup;
-
-  permissions: {
-    permissions: { code: string; id: number }[];
-  };
-  tempPermissionUIData: {
-    permissions: { code: string }[];
-  }[];
 
   /* Reference of edit button */
   @ViewChild('buttonEdit') buttonEdit: ElementRef<any>;
@@ -50,14 +109,7 @@ export class ConfigureMakerCheckerTasksComponent implements OnInit, AfterViewIni
    * @param {ConfigurationWizardService} configurationWizardService ConfigurationWizard Service.
    * @param {PopoverService} popoverService PopoverService.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private systemService: SystemService,
-    private formBuilder: UntypedFormBuilder,
-    private router: Router,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { permissions: any }) => {
       this.permissionsData = data.permissions;
     });
@@ -95,54 +147,93 @@ export class ConfigureMakerCheckerTasksComponent implements OnInit, AfterViewIni
     });
   }
 
-  setMakerCheckerTask() {
-    this.tempPermissionUIData = [
-      {
-        permissions: []
+  setMakerCheckerTask(): void {
+    this.tempPermissionUIData = {};
+
+    for (const permission of this.permissionsData) {
+      if (permission.grouping !== this.currentGrouping) {
+        this.currentGrouping = permission.grouping || '';
+        this.groupings.push(this.currentGrouping);
+        this.tempPermissionUIData[this.currentGrouping] = { permissions: [] };
       }
-    ];
-    for (const i in this.permissionsData) {
-      if (this.permissionsData[i]) {
-        if (this.permissionsData[i].grouping !== this.currentGrouping) {
-          this.currentGrouping = this.permissionsData[i].grouping;
-          this.groupings.push(this.currentGrouping);
-          this.tempPermissionUIData[this.currentGrouping] = { permissions: [] };
-        }
-        const temp = { code: this.permissionsData[i].code, id: i, selected: this.permissionsData[i].selected };
-        this.tempPermissionUIData[this.currentGrouping].permissions.push(temp);
-      }
+
+      const temp: Permission = {
+        code: permission.code,
+        id: permission.id,
+        selected: permission.selected
+      };
+
+      this.tempPermissionUIData[this.currentGrouping].permissions.push(temp);
     }
   }
 
-  showPermissions(grouping: string) {
-    this.permissions = this.tempPermissionUIData[grouping];
-    this.selectedItem = grouping;
-    this.previousGrouping = grouping;
+  showPermissions(grouping: string): void {
+    const group = this.tempPermissionUIData[grouping];
+    if (group) {
+      this.permissions = group;
+      this.selectedItem = grouping;
+      this.previousGrouping = grouping;
+    }
   }
 
-  permissionName = function (name: any) {
-    name = name || '';
-    // replace '_' with ' '
-    name = name.replace(/_/g, ' ');
-    // for reorts replace read with view
+  permissionName(name: string): string {
+    name = (name || '').trim();
+
+    // Special case: reports replace READ with View
     if (this.previousGrouping === 'report') {
-      name = name.replace(/READ/g, 'View');
+      name = name.replace(/^READ_/, 'VIEW_');
     }
-    return name;
-  };
 
-  formatName = function (stringVal: string) {
-    stringVal = stringVal || '';
-    if (stringVal.indexOf('portfolio_') > -1) {
-      stringVal = stringVal.replace('portfolio_', '');
+    // Split into action + entity at the first underscore
+    const underscoreIndex = name.indexOf('_');
+    if (underscoreIndex === -1) {
+      const key = `labels.permissions.actions.${name}`;
+      const t = this.translateService.instant(key);
+      return t !== key ? t : this.titleCase(name);
     }
-    if (stringVal.indexOf('transaction_') > -1) {
-      const temp = stringVal.split('_');
-      stringVal = temp[1] + ' ' + temp[0].charAt(0).toUpperCase() + temp[0].slice(1) + 's';
+
+    const action = name.substring(0, underscoreIndex);
+    const entity = name.substring(underscoreIndex + 1);
+
+    const actionKey = `labels.permissions.actions.${action}`;
+    const translatedAction = this.translateService.instant(actionKey);
+    const actionResult = translatedAction !== actionKey ? translatedAction : this.titleCase(action);
+
+    const entityKey = `labels.permissions.entities.${entity}`;
+    const translatedEntity = this.translateService.instant(entityKey);
+    const entityResult = translatedEntity !== entityKey ? translatedEntity : this.titleCase(entity.replace(/_/g, ' '));
+
+    return `${actionResult} ${entityResult}`;
+  }
+
+  formatName(string: string): string {
+    if (!string) {
+      return string;
     }
-    stringVal = stringVal.charAt(0).toUpperCase() + stringVal.slice(1);
-    return stringVal;
-  };
+    // Try to translate first
+    const translationKey = `labels.catalogs.${string}`;
+    const translated = this.translateService.instant(translationKey);
+
+    // If translation exists (and is different from key), use it
+    if (translated && translated !== translationKey) {
+      return translated;
+    }
+
+    // Otherwise, format the original string
+    if (string.indexOf('portfolio_') > -1) {
+      string = string.replace('portfolio_', '');
+    }
+    if (string.indexOf('transaction_') > -1) {
+      const temp = string.split('_');
+      string = temp[1] + ' ' + temp[0].charAt(0).toUpperCase() + temp[0].slice(1) + 's';
+    }
+    string = string.charAt(0).toUpperCase() + string.slice(1);
+    return string;
+  }
+
+  private titleCase(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
 
   /**
    * Backups the valued
@@ -175,17 +266,20 @@ export class ConfigureMakerCheckerTasksComponent implements OnInit, AfterViewIni
     this.formGroup.controls.roster.disable();
   }
 
-  submit() {
-    const value = this.formGroup.get('roster').value;
-    const data = {};
-    const permissionData = {
+  submit(): void {
+    const value = this.formGroup.get('roster')?.value;
+    const permissionData: SubmitPermissionData = {
       permissions: {}
     };
-    for (let i = 0; i < value.length; i++) {
-      data[value[i].code] = value[i].selected;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item.code && typeof item.selected === 'boolean') {
+          permissionData.permissions[item.code] = item.selected;
+        }
+      });
     }
-    permissionData.permissions = data;
-    this.formGroup.controls.roster.disable();
+    this.formGroup.get('roster')?.disable();
     this.checkboxesChanged = false;
     this.isDisabled = true;
     this.systemService.updateMakerCheckerPermission(permissionData).subscribe((response: any) => {});
@@ -211,12 +305,12 @@ export class ConfigureMakerCheckerTasksComponent implements OnInit, AfterViewIni
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showMakerCheckerTablePage === true) {
+    if (this.configurationWizardService.showMakerCheckerTablePage) {
       setTimeout(() => {
         this.showPopover(this.templateButtonEdit, this.buttonEdit.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showMakerCheckerTableList === true) {
+    if (this.configurationWizardService.showMakerCheckerTableList) {
       setTimeout(() => {
         this.showPopover(this.templateMcTable, this.mcTable.nativeElement, 'top', true);
       });

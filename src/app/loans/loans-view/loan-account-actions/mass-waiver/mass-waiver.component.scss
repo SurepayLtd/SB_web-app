@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 .centered-title {
   text-align: center;
   font-weight: 600;
@@ -5,7 +13,7 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* stylelint-disable-line unit-allowed-list */
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -38,6 +46,7 @@
   color: #555;
   margin-bottom: 12px;
 }
+
 .expandcollapsebutton {
   margin-top: -7px;
 }

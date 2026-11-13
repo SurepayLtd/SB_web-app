@@ -1,12 +1,27 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import {
+  UntypedFormGroup,
+  UntypedFormBuilder,
+  UntypedFormControl,
+  Validators,
+  ReactiveFormsModule
+} from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { GroupsService } from '../groups.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit Group component.
@@ -14,9 +29,20 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-edit-group',
   templateUrl: './edit-group.component.html',
-  styleUrls: ['./edit-group.component.scss']
+  styleUrls: ['./edit-group.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditGroupComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private groupService = inject(GroupsService);
+  private dateUtils = inject(Dates);
+  private settingsService = inject(SettingsService);
+
   /** Minimum date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum date allowed. */
@@ -39,19 +65,13 @@ export class EditGroupComponent implements OnInit {
    * @param {Dates} dateUtils Date Utils to format date.
    * @param {SettingsService} settingsService SettingsService
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private groupService: GroupsService,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { groupAndTemplateData: any; groupViewData: any }) => {
       this.staffData = data.groupAndTemplateData.staffOptions;
       this.groupData = data.groupAndTemplateData;
       this.submittedOnDate =
-        data.groupViewData.timeline.submittedOnDate && new Date(data.groupViewData.timeline.submittedOnDate);
+        data.groupViewData.timeline.submittedOnDate &&
+        this.dateUtils.parseDate(data.groupViewData.timeline.submittedOnDate);
     });
   }
 
@@ -78,7 +98,8 @@ export class EditGroupComponent implements OnInit {
         '',
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       submittedOnDate: [
         '',
@@ -98,7 +119,7 @@ export class EditGroupComponent implements OnInit {
       this.editGroupForm.addControl('activationDate', new UntypedFormControl('', Validators.required));
       this.editGroupForm
         .get('activationDate')
-        .patchValue(this.groupData.activationDate && new Date(this.groupData.activationDate));
+        .patchValue(this.groupData.activationDate && this.dateUtils.parseDate(this.groupData.activationDate));
     } else {
       this.editGroupForm.removeControl('activationDate');
     }

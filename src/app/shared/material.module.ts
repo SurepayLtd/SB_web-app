@@ -1,9 +1,16 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 import { LayoutModule } from '@angular/cdk/layout';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { STEPPER_GLOBAL_OPTIONS } from '@angular/cdk/stepper';
-import { FlexLayoutModule } from '@angular/flex-layout';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,8 +18,9 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatNativeDateModule } from '@angular/material/core';
+import { DateAdapter, MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { CustomDateAdapter } from 'app/core/utils/custom-date-adapter';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -23,8 +31,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -43,12 +51,11 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 /**
  * Material Module
  *
- * Angular CDK, Angular Material and Flex Layout modules are exported here.
+ * Angular CDK and Angular Material modules are exported here.
  */
 @NgModule({
   exports: [
     DragDropModule,
-    FlexLayoutModule,
     LayoutModule,
     MatAutocompleteModule,
     MatButtonModule,
@@ -89,7 +96,7 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
   providers: [
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
-      useValue: { appearance: 'standard' }
+      useValue: { appearance: 'fill' }
     },
     {
       provide: STEPPER_GLOBAL_OPTIONS,
@@ -97,6 +104,10 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
         showError: true,
         displayDefaultIndicatorType: false
       }
+    },
+    {
+      provide: DateAdapter,
+      useClass: CustomDateAdapter
     }
   ]
 })

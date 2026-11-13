@@ -1,4 +1,12 @@
-import { Currency } from 'app/shared/models/general.model';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { CodeValue, Currency } from 'app/shared/models/general.model';
 
 export interface DelinquencyRange {
   id: number;
@@ -8,6 +16,7 @@ export interface DelinquencyRange {
 
 export interface DelinquentData {
   availableDisbursementAmount: number;
+  availableDisbursementAmountWithOverApplied: number;
   pastDueDays: number;
   nextPaymentDueDate: number[];
   delinquentDays: number;
@@ -39,10 +48,16 @@ export interface LoanDelinquencyAction {
   action: string;
   startDate: number[];
   endDate: number[];
+  effectiveEndDate?: number[];
   createdById: number;
   createdOn: Date;
   updatedById: number;
   lastModifiedOn: Date;
+  /** Payment rule, returned only for RESCHEDULE actions on working capital loans */
+  minimumPayment?: number;
+  minimumPaymentType?: string;
+  frequency?: number;
+  frequencyType?: string;
 }
 
 export interface DelinquencyPausePeriod {
@@ -114,4 +129,98 @@ export interface RepaymentSchedulePeriod {
   totalWaivedForPeriod?: number;
   totalWrittenOffForPeriod?: number;
   totalInstallmentAmountForPeriod?: number;
+}
+
+export interface DisbursementData {
+  actualDisbursementDate: Date;
+  expectedDisbursementDate: Date;
+  principal: number;
+  id?: number;
+}
+
+export interface LoanDeferredIncomeData {
+  capitalizedIncomeData: LoanCapitalizedIncomeData[];
+}
+
+export interface LoanCapitalizedIncomeData {
+  amount: number;
+  amortizedAmount?: number;
+  unrecognizedAmount?: number;
+  amountAdjustment?: number;
+}
+
+export interface BuyDownFeeAmortizationDetails {
+  id: number;
+  loanId: number;
+  transactionId: number;
+  buyDownFeeDate: string;
+  buyDownFeeAmount: number;
+  amortizedAmount: number;
+  notYetAmortizedAmount: number;
+  adjustedAmount: number;
+  chargedOffAmount: number;
+}
+
+export interface EditablePeriod extends RepaymentSchedulePeriod {
+  changed?: boolean;
+  /** True when the due date differs from the unmodified schedule, to highlight the date cell. */
+  dueDateChanged?: boolean;
+  /** Formatted due date of the unmodified schedule, kept as the key for schedule variation records. */
+  originalDueDate?: string;
+  /** Installment amount of the unmodified schedule, to detect reverted edits. */
+  originalTotalDueForPeriod?: number;
+  /** Raw due date of the unmodified schedule, to restore the row when it is marked for deletion. */
+  originalDueDateValue?: number[];
+  /** True when the installment is marked for deletion via `exceptions.deletedinstallments`. */
+  deleted?: boolean;
+}
+
+/** Delete/restore toggle of one installment, keyed by its unmodified due date. */
+export interface ScheduleDeleteRecord {
+  dueDate: string;
+  deleted: boolean;
+}
+
+export interface EditableRepaymentSchedule extends RepaymentSchedule {
+  periods: EditablePeriod[];
+}
+
+export interface RepaymentScheduleEditCache {
+  edit: boolean;
+  data: RepaymentSchedulePeriod;
+}
+
+/**
+ * One entry of the `exceptions.modifiedinstallments` array of the Fineract
+ * loan schedule variations API. `dueDate` identifies the original installment;
+ * `installmentAmount` and `modifiedDueDate` carry the requested changes.
+ */
+export interface ScheduleChangeRecord {
+  dueDate: string;
+  installmentAmount?: number;
+  modifiedDueDate?: string;
+}
+
+export interface LoanOriginator {
+  id: number;
+  externalId: string;
+  name: string;
+  status: string;
+  originatorType?: CodeValue;
+  channelType?: CodeValue;
+}
+
+export interface DelinquencyRangeSchedule {
+  id: number;
+  loanId: number;
+  periodNumber: number;
+  fromDate: string;
+  toDate: string;
+  /** Null when the period was administratively reset — render as empty, not 0. */
+  expectedAmount: number | null;
+  paidAmount: number;
+  outstandingAmount: number;
+  minPaymentCriteriaMet?: boolean;
+  delinquentDays?: number;
+  delinquentAmount?: number;
 }

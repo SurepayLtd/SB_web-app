@@ -1,12 +1,23 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports. */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
 
 /** Custom Services. */
 import { OrganizationService } from 'app/organization/organization.service';
 import { SettingsService } from 'app/settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Allocate Cash component.
@@ -14,9 +25,21 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-allocate-cash',
   templateUrl: './allocate-cash.component.html',
-  styleUrls: ['./allocate-cash.component.scss']
+  styleUrls: ['./allocate-cash.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AllocateCashComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private organizationService = inject(OrganizationService);
+  private settingsService = inject(SettingsService);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Date allowed. */
@@ -24,7 +47,7 @@ export class AllocateCashComponent implements OnInit {
   /** Cashier data. */
   cashierData: any;
   /** Cashier Form. */
-  allocateCashForm: UntypedFormGroup;
+  allocateCashForm: FormGroup;
 
   /**
    * Get cashier data from `Resolver`.
@@ -35,15 +58,8 @@ export class AllocateCashComponent implements OnInit {
    * @param {SettingsService} settingsService Settings Service.
    * @param {Router} router Router.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    private organizationService: OrganizationService,
-    private settingsService: SettingsService,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { cashierTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { cashierTemplate: any }) => {
       this.cashierData = data.cashierTemplate;
     });
   }
@@ -71,7 +87,7 @@ export class AllocateCashComponent implements OnInit {
         }
       ],
       txnDate: [
-        new Date(),
+        this.settingsService.businessDate,
         Validators.required
       ],
       currencyCode: [
@@ -107,6 +123,7 @@ export class AllocateCashComponent implements OnInit {
     };
     this.organizationService
       .allocateCash(this.cashierData.tellerId, this.cashierData.cashierId, data)
+      .pipe(take(1))
       .subscribe((response: any) => {
         this.router.navigate(['../'], { relativeTo: this.route });
       });

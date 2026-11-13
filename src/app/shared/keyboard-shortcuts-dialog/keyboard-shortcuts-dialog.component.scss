@@ -1,4 +1,38 @@
-.modifierKey {
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+/* Shortcut on the left, description right beside it, both aligned on every row. */
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 120px 1fr; /* stylelint-disable-line unit-allowed-list */
+  column-gap: 16px;
+  align-items: center;
+  padding-block: 8px;
+}
+
+.shortcut-combination,
+.shortcut-description {
+  min-width: 0;
+}
+
+/* Long descriptions wrap instead of stretching the dialog. */
+.shortcut-description {
+  overflow-wrap: break-word;
+}
+
+@media (width <= 599px) {
+  .shortcut-row {
+    grid-template-columns: 104px 1fr; /* stylelint-disable-line unit-allowed-list */
+    column-gap: 8px;
+  }
+}
+
+.modifier-key {
   border: 1px solid #0000004d;
   padding: 0.3rem;
   background: #f8f8f8;

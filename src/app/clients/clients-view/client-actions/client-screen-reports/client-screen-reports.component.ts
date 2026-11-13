@@ -1,11 +1,32 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Renderer2, ViewChild, ElementRef, SecurityContext } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  Renderer2,
+  SecurityContext,
+  ViewChild,
+  inject
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { ClientsService } from 'app/clients/clients.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Client Screen Reports Component.
@@ -13,11 +34,23 @@ import { DomSanitizer } from '@angular/platform-browser';
 @Component({
   selector: 'mifosx-client-screen-reports',
   templateUrl: './client-screen-reports.component.html',
-  styleUrls: ['./client-screen-reports.component.scss']
+  styleUrls: ['./client-screen-reports.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientScreenReportsComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private clientsService = inject(ClientsService);
+  private route = inject(ActivatedRoute);
+  private sanitizer = inject(DomSanitizer);
+  private renderer = inject(Renderer2);
+  private destroyRef = inject(DestroyRef);
+
   /** Client Screen Reportform. */
-  clientScreenReportForm: UntypedFormGroup;
+  clientScreenReportForm: FormGroup;
   /** Templates Data */
   templatesData: any;
   /** Client Id */
@@ -36,14 +69,8 @@ export class ClientScreenReportsComponent implements OnInit {
    * @param {DomSanitizer} sanitizer DOM Sanitizer
    * @param {Renderer2} renderer Renderer 2
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private clientsService: ClientsService,
-    private route: ActivatedRoute,
-    private sanitizer: DomSanitizer,
-    private renderer: Renderer2
-  ) {
-    this.route.data.subscribe((data: { clientActionData: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { clientActionData: any }) => {
       this.templatesData = data.clientActionData;
     });
     this.clientId = this.route.parent.snapshot.params['clientId'];

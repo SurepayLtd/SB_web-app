@@ -1,14 +1,16 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
 <div class="analytics-container">
   <!-- ── Filter Panel ── -->
   <mat-card class="filter-card">
     <mat-card-content>
-      <form
-        [formGroup]="filterForm"
-        (ngSubmit)="applyFilters()"
-        fxLayout="row wrap"
-        fxLayoutAlign="start center"
-        fxLayoutGap="16px"
-      >
+      <form class="layout-row-wrap align-start-center gap-12px" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
         <!-- Start Date -->
         <mat-form-field class="filter-field" (click)="startDatePicker.open()">
           <mat-label>Start Date</mat-label>
@@ -53,7 +55,7 @@
         </mat-form-field>
 
         <!-- Action buttons -->
-        <div class="filter-actions" fxLayout="row" fxLayoutGap="8px">
+        <div class="layout-row gap-8px filter-actions">
           <button mat-raised-button color="primary" type="submit" [disabled]="filterForm.invalid || isLoading">
             <mat-icon>search</mat-icon> Apply
           </button>
@@ -174,7 +176,9 @@
         <mat-card-content>
           <mat-icon class="kpi-icon">collections</mat-icon>
           <div class="kpi-label">Total Momo Transactions</div>
-          <div class="kpi-value">Amount: {{ formatCurrency(analyticsData.executiveSnapshot.overallMomoTransactions) }}</div>
+          <div class="kpi-value">
+            Amount: {{ formatCurrency(analyticsData.executiveSnapshot.overallMomoTransactions) }}
+          </div>
         </mat-card-content>
       </mat-card>
     </div>
@@ -182,14 +186,15 @@
     <!-- ── Momo Snapshot ── -->
     <h2 class="section-title"><mat-icon>dashboard</mat-icon> Momo Transactions Snapshot</h2>
     <div class="cards-grid">
-
       <mat-card class="kpi-card accent-purple">
         <mat-card-content>
           <mat-icon class="kpi-icon">collections</mat-icon>
           <div class="kpi-label">Total Momo Transactions</div>
           <div class="kpi-value">{{ analyticsData.momoTransactions.totalTransactions | number }}</div>
           <div class="kpi-sub">Overall: {{ formatCurrency(analyticsData.momoTransactions.overallTransactions) }}</div>
-          <div class="kpi-sub">Average: {{ formatCurrency(analyticsData.momoTransactions.averageTransactionValue) }}</div>
+          <div class="kpi-sub">
+            Average: {{ formatCurrency(analyticsData.momoTransactions.averageTransactionValue) }}
+          </div>
         </mat-card-content>
       </mat-card>
 
@@ -216,7 +221,9 @@
           <mat-icon class="kpi-icon">money_off</mat-icon>
           <div class="kpi-label">Total Momo Disbursements</div>
           <div class="kpi-value">{{ analyticsData.momoTransactions.loanDisbursementTransactions | number }}</div>
-          <div class="kpi-sub">Disbursements: {{ formatCurrency(analyticsData.momoTransactions.totalLoanDisbursements) }}</div>
+          <div class="kpi-sub">
+            Disbursements: {{ formatCurrency(analyticsData.momoTransactions.totalLoanDisbursements) }}
+          </div>
         </mat-card-content>
       </mat-card>
 
@@ -225,7 +232,9 @@
           <mat-icon class="kpi-icon">collections</mat-icon>
           <div class="kpi-label">Total Momo Repayments</div>
           <div class="kpi-value">{{ analyticsData.momoTransactions.loanRepaymentTransactions | number }}</div>
-          <div class="kpi-sub">Repayments: {{ formatCurrency(analyticsData.momoTransactions.totalLoanRepayments) }}</div>
+          <div class="kpi-sub">
+            Repayments: {{ formatCurrency(analyticsData.momoTransactions.totalLoanRepayments) }}
+          </div>
         </mat-card-content>
       </mat-card>
     </div>

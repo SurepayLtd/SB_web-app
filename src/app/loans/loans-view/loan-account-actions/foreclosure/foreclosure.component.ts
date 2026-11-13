@@ -1,21 +1,36 @@
-import { Component, Input, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
-import { LoansService } from 'app/loans/loans.service';
-import { ActivatedRoute, Router } from '@angular/router';
 
 /** Custom Services */
-import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 
 @Component({
   selector: 'mifosx-foreclosure',
   templateUrl: './foreclosure.component.html',
-  styleUrls: ['./foreclosure.component.scss']
+  styleUrls: ['./foreclosure.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ForeclosureComponent implements OnInit {
-  @Input() dataObject: any;
+export class ForeclosureComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private formBuilder = inject(UntypedFormBuilder);
+  private dateUtils = inject(Dates);
 
-  loanId: any;
   foreclosureForm: UntypedFormGroup;
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
@@ -23,22 +38,8 @@ export class ForeclosureComponent implements OnInit {
   maxDate = new Date();
   foreclosuredata: any;
 
-  /**
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {LoansService} systemService Loan Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   * @param {SettingsService} settingsService Settings Service
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  constructor() {
+    super();
   }
 
   ngOnInit() {
@@ -50,7 +51,7 @@ export class ForeclosureComponent implements OnInit {
   createforeclosureForm() {
     this.foreclosureForm = this.formBuilder.group({
       transactionDate: [
-        this.dataObject.date && new Date(this.dataObject.date),
+        this.dataObject.date && this.dateUtils.parseDate(this.dataObject.date),
         Validators.required
       ],
       outstandingPrincipalPortion: [{ value: this.dataObject.principalPortion || 0, disabled: true }],
@@ -66,9 +67,12 @@ export class ForeclosureComponent implements OnInit {
   }
 
   onChanges(): void {
-    this.foreclosureForm.get('transactionDate').valueChanges.subscribe((val) => {
-      this.retrieveLoanForeclosureTemplate(val);
-    });
+    this.foreclosureForm
+      .get('transactionDate')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((val) => {
+        this.retrieveLoanForeclosureTemplate(val);
+      });
   }
 
   retrieveLoanForeclosureTemplate(val: any) {
@@ -107,7 +111,7 @@ export class ForeclosureComponent implements OnInit {
     };
 
     this.loanService.loanForclosureData(this.loanId, data).subscribe((response: any) => {
-      this.router.navigate([`../../general`], { relativeTo: this.route });
+      this.gotoLoanDefaultView();
     });
   }
 }

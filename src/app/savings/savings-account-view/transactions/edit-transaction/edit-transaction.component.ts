@@ -1,13 +1,25 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
 
 /** Custom Services */
 import { SavingsService } from 'app/savings/savings.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Currency } from 'app/shared/models/general.model';
+import { InputAmountComponent } from '../../../../shared/input-amount/input-amount.component';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit Transaction component.
@@ -15,15 +27,29 @@ import { Currency } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-edit-transaction',
   templateUrl: './edit-transaction.component.html',
-  styleUrls: ['./edit-transaction.component.scss']
+  styleUrls: ['./edit-transaction.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    MatSlideToggle
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditTransactionComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private savingsService = inject(SavingsService);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+
   /** Minimum Due Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Due Date allowed. */
   maxDate = new Date();
   /** Savings account transaction form. */
-  editTransactionForm: UntypedFormGroup;
+  editTransactionForm: FormGroup;
   /** savings account transaction payment options. */
   paymentTypeOptions: {
     id: number;
@@ -49,21 +75,16 @@ export class EditTransactionComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {SettingsService} settingsService Setting service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private savingsService: SavingsService,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { savingsAccountTransactionTemplate: any }) => {
-      this.transactionTemplateData = data.savingsAccountTransactionTemplate;
-      if (data.savingsAccountTransactionTemplate.currency) {
-        this.currency = data.savingsAccountTransactionTemplate.currency;
-      }
-      this.paymentTypeOptions = this.transactionTemplateData.paymentTypeOptions;
-    });
+  constructor() {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { savingsAccountTransactionTemplate: any }) => {
+        this.transactionTemplateData = data.savingsAccountTransactionTemplate;
+        if (data.savingsAccountTransactionTemplate.currency) {
+          this.currency = data.savingsAccountTransactionTemplate.currency;
+        }
+        this.paymentTypeOptions = this.transactionTemplateData.paymentTypeOptions;
+      });
     this.savingAccountId = this.route.snapshot.params['savingAccountId'];
   }
 
@@ -74,9 +95,9 @@ export class EditTransactionComponent implements OnInit {
     this.maxDate = this.settingsService.businessDate;
     this.createEditTransactionForm();
     this.editTransactionForm.patchValue({
-      transactionDate: this.transactionTemplateData.date && new Date(this.transactionTemplateData.date),
+      transactionDate: this.transactionTemplateData.date && this.dateUtils.parseDate(this.transactionTemplateData.date),
       transactionAmount: this.transactionTemplateData.amount,
-      paymentTypeId: this.transactionTemplateData.paymentTypeId
+      paymentTypeId: this.transactionTemplateData.paymentDetailData?.paymentType?.id ?? ''
     });
   }
 
@@ -103,11 +124,11 @@ export class EditTransactionComponent implements OnInit {
   addPaymentDetails() {
     this.showPaymentDetails = !this.showPaymentDetails;
     if (this.showPaymentDetails) {
-      this.editTransactionForm.addControl('accountNumber', new UntypedFormControl(''));
-      this.editTransactionForm.addControl('checkNumber', new UntypedFormControl(''));
-      this.editTransactionForm.addControl('routingCode', new UntypedFormControl(''));
-      this.editTransactionForm.addControl('receiptNumber', new UntypedFormControl(''));
-      this.editTransactionForm.addControl('bankNumber', new UntypedFormControl(''));
+      this.editTransactionForm.addControl('accountNumber', new FormControl(''));
+      this.editTransactionForm.addControl('checkNumber', new FormControl(''));
+      this.editTransactionForm.addControl('routingCode', new FormControl(''));
+      this.editTransactionForm.addControl('receiptNumber', new FormControl(''));
+      this.editTransactionForm.addControl('bankNumber', new FormControl(''));
     } else {
       this.editTransactionForm.removeControl('accountNumber');
       this.editTransactionForm.removeControl('checkNumber');

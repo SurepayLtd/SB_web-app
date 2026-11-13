@@ -1,10 +1,31 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatTableDataSource, MatTable } from '@angular/material/table';
-import { ActivatedRoute } from '@angular/router';
-import { UntypedFormControl } from '@angular/forms';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 /** Custom Services */
 import { AccountTransfersService } from '../account-transfers.service';
@@ -12,6 +33,9 @@ import { AccountTransfersService } from '../account-transfers.service';
 /** Dialog Components */
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import { SettingsService } from 'app/settings/settings.service';
+import { MatTooltip } from '@angular/material/tooltip';
+import { DateFormatPipe } from '../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Lists all the standing intructions of particular ID
@@ -19,21 +43,44 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-list-standing-instructions',
   templateUrl: './list-standing-instructions.component.html',
-  styleUrls: ['./list-standing-instructions.component.scss']
+  styleUrls: ['./list-standing-instructions.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatTooltip,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ListStandingInstructionsComponent {
+  private route = inject(ActivatedRoute);
+  private accountTransfersService = inject(AccountTransfersService);
+  private settingsService = inject(SettingsService);
+  private dialog = inject(MatDialog);
+  private destroyRef = inject(DestroyRef);
+
   /** Recurring Deposits Data */
   standingIntructionsTemplateData: any;
   /** Instructions Data */
   instructionsData: any[];
   /** Name form control. */
-  transferType = new UntypedFormControl();
+  transferType = new FormControl();
   /** ExternalId form control. */
-  fromAccountId = new UntypedFormControl();
+  fromAccountId = new FormControl();
   /** Name form control. */
-  clientNameControl = new UntypedFormControl();
+  clientNameControl = new FormControl();
   /** ExternalId form control. */
-  fromClientId = new UntypedFormControl();
+  fromClientId = new FormControl();
   /** Client Name */
   clientName: any;
   /** Transfer Type Options Data */
@@ -71,21 +118,18 @@ export class ListStandingInstructionsComponent {
    * @param {SettingsService} settingsService Settings Service
    * @param {AccountTransfersService} accountTransfersService Account Transfers Service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private accountTransfersService: AccountTransfersService,
-    private settingsService: SettingsService,
-    private dialog: MatDialog
-  ) {
-    this.route.data.subscribe((data: { standingIntructionsTemplate: any }) => {
-      this.standingIntructionsTemplateData = data.standingIntructionsTemplate;
-      if (data.standingIntructionsTemplate.fromClient) {
-        this.clientName = this.standingIntructionsTemplateData.fromClient.displayName;
-        this.getStandingInstructions();
-      }
-      this.setParams();
-      this.transferTypeDatas = this.standingIntructionsTemplateData.transferTypeOptions;
-    });
+  constructor() {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { standingIntructionsTemplate: any }) => {
+        this.standingIntructionsTemplateData = data.standingIntructionsTemplate;
+        if (data.standingIntructionsTemplate.fromClient) {
+          this.clientName = this.standingIntructionsTemplateData.fromClient.displayName;
+          this.getStandingInstructions();
+        }
+        this.setParams();
+        this.transferTypeDatas = this.standingIntructionsTemplateData.transferTypeOptions;
+      });
   }
 
   setParams() {
@@ -122,7 +166,7 @@ export class ListStandingInstructionsComponent {
       offset: 0,
       fromAccountType: this.accountTypeId,
       fromAccountId: this.fromAccountId.value,
-      fromTransferType: this.transferType.value
+      transferType: this.transferType.value
     };
     this.accountTransfersService.getStandingInstructions(searchData).subscribe((response: any) => {
       this.instructionsData = response.pageItems;
@@ -138,7 +182,9 @@ export class ListStandingInstructionsComponent {
     });
     deleteStandingInstructionDialogRef.afterClosed().subscribe((response: any) => {
       if (response.delete) {
-        this.accountTransfersService.deleteStandingInstrucions(instructionId).subscribe(() => {});
+        this.accountTransfersService
+          .deleteStandingInstrucions(instructionId)
+          .subscribe(() => this.getStandingInstructions());
       }
     });
   }

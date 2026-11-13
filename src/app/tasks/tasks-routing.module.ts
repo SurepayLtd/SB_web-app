@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
@@ -10,6 +18,14 @@ import { CheckerInboxAndTasksComponent } from './checker-inbox-and-tasks/checker
 import { CheckerInboxComponent } from './checker-inbox-and-tasks-tabs/checker-inbox/checker-inbox.component';
 import { ClientApprovalComponent } from './checker-inbox-and-tasks-tabs/client-approval/client-approval.component';
 import { LoanApprovalComponent } from './checker-inbox-and-tasks-tabs/loan-approval/loan-approval.component';
+import { CreditApplicationsComponent } from './checker-inbox-and-tasks-tabs/credit-applications/credit-applications.component';
+import {
+  CREDIT_APPLICATIONS_PERMISSION,
+  creditApplicationsGuard
+} from './checker-inbox-and-tasks-tabs/credit-applications/credit-applications.guard';
+import { pendingProspectsGuard } from './checker-inbox-and-tasks-tabs/pending-prospects/pending-prospects.guard';
+import { PendingProspectsComponent } from './checker-inbox-and-tasks-tabs/pending-prospects/pending-prospects.component';
+import { CouncilApprovalComponent } from './checker-inbox-and-tasks-tabs/council-approval/council-approval.component';
 import { LoanDisbursalComponent } from './checker-inbox-and-tasks-tabs/loan-disbursal/loan-disbursal.component';
 import { RescheduleLoanComponent } from './checker-inbox-and-tasks-tabs/reschedule-loan/reschedule-loan.component';
 import { ViewCheckerInboxComponent } from './view-checker-inbox/view-checker-inbox.component';
@@ -27,10 +43,10 @@ import { GetUssdLoansToBeApproved } from './common-resolvers/getUssdLoansToBeApp
 import { UssdApprovalComponent } from './checker-inbox-and-tasks-tabs/ussd-approval/ussd-approval.component';
 
 /** Tasks Routes */
-const routes: Routes = [
+export const routes: Routes = [
   Route.withShell([
     {
-      path: 'checker-inbox-and-tasks',
+      path: '',
       component: CheckerInboxAndTasksComponent,
       data: { title: 'Checker Inbox & Tasks', breadcrumb: 'Checker Inbox & Tasks' },
       children: [
@@ -54,7 +70,40 @@ const routes: Routes = [
         {
           path: 'loan-approval',
           component: LoanApprovalComponent,
-          data: { title: 'Laon Approval' },
+          data: { title: 'Loan Approval' },
+          resolve: {
+            officesData: GetOffices,
+            loansData: GetLoansToBeApproved
+          }
+        },
+        {
+          path: 'requests',
+          component: CreditApplicationsComponent,
+          canActivate: [creditApplicationsGuard],
+          data: { title: 'Requests', permissions: [CREDIT_APPLICATIONS_PERMISSION] }
+        },
+        {
+          path: 'credit',
+          component: CreditApplicationsComponent,
+          canActivate: [creditApplicationsGuard],
+          data: { title: 'Credit', permissions: [CREDIT_APPLICATIONS_PERMISSION] }
+        },
+        {
+          path: 'mass-rejection',
+          component: CreditApplicationsComponent,
+          canActivate: [creditApplicationsGuard],
+          data: { title: 'Mass Rejection', permissions: [CREDIT_APPLICATIONS_PERMISSION] }
+        },
+        {
+          path: 'pending-prospects',
+          component: PendingProspectsComponent,
+          canActivate: [pendingProspectsGuard],
+          data: { title: 'Pending Prospects', permissions: ['READ_PROSPECT'] }
+        },
+        {
+          path: 'council-approval',
+          component: CouncilApprovalComponent,
+          data: { title: 'Council Approval' },
           resolve: {
             officesData: GetOffices,
             loansData: GetLoansToBeApproved
@@ -73,7 +122,7 @@ const routes: Routes = [
           component: RescheduleLoanComponent,
           data: { title: 'Reschedule Loan' },
           resolve: {
-            recheduleLoansData: GetRescheduleLoans
+            rescheduleLoansData: GetRescheduleLoans
           }
         },
         {
@@ -101,7 +150,6 @@ const routes: Routes = [
       ]
     }
   ])
-
 ];
 
 @NgModule({

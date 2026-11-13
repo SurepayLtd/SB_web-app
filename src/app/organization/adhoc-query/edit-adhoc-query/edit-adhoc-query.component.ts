@@ -1,10 +1,22 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { OrganizationService } from '../../organization.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit Adhoc Query component.
@@ -12,30 +24,29 @@ import { OrganizationService } from '../../organization.service';
 @Component({
   selector: 'mifosx-edit-adhoc-query',
   templateUrl: './edit-adhoc-query.component.html',
-  styleUrls: ['./edit-adhoc-query.component.scss']
+  styleUrls: ['./edit-adhoc-query.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditAdhocQueryComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   /** Edit Adhoc Query form. */
-  editAdhocQueryForm: UntypedFormGroup;
+  editAdhocQueryForm: FormGroup;
   /** Adhoc Query template data. */
   adhocQueryTemplateData: any;
   /** Report run frequencies data. */
   reportRunFrequencyData: any;
 
-  /**
-   * Retrieves the adhoc query template data from `resolve`.
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {OrganizationService} organizationService Organization Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { adhocQueryAndTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { adhocQueryAndTemplate: any }) => {
       this.adhocQueryTemplateData = data.adhocQueryAndTemplate;
     });
   }
@@ -83,19 +94,23 @@ export class EditAdhocQueryComponent implements OnInit {
    * Sets the conditional controls of the adhoc query form
    */
   setConditionalControls() {
-    this.editAdhocQueryForm.get('reportRunFrequency').valueChanges.subscribe((reportRunFrequencyId) => {
-      if (reportRunFrequencyId === 5) {
-        this.editAdhocQueryForm.addControl(
-          'reportRunEvery',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.min(1)])
-        );
-        this.editAdhocQueryForm.get('reportRunEvery').patchValue(this.adhocQueryTemplateData.reportRunEvery);
-      } else {
-        this.editAdhocQueryForm.removeControl('reportRunEvery');
-      }
-    });
+    this.editAdhocQueryForm
+      .get('reportRunFrequency')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((reportRunFrequencyId) => {
+        if (reportRunFrequencyId === 5) {
+          this.editAdhocQueryForm.addControl(
+            'reportRunEvery',
+            new FormControl('', [
+              Validators.required,
+              Validators.min(1)
+            ])
+          );
+          this.editAdhocQueryForm.get('reportRunEvery').patchValue(this.adhocQueryTemplateData.reportRunEvery);
+        } else {
+          this.editAdhocQueryForm.removeControl('reportRunEvery');
+        }
+      });
     this.editAdhocQueryForm.get('reportRunFrequency').patchValue(this.adhocQueryTemplateData.reportRunFrequency);
   }
 
@@ -106,6 +121,7 @@ export class EditAdhocQueryComponent implements OnInit {
   submit() {
     this.organizationService
       .updateAdhocQuery(this.adhocQueryTemplateData.id, this.editAdhocQueryForm.value)
+      .pipe(take(1))
       .subscribe(() => {
         this.router.navigate(['../'], { relativeTo: this.route });
       });

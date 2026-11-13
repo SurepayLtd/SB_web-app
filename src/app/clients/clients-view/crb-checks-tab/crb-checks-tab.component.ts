@@ -1,16 +1,43 @@
-import { Component, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { Component, OnInit, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
 import { ClientsService } from '../../clients.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type ValidationGroup = 'details' | 'nin' | 'phone';
 
 @Component({
   selector: 'mifosx-crb-checks-tab',
   templateUrl: './crb-checks-tab.component.html',
-  styleUrls: ['./crb-checks-tab.component.scss']
+  styleUrls: ['./crb-checks-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    MatExpansionModule,
+    MatTabsModule,
+    MatProgressSpinnerModule
+  ]
 })
 export class CrbChecksTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private clientService = inject(ClientsService);
+  private snackBar = inject(MatSnackBar);
 
   clientId: string;
   checks: any[] = [];
@@ -19,11 +46,7 @@ export class CrbChecksTabComponent implements OnInit {
   loaded = false;
   errorMessage = '';
 
-  constructor(
-    private route: ActivatedRoute,
-    private clientService: ClientsService,
-    private snackBar: MatSnackBar
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { checks: any }) => {
       this.checks = data.checks;
       this.clientId = this.route.parent.snapshot.paramMap.get('clientId');
@@ -43,15 +66,10 @@ export class CrbChecksTabComponent implements OnInit {
     this.errorMessage = '';
 
     this.clientService.getCrbCheckHistory(this.clientId).subscribe({
-      next: (response: any ) => {
-        const records = Array.isArray(response)
-          ? response
-          : response?.pageItems ?? [];
+      next: (response: any) => {
+        const records = Array.isArray(response) ? response : (response?.pageItems ?? []);
 
-        this.checks = [...records].sort(
-          (a, b) => this.toTimestamp(b.createdAt) -
-            this.toTimestamp(a.createdAt)
-        );
+        this.checks = [...records].sort((a, b) => this.toTimestamp(b.createdAt) - this.toTimestamp(a.createdAt));
 
         this.loading = false;
         this.loaded = true;
@@ -78,29 +96,25 @@ export class CrbChecksTabComponent implements OnInit {
   }
 
   get latestChecks() {
-    const groups: ValidationGroup[] = ['details', 'nin', 'phone'];
+    const groups: ValidationGroup[] = [
+      'details',
+      'nin',
+      'phone'
+    ];
 
-    return groups
-      .map((group) => this.filterByType(group)[0])
-      .filter((check) => !!check);
+    return groups.map((group) => this.filterByType(group)[0]).filter((check) => !!check);
   }
 
   get latestConsentStatus(): string {
-    return this.checks.find((check) => check.consentStatus?.value)
-      ?.consentStatus?.value ?? 'Not available';
+    return this.checks.find((check) => check.consentStatus?.value)?.consentStatus?.value ?? 'Not available';
   }
 
   get totalCost(): number {
-    return this.checks.reduce(
-      (total, check) => total + Number(check.cost ?? 0),
-      0
-    );
+    return this.checks.reduce((total, check) => total + Number(check.cost ?? 0), 0);
   }
 
   get verifiedCount(): number {
-    return this.checks.filter(
-      (check) => check.status?.value?.toLowerCase() === 'verified'
-    ).length;
+    return this.checks.filter((check) => check.status?.value?.toLowerCase() === 'verified').length;
   }
 
   filterByType(type: ValidationGroup): any[] {
@@ -110,8 +124,7 @@ export class CrbChecksTabComponent implements OnInit {
 
       switch (type) {
         case 'details':
-          return value.includes('customer details') ||
-            value.includes('personal details');
+          return value.includes('customer details') || value.includes('personal details');
 
         case 'nin':
           return value.includes('nin') || code.endsWith('.nin');
@@ -145,7 +158,14 @@ export class CrbChecksTabComponent implements OnInit {
     let date: Date;
 
     if (Array.isArray(value)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = value;
+      const [
+        year,
+        month,
+        day,
+        hour = 0,
+        minute = 0,
+        second = 0
+      ] = value;
       date = new Date(year, month - 1, day, hour, minute, second);
     } else {
       date = new Date(value);
@@ -159,10 +179,10 @@ export class CrbChecksTabComponent implements OnInit {
       return '—';
     }
 
-    return `${check.currency ?? ''} ${Number(check.cost).toLocaleString(
-      undefined,
-      { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-    )}`.trim();
+    return `${check.currency ?? ''} ${Number(check.cost).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`.trim();
   }
 
   statusClass(status?: string): string {
@@ -191,12 +211,18 @@ export class CrbChecksTabComponent implements OnInit {
     }
 
     if (Array.isArray(value)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = value;
+      const [
+        year,
+        month,
+        day,
+        hour = 0,
+        minute = 0,
+        second = 0
+      ] = value;
       return new Date(year, month - 1, day, hour, minute, second).getTime();
     }
 
     const timestamp = new Date(value).getTime();
     return Number.isNaN(timestamp) ? 0 : timestamp;
   }
-
 }

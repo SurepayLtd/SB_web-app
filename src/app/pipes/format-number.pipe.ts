@@ -1,21 +1,25 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { DecimalPipe } from '@angular/common';
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { SettingsService } from 'app/settings/settings.service';
 
-@Pipe({
-  name: 'formatNumber'
-})
+@Pipe({ name: 'formatNumber' })
 export class FormatNumberPipe implements PipeTransform {
-  constructor(
-    private decimalFormat: DecimalPipe,
-    private settingsService: SettingsService
-  ) {}
+  private decimalFormat = inject(DecimalPipe);
+  private settingsService = inject(SettingsService);
 
-  transform(value: string | number, defaultValue: any): string {
-    if (!value) {
+  transform(value: string | number, defaultValue?: any, digits?: string | number): string {
+    if (value === undefined) {
       return defaultValue ? defaultValue : '';
     }
-    const decimals = this.settingsService.decimals;
+    const decimals = digits !== undefined ? digits : this.settingsService.decimals;
     const format = `1.${decimals}-${decimals}`;
     return this.decimalFormat.transform(value, format);
   }

@@ -1,9 +1,14 @@
-/* Angular Imports */
-import { Directive, Renderer2, ElementRef, HostBinding, ChangeDetectorRef, OnDestroy } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-/* rxjs Imports */
-import { Subscription } from 'rxjs';
-import { map } from 'rxjs/operators';
+/* Angular Imports */
+import { Directive, Renderer2, ElementRef, HostBinding, ChangeDetectorRef, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 /* Popover Ref */
 import { PopoverRef } from './popover-ref';
@@ -11,10 +16,12 @@ import { PopoverRef } from './popover-ref';
 /**
  * Internal directive that shows the popover arrow.
  */
-@Directive({
-  selector: '[mifosxPopoverArrow]'
-})
-export class PopoverArrowDirective implements OnDestroy {
+@Directive({ selector: '[mifosxPopoverArrow]' })
+export class PopoverArrowDirective {
+  private popoverRef = inject(PopoverRef);
+  private cd = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
+
   @HostBinding('style.width.px')
   @HostBinding('style.height.px')
   arrowSize: number;
@@ -31,31 +38,21 @@ export class PopoverArrowDirective implements OnDestroy {
   @HostBinding('style.left.px')
   offsetLeft: number;
 
-  private subscription = new Subscription();
+  constructor() {
+    this.arrowSize = this.popoverRef.config.arrowSize;
 
-  /**
-   * @param {PopoverRef} popoverRef PopoverRef.
-   * @param {ChangeDetectorRef} cd ChangeDetectorRef
-   */
-  constructor(
-    private popoverRef: PopoverRef,
-    private cd: ChangeDetectorRef
-  ) {
-    this.arrowSize = popoverRef.config.arrowSize;
+    this.popoverRef
+      .positionChanges()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((p) => {
+        const { offsetX, offsetY } = p.connectionPair;
 
-    this.subscription = popoverRef.positionChanges().subscribe((p) => {
-      const { offsetX, offsetY } = p.connectionPair;
+        this.offsetTop = offsetY >= 0 ? offsetY * -1 : null;
+        this.offsetLeft = offsetX < 0 ? offsetX * -1 : null;
+        this.offsetBottom = offsetY < 0 ? offsetY : null;
+        this.offsetRight = offsetX >= 0 ? offsetX : null;
 
-      this.offsetTop = offsetY >= 0 ? offsetY * -1 : null;
-      this.offsetLeft = offsetX < 0 ? offsetX * -1 : null;
-      this.offsetBottom = offsetY < 0 ? offsetY : null;
-      this.offsetRight = offsetX >= 0 ? offsetX : null;
-
-      this.cd.detectChanges();
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
+        this.cd.detectChanges();
+      });
   }
 }

@@ -1,0 +1,108 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+.tab-container {
+  padding: 1%;
+  margin: 1%;
+
+  .schedule-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 120px;
+    text-align: center;
+  }
+
+  .compact-state {
+    min-height: 40px;
+    justify-content: flex-start;
+  }
+
+  .error-state {
+    color: var(--warn-color, #b00020);
+  }
+
+  .unavailable-state {
+    color: rgb(78 78 78);
+  }
+
+  .schedule-table {
+    display: grid;
+    gap: 8px;
+  }
+
+  .schedule-header,
+  .schedule-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, calc(50% - 8px)));
+    align-items: center;
+    column-gap: 16px;
+  }
+
+  .schedule-header {
+    min-height: 40px;
+    font-weight: 500;
+    color: rgb(0 0 0 / 60%);
+  }
+
+  .schedule-row {
+    min-height: 72px;
+    row-gap: 8px;
+  }
+
+  .day-status {
+    display: block;
+    font-weight: normal;
+  }
+
+  .weekday-label {
+    font-weight: 500;
+  }
+
+  .schedule-header span,
+  .weekday-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .enabled-column {
+    justify-self: center;
+  }
+
+  .time-column {
+    min-width: 0;
+  }
+
+  .schedule-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  @media (width <= 720px) {
+    .schedule-header,
+    .schedule-row {
+      grid-template-columns: minmax(0, calc(100% - 80px)) 64px;
+      row-gap: 8px;
+      padding: 8px 0;
+    }
+
+    .schedule-row {
+      border-bottom: 1px solid rgb(0 0 0 / 12%);
+    }
+
+    .schedule-row .time-column {
+      grid-column: 1 / -1;
+    }
+  }
+}
