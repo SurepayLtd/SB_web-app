@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 
@@ -17,10 +25,16 @@ import { EditFamilyMemberComponent } from './clients-view/family-members-tab/edi
 import { IdentitiesTabComponent } from './clients-view/identities-tab/identities-tab.component';
 import { UploadDocumentDialogComponent } from './clients-view/custom-dialogs/upload-document-dialog/upload-document-dialog.component';
 import { NotesTabComponent } from './clients-view/notes-tab/notes-tab.component';
+import { BureauReadinessComponent } from './clients-view/bureau-readiness/bureau-readiness.component';
+import { CreditProfileComponent } from './clients-view/credit-profile/credit-profile.component';
+import { DisputeManagementComponent } from './clients-view/dispute-management/dispute-management.component';
+import { AuditTrailComponent } from './clients-view/audit-trail/audit-trail.component';
 import { EditNotesDialogComponent } from './clients-view/custom-dialogs/edit-notes-dialog/edit-notes-dialog.component';
 import { DocumentsTabComponent } from './clients-view/documents-tab/documents-tab.component';
 import { DatatableTabComponent } from './clients-view/datatable-tab/datatable-tab.component';
 import { AddressTabComponent } from './clients-view/address-tab/address-tab.component';
+import { PersonalDataTabComponent } from './clients-view/personal-data-tab/personal-data-tab.component';
+import { EnrollmentStatusComponent } from './clients-view/enrollment-status/enrollment-status.component';
 import { ChargesOverviewComponent } from './clients-view/charges/charges-overview/charges-overview.component';
 import { ClientActionsComponent } from './clients-view/client-actions/client-actions.component';
 import { ClientAssignStaffComponent } from './clients-view/client-actions/client-assign-staff/client-assign-staff.component';
@@ -54,7 +68,6 @@ import { ClientPreviewStepComponent } from './client-stepper/client-preview-step
 import { ClientAddressStepComponent } from './client-stepper/client-address-step/client-address-step.component';
 import { ClientFamilyMemberDialogComponent } from './client-stepper/client-family-members-step/client-family-member-dialog/client-family-member-dialog.component';
 import { CaptureImageDialogComponent } from './clients-view/custom-dialogs/capture-image-dialog/capture-image-dialog.component';
-import { CreateSelfServiceUserComponent } from './clients-view/client-actions/create-self-service-user/create-self-service-user.component';
 import { AddClientCollateralComponent } from './clients-view/client-actions/add-client-collateral/add-client-collateral.component';
 import { ClientDatatableStepComponent } from './client-stepper/client-datatable-step/client-datatable-step.component';
 import { MomoActivationDialogComponent } from './clients-view/custom-dialogs/momo-activation-dialog/momo-activation-dialog.component';
@@ -75,18 +88,22 @@ import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-
     SharedModule,
     ClientsRoutingModule,
     PipesModule,
-    DirectivesModule
-  ],
-  declarations: [
+    DirectivesModule,
     ClientsComponent,
     ClientsViewComponent,
     GeneralTabComponent,
+    PersonalDataTabComponent,
+    EnrollmentStatusComponent,
     FamilyMembersTabComponent,
     AddFamilyMemberComponent,
     EditFamilyMemberComponent,
     IdentitiesTabComponent,
     UploadDocumentDialogComponent,
     NotesTabComponent,
+    BureauReadinessComponent,
+    CreditProfileComponent,
+    DisputeManagementComponent,
+    AuditTrailComponent,
     EditNotesDialogComponent,
     DocumentsTabComponent,
     DatatableTabComponent,
@@ -124,7 +141,6 @@ import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-
     ClientAddressStepComponent,
     ClientFamilyMemberDialogComponent,
     CaptureImageDialogComponent,
-    CreateSelfServiceUserComponent,
     AddClientCollateralComponent,
     ClientDatatableStepComponent,
     MomoActivationDialogComponent,
@@ -135,7 +151,6 @@ import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-
     CrbCheckComponent,
     CrbChecksTabComponent
   ],
-  entryComponents: [MomoActivationDialogComponent],
   providers: []
 })
 export class ClientsModule {}

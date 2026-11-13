@@ -1,6 +1,19 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTabsModule } from '@angular/material/tabs';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { MatTableModule } from '@angular/material/table';
 
 /**
  * Two-Factor Configuration component.
@@ -10,9 +23,18 @@ import { ActivatedRoute } from '@angular/router';
 @Component({
   selector: 'mifosx-two-factor-config',
   templateUrl: './two-factor-config.component.html',
-  styleUrls: ['./two-factor-config.component.scss']
+  styleUrls: ['./two-factor-config.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatTabsModule,
+    FontAwesomeModule,
+    MatTableModule
+  ]
 })
-export class TwoFactorConfigComponent implements OnInit {
+export class TwoFactorConfigComponent {
+  private route = inject(ActivatedRoute);
+
   /** Two-Factor Configuration Data */
   twoFactorConfig: any;
 
@@ -20,13 +42,11 @@ export class TwoFactorConfigComponent implements OnInit {
    * Retrieves two-factor configuration data from `resolve`.
    * @param {ActivatedRoute} route Activated Route.
    */
-  constructor(private route: ActivatedRoute) {
+  constructor() {
     this.route.data.subscribe((data: { twoFactorConfig: any }) => {
       this.twoFactorConfig = data.twoFactorConfig;
     });
   }
-
-  ngOnInit(): void {}
 
   /**
    * Get Email configuration data source

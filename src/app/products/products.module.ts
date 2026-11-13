@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 
@@ -23,6 +31,10 @@ import { ManageTaxConfigurationsComponent } from './manage-tax-configurations/ma
 import { RecurringDepositProductsComponent } from './recurring-deposit-products/recurring-deposit-products.component';
 import { ChargesComponent } from './charges/charges.component';
 import { ViewChargeComponent } from './charges/view-charge/view-charge.component';
+import { TransferFeesComponent } from './transfer-fees/transfer-fees.component';
+import { CreateTransferFeeComponent } from './transfer-fees/create-transfer-fee/create-transfer-fee.component';
+import { ViewTransferFeeComponent } from './transfer-fees/view-transfer-fee/view-transfer-fee.component';
+import { EditTransferFeeComponent } from './transfer-fees/edit-transfer-fee/edit-transfer-fee.component';
 import { FixedDepositProductsComponent } from './fixed-deposit-products/fixed-deposit-products.component';
 import { ProductsMixComponent } from './products-mix/products-mix.component';
 import { ViewProductMixComponent } from './products-mix/view-product-mix/view-product-mix.component';
@@ -121,6 +133,9 @@ import { LoanProductPaymentStrategyStepComponent } from './loan-products/loan-pr
 import { ViewAdvancePaymenyAllocationComponent } from './loan-products/view-loan-product/shared/view-advance-paymeny-allocation/view-advance-paymeny-allocation.component';
 import { AdvancePaymentAllocationTabComponent } from './loan-products/loan-product-stepper/loan-product-payment-strategy-step/advance-payment-allocation-tab/advance-payment-allocation-tab.component';
 import { LoanProductSummaryComponent } from './loan-products/common/loan-product-summary/loan-product-summary.component';
+import { LoanProductDeferredIncomeRecognitionStepComponent } from './loan-products/loan-product-stepper/loan-product-capitalized-income-step/loan-product-deferred-income-recognition-step.component';
+import { AdvancedAccountingMappingRuleComponent } from './loan-products/loan-product-stepper/loan-product-accounting-step/advanced-accounting-mapping-rule/advanced-accounting-mapping-rule.component';
+import { LoanProductSelectionComponent } from './loan-products/create-loan-product/loan-product-selection.component';
 
 /**
  * Products Module
@@ -132,9 +147,7 @@ import { LoanProductSummaryComponent } from './loan-products/common/loan-product
     SharedModule,
     ProductsRoutingModule,
     PipesModule,
-    DirectivesModule
-  ],
-  declarations: [
+    DirectivesModule,
     ProductsComponent,
     LoanProductsComponent,
     LoanProductDetailsStepComponent,
@@ -147,10 +160,15 @@ import { LoanProductSummaryComponent } from './loan-products/common/loan-product
     LoanProductAccountingStepComponent,
     LoanProductPreviewStepComponent,
     CreateLoanProductComponent,
+    LoanProductSelectionComponent,
     ManageTaxConfigurationsComponent,
     RecurringDepositProductsComponent,
     ChargesComponent,
     ViewChargeComponent,
+    TransferFeesComponent,
+    CreateTransferFeeComponent,
+    ViewTransferFeeComponent,
+    EditTransferFeeComponent,
     FixedDepositProductsComponent,
     ManageTaxComponentsComponent,
     ProductsMixComponent,
@@ -249,7 +267,9 @@ import { LoanProductSummaryComponent } from './loan-products/common/loan-product
     ShareProductDatatableTabComponent,
     ViewAdvancePaymenyAllocationComponent,
     AdvancePaymentAllocationTabComponent,
-    LoanProductSummaryComponent
+    LoanProductSummaryComponent,
+    LoanProductDeferredIncomeRecognitionStepComponent,
+    AdvancedAccountingMappingRuleComponent
   ]
 })
 export class ProductsModule {}

@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 /** rxjs Imports */
@@ -15,13 +23,8 @@ import { SettingsService } from 'app/settings/settings.service';
   providedIn: 'root'
 })
 export class OrganizationService {
-  /**
-   * @param {HttpClient} http Http Client to send requests.
-   */
-  constructor(
-    private http: HttpClient,
-    private settingsService: SettingsService
-  ) {}
+  private http = inject(HttpClient);
+  private settingsService = inject(SettingsService);
 
   /**
    * @returns {Observable<any>} Loan Provisioning Criteria data
@@ -134,6 +137,95 @@ export class OrganizationService {
    */
   updateOffice(officeId: string, office: any): Observable<any> {
     return this.http.put(`/offices/${officeId}`, office);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @returns {Observable<any>} Office addresses.
+   */
+  getOfficeAddresses(officeId: string): Observable<any> {
+    return this.http.get(`/v2/offices/${officeId}/addresses`);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {any} addressData Office address data.
+   * @returns {Observable<any>}
+   */
+  createOfficeAddress(officeId: string, addressData: any): Observable<any> {
+    return this.http.post(`/v2/offices/${officeId}/addresses`, addressData);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {string} addressId Office address ID.
+   * @param {any} addressData Office address data.
+   * @returns {Observable<any>}
+   */
+  updateOfficeAddress(officeId: string, addressId: string, addressData: any): Observable<any> {
+    return this.http.put(`/v2/offices/${officeId}/addresses/${addressId}`, addressData);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {string} addressId Office address ID.
+   * @returns {Observable<any>}
+   */
+  deleteOfficeAddress(officeId: string, addressId: string): Observable<any> {
+    return this.http.delete(`/v2/offices/${officeId}/addresses/${addressId}`);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @returns {Observable<any>} Office services.
+   */
+  getOfficeServices(officeId: string): Observable<any> {
+    return this.http.get(`/v2/offices/${officeId}/services`);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @returns {Observable<any>} Office schedules.
+   */
+  getOfficeSchedules(officeId: string): Observable<any> {
+    return this.http.get(`/v2/offices/${officeId}/schedules`);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {any} scheduleData Office schedule data.
+   * @returns {Observable<any>}
+   */
+  updateOfficeSchedules(officeId: string, scheduleData: any): Observable<any> {
+    return this.http.put(`/v2/offices/${officeId}/schedules`, scheduleData);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {any} serviceData Office service data.
+   * @returns {Observable<any>}
+   */
+  createOfficeService(officeId: string, serviceData: any): Observable<any> {
+    return this.http.post(`/v2/offices/${officeId}/services`, serviceData);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {string} serviceId Office service ID.
+   * @param {any} serviceData Office service data.
+   * @returns {Observable<any>}
+   */
+  updateOfficeService(officeId: string, serviceId: string, serviceData: any): Observable<any> {
+    return this.http.put(`/v2/offices/${officeId}/services/${serviceId}`, serviceData);
+  }
+
+  /**
+   * @param {string} officeId Office ID of Office.
+   * @param {string} serviceId Office service ID.
+   * @returns {Observable<any>}
+   */
+  deleteOfficeService(officeId: string, serviceId: string): Observable<any> {
+    return this.http.delete(`/v2/offices/${officeId}/services/${serviceId}`);
   }
 
   /**
@@ -702,12 +794,31 @@ export class OrganizationService {
     return this.http.put(`/funds/${fundId}`, fundData);
   }
 
-  /*
-   * @param {any} officeId ID of office to retrieve staff from.
+  getStaffs(officeId: any): Observable<any> {
+    const httpParams = new HttpParams().set('officeId', officeId).set('status', 'all');
+    return this.http.get(`/staff`, { params: httpParams });
+  }
+
+  getCenters(officeId: any): Observable<any> {
+    const httpParams = new HttpParams().set('officeId', officeId).set('status', 'all');
+    return this.http.get(`/centers`, { params: httpParams });
+  }
+
+  getGroups(officeId: any): Observable<any> {
+    const httpParams = new HttpParams().set('officeId', officeId).set('status', 'all');
+    return this.http.get(`/groups`, { params: httpParams });
+  }
+
+  /**
+   * @param {number | string} officeId ID of office to retrieve staff from.
+   * @param {boolean} [isLoanOfficer] Optional flag to filter by loan officer status.
    * @returns {Observable<any>} Staff data.
    */
-  getStaff(officeId: any): Observable<any> {
-    const httpParams = new HttpParams().set('officeId', officeId.toString());
+  getStaff(officeId: number | string, isLoanOfficer?: boolean): Observable<any> {
+    let httpParams = new HttpParams().set('officeId', officeId.toString()).set('status', 'active');
+    if (isLoanOfficer !== undefined) {
+      httpParams = httpParams.set('isLoanOfficer', isLoanOfficer.toString());
+    }
     return this.http.get('/staff', { params: httpParams });
   }
 
@@ -812,5 +923,47 @@ export class OrganizationService {
     formData.append('locale', this.settingsService.language.code);
     formData.append('dateFormat', this.settingsService.dateFormat);
     return this.http.post(`${urlSuffix}/uploadtemplate`, formData, { params: httpParams });
+  }
+
+  /**
+   * @returns {Observable<any>} Loan Originators data
+   */
+  getLoanOriginators(): Observable<any> {
+    return this.http.get('/loan-originators');
+  }
+
+  /**
+   * @returns {Observable<any>} Loan Originators Template data
+   */
+  getLoanOriginatorsTemplate(): Observable<any> {
+    return this.http.get('/loan-originators/template');
+  }
+
+  /**
+   * @returns {Observable<any>} Loan Originator data
+   */
+  getLoanOriginator(originatorId: string): Observable<any> {
+    return this.http.get(`/loan-originators/${originatorId}`);
+  }
+
+  /**
+   * @returns {Observable<any>}
+   */
+  createLoanOriginator(payload: any): Observable<any> {
+    return this.http.post(`/loan-originators`, payload);
+  }
+
+  /**
+   * @returns {Observable<any>}
+   */
+  updateLoanOriginator(originatorId: number, payload: any): Observable<any> {
+    return this.http.put(`/loan-originators/${originatorId}`, payload);
+  }
+
+  /**
+   * @returns {Observable<any>}
+   */
+  deleteLoanOriginator(originatorId: number): Observable<any> {
+    return this.http.delete(`/loan-originators/${originatorId}`);
   }
 }

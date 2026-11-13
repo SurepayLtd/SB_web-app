@@ -1,14 +1,47 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  inject,
+  DestroyRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil, switchMap } from 'rxjs/operators';
 
 /** Services Import */
 import { CollectionsService } from '../collections.service';
+import { DataReloadService } from 'app/core/services/data-reload.service';
 
 /** Custom Dialogs */
 import { FormDialogComponent } from 'app/shared/form-dialog/form-dialog.component';
@@ -21,6 +54,9 @@ import { SelectBase } from 'app/shared/form-dialog/formfield/model/select-base';
 /** Custom Services */
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { OrganizationService } from 'app/organization/organization.service';
 
 /**
  * Individual Collection Sheet
@@ -28,31 +64,58 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-individual-collection-sheet',
   templateUrl: './individual-collection-sheet.component.html',
-  styleUrls: ['./individual-collection-sheet.component.scss']
+  styleUrls: ['./individual-collection-sheet.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class IndividualCollectionSheetComponent implements OnInit {
-  /** Offices Data */
+export class IndividualCollectionSheetComponent implements OnInit, OnDestroy {
+  private formBuilder = inject(FormBuilder);
+  private collectionsService = inject(CollectionsService);
+  private organizationService = inject(OrganizationService);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private dialog = inject(MatDialog);
+  private router = inject(Router);
+  private settingsService = inject(SettingsService);
+  private dataReloadService = inject(DataReloadService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+
   officesData: any;
-  /** Loan Officer Data */
   loanOfficerData: any = [];
-  /** Loans Data */
   loansData: any = [];
-  /** Savings Data */
   savingsData: any = [];
-  /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
-  /** Maximum Date allowed. */
   maxDate = new Date();
-  /** Collection Sheet form. */
-  collectionSheetForm: UntypedFormGroup;
-  /** Toggles b/w form and table */
+  collectionSheetForm: FormGroup;
   isCollapsed = false;
-  /** Collections Sheet Data */
   collectionSheetData: any;
+
+  private reloadContext = 'individual-collection-sheet';
+  private buildDependencies$ = new Subject<void>();
   /** checks and stores the local storage values */
   Success: boolean;
   /** Bulk Disbursement Transactions Data */
-  bulkDisbursementTransactionsData = {};
+  bulkDisbursementTransactionsData: {
+    bulkRepaymentTransactions?: any[];
+    bulkSavingsDueTransactions?: any[];
+  } = {};
   /** Bulk Repayment Transactions Data */
   bulkRepaymentTransactions: any[] = [];
   /** Bulk Savings Due Data */
@@ -99,31 +162,39 @@ export class IndividualCollectionSheetComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private collectionsService: CollectionsService,
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    public dialog: MatDialog,
-    private router: Router,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { officesData: any }) => {
+  ngOnInit(): void {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { officesData: any }) => {
       this.officesData = data.officesData;
     });
-  }
 
-  ngOnInit() {
+    // Subscribe to reload events
+    this.dataReloadService
+      .getReloadObservable(this.reloadContext)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refreshData();
+        this.cdr.markForCheck();
+      });
+
     this.maxDate = this.settingsService.businessDate;
     if (localStorage.getItem('Success')) {
       localStorage.removeItem('Success');
       this.Success = true;
       setTimeout(() => {
         this.Success = false;
+        this.cdr.markForCheck();
       }, 3000);
     }
     this.createCollectionSheetForm();
     this.buildDependencies();
+  }
+
+  ngOnDestroy(): void {
+    this.buildDependencies$.next();
+    this.buildDependencies$.complete();
+    if (this.reloadContext) {
+      this.dataReloadService.cleanup(this.reloadContext);
+    }
   }
 
   /**
@@ -136,7 +207,7 @@ export class IndividualCollectionSheetComponent implements OnInit {
         Validators.required
       ],
       transactionDate: [
-        new Date(),
+        this.settingsService.businessDate,
         Validators.required
       ],
       staffId: ['']
@@ -147,11 +218,20 @@ export class IndividualCollectionSheetComponent implements OnInit {
    * Checks for the office id value change
    */
   buildDependencies() {
-    this.collectionSheetForm.get('officeId').valueChanges.subscribe((value: any) => {
-      this.collectionsService.getStaffs(value).subscribe((response: any) => {
+    // Complete previous subscription before creating new one
+    this.buildDependencies$.next();
+
+    this.collectionSheetForm
+      .get('officeId')
+      .valueChanges.pipe(
+        takeUntil(this.buildDependencies$),
+        takeUntilDestroyed(this.destroyRef),
+        switchMap((value: any) => this.organizationService.getStaffs(value))
+      )
+      .subscribe((response: any) => {
         this.loanOfficerData = response;
+        this.cdr.markForCheck();
       });
-    });
   }
 
   /**
@@ -164,6 +244,8 @@ export class IndividualCollectionSheetComponent implements OnInit {
         client.loans.forEach((loan: any) => {
           const loanData = {
             ...loan,
+            // Fineract sends the dues split by component, there is no totalDue in the response.
+            totalDue: Math.round((Number(loan.principalDue ?? 0) + Number(loan.interestDue ?? 0)) * 100) / 100,
             clientName: client.clientName,
             clientId: client.clientId
           };
@@ -205,7 +287,8 @@ export class IndividualCollectionSheetComponent implements OnInit {
     if (isNaN(chargesDue)) {
       chargesDue = 0;
     }
-    return Math.ceil((Number(principalInterestDue) + Number(chargesDue)) * 100) / 100;
+    // Round to the nearest cent: Math.ceil turned float noise (100.18 + 0.2 = 100.38000000000001) into an extra cent.
+    return Math.round((Number(principalInterestDue) + Number(chargesDue)) * 100) / 100;
   }
 
   /**
@@ -249,7 +332,6 @@ export class IndividualCollectionSheetComponent implements OnInit {
         type: 'number',
         required: false
       })
-
     ];
     const data = {
       title: `Payment for ${type === 'loans' ? 'Loan' : 'Saving'} Id ${type === 'loans' ? selectedData.loanId : selectedData.savingsId}`,
@@ -261,7 +343,16 @@ export class IndividualCollectionSheetComponent implements OnInit {
       if (response.data) {
         if (type === 'loans') {
           const totalDue = this.getLoanTotalDueAmount(selectedData);
-          const loanTransaction = {
+          const loanTransaction: {
+            loanId: any;
+            transactionAmount: number;
+            paymentTypeId?: string;
+            accountNumber?: any;
+            checkNumber?: number;
+            routingCode?: string;
+            receiptNumber?: number;
+            bankNumber?: number;
+          } = {
             loanId: selectedData.loanId,
             transactionAmount: totalDue
           };
@@ -279,7 +370,17 @@ export class IndividualCollectionSheetComponent implements OnInit {
           if (isNaN(dueAmount)) {
             dueAmount = 0;
           }
-          const savingsTransaction = {
+          const savingsTransaction: {
+            savingsId: any;
+            transactionAmount: any;
+            depositAccountType: number;
+            accountNumber?: any;
+            checkNumber?: number;
+            routingCode?: string;
+            receiptNumber?: number;
+            bankNumber?: number;
+            paymentTypeId?: string;
+          } = {
             savingsId: selectedData.savingsId,
             transactionAmount: dueAmount,
             depositAccountType:
@@ -289,13 +390,13 @@ export class IndividualCollectionSheetComponent implements OnInit {
                   ? 300
                   : 400
           };
-          if (response.data.paymentTypeId !== '') {
-            savingsTransaction['paymentTypeId'] = response.data.paymentTypeId;
-            savingsTransaction['accountNumber'] = response.data.accountNumber;
-            savingsTransaction['checkNumber'] = response.data.checkNumber;
-            savingsTransaction['routingCode'] = response.data.routingCode;
-            savingsTransaction['receiptNumber'] = response.data.receiptNumber;
-            savingsTransaction['bankNumber'] = response.data.bankNumber;
+          if (response.data.value.paymentTypeId !== '') {
+            savingsTransaction['paymentTypeId'] = response.data.value.paymentTypeId;
+            savingsTransaction['accountNumber'] = response.data.value.accountNumber;
+            savingsTransaction['checkNumber'] = response.data.value.checkNumber;
+            savingsTransaction['routingCode'] = response.data.value.routingCode;
+            savingsTransaction['receiptNumber'] = response.data.value.receiptNumber;
+            savingsTransaction['bankNumber'] = response.data.value.bankNumber;
           }
           if (savingsTransaction.transactionAmount > 0) {
             this.bulkSavingsDueTransactions.push(savingsTransaction);
@@ -329,8 +430,11 @@ export class IndividualCollectionSheetComponent implements OnInit {
         this.noData = true;
         setTimeout(() => {
           this.noData = false;
+          this.cdr.markForCheck();
         }, 3000);
       }
+      // OnPush: the response arrives after the click, so the view has to be told to update.
+      this.cdr.markForCheck();
     });
   }
 
@@ -356,11 +460,30 @@ export class IndividualCollectionSheetComponent implements OnInit {
   }
 
   /**
-   * Refetches data for the component
-   * TODO: Replace by a custom reload component instead of hard-coded back-routing.
+   * Triggers a reload event for the collection sheet.
    */
-  reload() {
-    const url: string = this.router.url;
-    this.router.navigateByUrl(`/collections`, { skipLocationChange: true }).then(() => this.router.navigate([url]));
+  reload(): void {
+    this.dataReloadService.triggerReload(this.reloadContext);
+  }
+
+  /**
+   * Refreshes the collection sheet data when reload is triggered.
+   */
+  private refreshData(): void {
+    // Re-create the form and rebuild dependencies
+    this.isCollapsed = false;
+    this.collectionSheetData = null;
+
+    // Clear bulk transaction arrays to prevent stale data
+    this.bulkRepaymentTransactions = [];
+    this.bulkSavingsDueTransactions = [];
+    this.bulkDisbursementTransactionsData = {};
+
+    // Clear table data arrays
+    this.loansData = [];
+    this.savingsData = [];
+
+    this.createCollectionSheetForm();
+    this.buildDependencies();
   }
 }

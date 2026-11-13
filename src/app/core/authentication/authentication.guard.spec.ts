@@ -1,55 +1,70 @@
-// import { TestBed, inject } from '@angular/core/testing';
-// import { Router } from '@angular/router';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-// import { AuthenticationService } from './authentication.service';
-// import { MockAuthenticationService } from './authentication.service.mock';
-// import { AuthenticationGuard } from './authentication.guard';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
+import { of } from 'rxjs';
 
-// describe('AuthenticationGuard', () => {
-//   let authenticationGuard: AuthenticationGuard;
-//   let authenticationService: MockAuthenticationService;
-//   let mockRouter: any;
+import { AuthenticationGuard } from './authentication.guard';
+import { AuthenticationService } from './authentication.service';
 
-//   beforeEach(() => {
-//     mockRouter = {
-//       navigate: jasmine.createSpy('navigate')
-//     };
-//     TestBed.configureTestingModule({
-//       providers: [
-//         AuthenticationGuard,
-//         { provide: AuthenticationService, useClass: MockAuthenticationService },
-//         { provide: Router, useValue: mockRouter },
-//       ]
-//     });
-//   });
+describe('AuthenticationGuard', () => {
+  function createGuard(authenticated: boolean): {
+    guard: AuthenticationGuard;
+    router: { navigate: jest.Mock };
+    authenticationService: { isAuthenticated: jest.Mock; logout: jest.Mock };
+  } {
+    const router = { navigate: jest.fn() };
+    const authenticationService = {
+      isAuthenticated: jest.fn().mockReturnValue(authenticated),
+      logout: jest.fn().mockReturnValue(of(true))
+    };
 
-//   beforeEach(inject([
-//     AuthenticationGuard,
-//     AuthenticationService
-//   ], (_authenticationGuard: AuthenticationGuard,
-//       _authenticationService: MockAuthenticationService) => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: AuthenticationService, useValue: authenticationService }
+      ]
+    });
 
-//     authenticationGuard = _authenticationGuard;
-//     authenticationService = _authenticationService;
-//   }));
+    return { guard: TestBed.runInInjectionContext(() => new AuthenticationGuard()), router, authenticationService };
+  }
 
-//   it('should have a canActivate method', () => {
-//     expect(typeof authenticationGuard.canActivate).toBe('function');
-//   });
+  function stateFor(url: string): RouterStateSnapshot {
+    return { url } as RouterStateSnapshot;
+  }
 
-//   it('should return true if user is authenticated', () => {
-//     expect(authenticationGuard.canActivate()).toBe(true);
-//   });
+  const route = {} as ActivatedRouteSnapshot;
 
-//   it('should return false and redirect to login if user is not authenticated', () => {
-//     // Arrange
-//     authenticationService.credentials = null;
+  it('should let an authenticated user through without redirecting', () => {
+    const { guard, router } = createGuard(true);
 
-//     // Act
-//     const result = authenticationGuard.canActivate();
+    expect(guard.canActivate(route, stateFor('/clients'))).toBe(true);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
 
-//     // Assert
-//     expect(mockRouter.navigate).toHaveBeenCalledWith(['/login'], {replaceUrl: true});
-//     expect(result).toBe(false);
-//   });
-// });
+  it('should block an unauthenticated user and redirect to login', () => {
+    const { guard, router } = createGuard(false);
+
+    expect(guard.canActivate(route, stateFor('/clients'))).toBe(false);
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], expect.objectContaining({ replaceUrl: true }));
+  });
+
+  it('should preserve the requested route as the return URL', () => {
+    const { guard, router, authenticationService } = createGuard(false);
+
+    guard.canActivate(route, stateFor('/clients/1/general?tab=savings'));
+
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
+      replaceUrl: true,
+      queryParams: { returnUrl: '/clients/1/general?tab=savings' }
+    });
+    expect(authenticationService.logout).toHaveBeenCalledWith('/clients/1/general?tab=savings');
+  });
+});

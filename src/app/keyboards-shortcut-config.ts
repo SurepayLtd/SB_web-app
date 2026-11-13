@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Keyboard Shortcuts Button Configuration */
 export class KeyboardShortcutsConfiguration {
   buttonsArray: {
@@ -53,7 +61,7 @@ export class KeyboardShortcutsConfiguration {
       // key: 'o',
       // route: ''
       // },
-      // Create Client - ctrl + c
+      // Create Client - alt + c
       {
         title: 'Create Client',
         ctrlKey: false,
@@ -116,7 +124,7 @@ export class KeyboardShortcutsConfiguration {
         key: 'r',
         route: 'reports'
       },
-      // Accounting - ctrl + a
+      // Accounting - alt + a
       {
         title: 'Accounting',
         ctrlKey: false,
@@ -125,7 +133,7 @@ export class KeyboardShortcutsConfiguration {
         key: 'a',
         route: 'accounting'
       },
-      // Save/Submit Forms - ctrl + s
+      // Save/Submit Forms - alt + s
       {
         title: 'Save/Submit Forms',
         ctrlKey: false,
@@ -135,7 +143,7 @@ export class KeyboardShortcutsConfiguration {
         route: '',
         id: 'submit'
       },
-      // Cancel - ctrl + x
+      // Cancel - alt + x
       {
         title: 'Cancel',
         ctrlKey: false,
@@ -145,7 +153,7 @@ export class KeyboardShortcutsConfiguration {
         route: '',
         id: 'cancel'
       },
-      // Help - ctrl + h
+      // Help - alt + h
       {
         title: 'Help',
         ctrlKey: false,

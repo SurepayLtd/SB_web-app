@@ -1,7 +1,15 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, OnChanges, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnChanges, Input, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { UntypedFormControl } from '@angular/forms';
+import { FormControl } from '@angular/forms';
 
 /** Custom Dialogs */
 import { FormDialogComponent } from 'app/shared/form-dialog/form-dialog.component';
@@ -11,8 +19,28 @@ import { FormfieldBase } from 'app/shared/form-dialog/formfield/model/formfield-
 import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
 import { DatepickerBase } from 'app/shared/form-dialog/formfield/model/datepicker-base';
 import { Dates } from 'app/core/utils/dates';
-import { MatTableDataSource } from '@angular/material/table';
+import { SettingsService } from 'app/settings/settings.service';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
 import { TranslateService } from '@ngx-translate/core';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { ChargesFilterPipe } from '../../../pipes/charges-filter.pipe';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { FormatNumberPipe } from '../../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Savings Account Charges Step
@@ -20,15 +48,41 @@ import { TranslateService } from '@ngx-translate/core';
 @Component({
   selector: 'mifosx-savings-account-charges-step',
   templateUrl: './savings-account-charges-step.component.html',
-  styleUrls: ['./savings-account-charges-step.component.scss']
+  styleUrls: ['./savings-account-charges-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatIconButton,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatStepperPrevious,
+    MatStepperNext,
+    ChargesFilterPipe,
+    DateFormatPipe,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
+  private dialog = inject(MatDialog);
+  private dateUtils = inject(Dates);
+  private translateService = inject(TranslateService);
+  private settingsService = inject(SettingsService);
+
   /** Savings Account Product Template */
   @Input() savingsAccountProductTemplate: any;
   /** Savings Account Template */
   @Input() savingsAccountTemplate: any;
   /** Currency Code */
-  @Input() currencyCode: UntypedFormControl;
+  @Input() currencyCode: FormControl;
   /** active Client Members in case of GSIM Account */
   @Input() activeClientMembers?: any;
 
@@ -63,33 +117,32 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
     'name'
   ];
 
-  /**
-   * @param {MatDialog} dialog Mat Dialog
-   */
-  constructor(
-    private dialog: MatDialog,
-    private dateUtils: Dates,
-    private translateService: TranslateService
-  ) {}
-
   ngOnInit() {
     if (this.savingsAccountTemplate) {
       if (!this.isChargesPatched && this.savingsAccountTemplate.charges) {
+        // An account charge holds the calculated amount in `amount`; the value entered for the charge
+        // (flat amount or percentage) is `amountOrPercentage`, which is what the form sends back.
         this.chargesDataSource =
-          this.savingsAccountProductTemplate.charges.map((charge: any) => ({ ...charge, id: charge.chargeId })) || [];
+          this.savingsAccountTemplate.charges.map((charge: any) => ({
+            ...charge,
+            id: charge.chargeId,
+            amount: charge.amountOrPercentage ?? charge.amount
+          })) || [];
         this.isChargesPatched = true;
       } else {
         this.chargesDataSource = [];
       }
-      this.dataSource = new MatTableDataSource<any>(this.activeClientMembers);
     }
   }
 
   ngOnChanges() {
     if (this.savingsAccountProductTemplate) {
       this.chargeData = this.savingsAccountProductTemplate.chargeOptions;
-      this.chargesDataSource =
-        this.savingsAccountProductTemplate.charges.map((charge: any) => ({ ...charge, id: charge.chargeId })) || [];
+      // When modifying an application, keep the charges loaded from the account in ngOnInit.
+      if (!this.isChargesPatched) {
+        this.chargesDataSource =
+          this.savingsAccountProductTemplate.charges.map((charge: any) => ({ ...charge, id: charge.chargeId })) || [];
+      }
     }
   }
 
@@ -116,7 +169,6 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
         type: 'number',
         required: false
       })
-
     ];
     const data = {
       title: this.translateService.instant('labels.heading.Edit Charge Amount'),
@@ -125,7 +177,7 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
     };
     const editNoteDialogRef = this.dialog.open(FormDialogComponent, { data });
     editNoteDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const newCharge = { ...charge, amount: response.data.value.amount };
         this.chargesDataSource.splice(this.chargesDataSource.indexOf(charge), 1, newCharge);
         this.chargesDataSource = this.chargesDataSource.concat([]);
@@ -145,9 +197,9 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
         label: this.translateService.instant('labels.inputs.Date'),
         value: charge.dueDate || charge.feeOnMonthDay || '',
         type: 'datetime-local',
+        maxDate: this.settingsService.maxFutureDate,
         required: false
       })
-
     ];
     const data = {
       title: this.translateService.instant('labels.heading.Edit Charge Date'),
@@ -156,7 +208,7 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
     };
     const editNoteDialogRef = this.dialog.open(FormDialogComponent, { data });
     editNoteDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         let newCharge: any;
         const dateFormat = 'dd MMMM yyyy';
         const date = this.dateUtils.formatDate(response.data.value.date, dateFormat);
@@ -171,7 +223,6 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
             newCharge = { ...charge, feeOnMonthDay: dateMonthDay };
             break;
         }
-        console.log(newCharge);
         this.chargesDataSource.splice(this.chargesDataSource.indexOf(charge), 1, newCharge);
         this.chargesDataSource = this.chargesDataSource.concat([]);
       }
@@ -192,7 +243,6 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
         type: 'text',
         required: false
       })
-
     ];
     const data = {
       title: 'Edit Charge Fee Interval',
@@ -201,7 +251,7 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
     };
     const editNoteDialogRef = this.dialog.open(FormDialogComponent, { data });
     editNoteDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const newCharge = { ...charge, feeInterval: response.data.value.feeInterval };
         this.chargesDataSource.splice(this.chargesDataSource.indexOf(charge), 1, newCharge);
         this.chargesDataSource = this.chargesDataSource.concat([]);
@@ -225,23 +275,5 @@ export class SavingsAccountChargesStepComponent implements OnInit, OnChanges {
    */
   get savingsAccountCharges() {
     return { charges: this.chargesDataSource };
-  }
-
-  get selectedClientMembers() {
-    return { selectedMembers: this.activeClientMembers.filter((item: any) => item.selected) };
-  }
-
-  /** Toggle all checks */
-  toggleSelects() {
-    for (const member of this.activeClientMembers) {
-      member.selected = this.selectAllItems;
-    }
-  }
-
-  /** Check if all the checks are selected */
-  toggleSelect() {
-    const len = this.activeClientMembers.length;
-    this.selectAllItems =
-      len === 0 ? false : this.activeClientMembers.filter((item: any) => item.selected).length === len;
   }
 }

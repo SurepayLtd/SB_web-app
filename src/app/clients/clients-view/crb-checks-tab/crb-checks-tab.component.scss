@@ -1,3 +1,10 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 .crb-checks-page {
   padding: 1rem;
@@ -42,7 +49,7 @@
 .summary-grid,
 .result-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); /* stylelint-disable-line unit-allowed-list */
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -113,7 +120,7 @@
 }
 
 .status-neutral {
-  background: #eeeeee;
+  background: #eee;
   color: #424242;
 }
 
@@ -129,7 +136,7 @@
 
 .detail-row {
   display: grid;
-  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.5fr);
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.5fr); /* stylelint-disable-line unit-allowed-list */
   gap: 1rem;
   padding: 0.65rem 0;
   border-bottom: 1px solid var(--border-color, #e0e0e0);
@@ -167,7 +174,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .crb-checks-page {
     padding: 0.5rem;
   }
@@ -177,7 +184,7 @@
   }
 
   .detail-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* stylelint-disable-line unit-allowed-list */
     gap: 0.35rem;
   }
 }

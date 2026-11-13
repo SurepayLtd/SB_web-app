@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -11,17 +19,34 @@ import { CrbConsentOtpDialogComponent } from '../custom-dialogs/crb-consent-otp-
 import { ClientsService } from '../../clients.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { formatDate } from '@angular/common';
-import {
-  CrbConsentRevokeDialogComponent
-} from '../custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
+import { CrbConsentRevokeDialogComponent } from '../custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
 import { ConfirmationDialogComponent } from '../../../shared/confirmation-dialog/confirmation-dialog.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'mifosx-crb-consent-tab',
   templateUrl: './crb-consent-tab.component.html',
-  styleUrls: ['./crb-consent-tab.component.scss']
+  styleUrls: ['./crb-consent-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatIconModule,
+    FontAwesomeModule,
+    MatDividerModule,
+    MatTooltipModule
+  ]
 })
 export class CrbConsentTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private clientsService = inject(ClientsService);
+  private settingsService = inject(SettingsService);
+  dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   /** Component Properties */
   consentData: any;
@@ -41,13 +66,7 @@ export class CrbConsentTabComponent implements OnInit {
   readonly REVOKED = 3;
   readonly REACTIVATED = 4;
 
-  constructor(
-    private route: ActivatedRoute,
-    private clientsService: ClientsService,
-    private settingsService: SettingsService,
-    public dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { consentData: any; clientViewData: any }) => {
       this.consentData = data.consentData;
       this.clientViewData = data.clientViewData;
@@ -191,40 +210,39 @@ export class CrbConsentTabComponent implements OnInit {
 
     this.isProcessing = true;
 
-    this.clientsService.getCrbConsentTemplate('revoke')
-      .subscribe({
-        next: (template: any) => {
-          this.isProcessing = false;
-          const narrations = (template?.narrations ?? [])
-            .filter((narration: any) => narration.active)
-            .sort((a: any, b: any) => a.position - b.position);
+    this.clientsService.getCrbConsentTemplate('revoke').subscribe({
+      next: (template: any) => {
+        this.isProcessing = false;
+        const narrations = (template?.narrations ?? [])
+          .filter((narration: any) => narration.active)
+          .sort((a: any, b: any) => a.position - b.position);
 
-          if (narrations.length === 0) {
-            this.snackBar.open('No revocation reasons are available.', 'Close', { duration: 5000 });
+        if (narrations.length === 0) {
+          this.snackBar.open('No revocation reasons are available.', 'Close', { duration: 5000 });
+          return;
+        }
+
+        const dialogRef = this.dialog.open(CrbConsentRevokeDialogComponent, {
+          width: '450px',
+          maxWidth: '95vw',
+          disableClose: true,
+          data: { narrations }
+        });
+
+        dialogRef.afterClosed().subscribe((revokeReasonId: number | null) => {
+          if (revokeReasonId == null) {
             return;
           }
-
-          const dialogRef = this.dialog.open(CrbConsentRevokeDialogComponent,
-            {
-              width: '450px',
-              maxWidth: '95vw',
-              disableClose: true,
-              data: { narrations }
-            }
-          );
-
-          dialogRef.afterClosed().subscribe((revokeReasonId: number | null) => {
-            if (revokeReasonId == null) {
-              return;
-            }
-            this.submitConsentRevocation(revokeReasonId);
-          });
-        },
-        error: (error) => {
-          this.isProcessing = false;
-          this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to load revocation reasons.', 'Close', { duration: 5000 });
-        }
-      });
+          this.submitConsentRevocation(revokeReasonId);
+        });
+      },
+      error: (error) => {
+        this.isProcessing = false;
+        this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to load revocation reasons.', 'Close', {
+          duration: 5000
+        });
+      }
+    });
   }
 
   private submitConsentRevocation(revokeReasonId: number): void {
@@ -234,23 +252,23 @@ export class CrbConsentTabComponent implements OnInit {
 
     this.isProcessing = true;
 
-    this.clientsService.updateCrbConsent(this.consentData.id, 'revoke', { revokeReasonId })
-      .subscribe({
-        next: () => {
-          this.isProcessing = false;
-          this.snackBar.open('CRB consent revoked successfully.', 'Close', { duration: 5000 });
-          this.loadConsentData();
-          this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
-            this.clientViewData = clientData;
-          });
-        },
-        error: (error) => {
-          this.isProcessing = false;
-          this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to revoke CRB consent.', 'Close', { duration: 5000 });
-        }
-      });
+    this.clientsService.updateCrbConsent(this.consentData.id, 'revoke', { revokeReasonId }).subscribe({
+      next: () => {
+        this.isProcessing = false;
+        this.snackBar.open('CRB consent revoked successfully.', 'Close', { duration: 5000 });
+        this.loadConsentData();
+        this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
+          this.clientViewData = clientData;
+        });
+      },
+      error: (error) => {
+        this.isProcessing = false;
+        this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to revoke CRB consent.', 'Close', {
+          duration: 5000
+        });
+      }
+    });
   }
-
 
   reactivateConsent(): void {
     if (!this.consentData?.id || this.isProcessing || !this.canReactivateConsent) {
@@ -274,21 +292,22 @@ export class CrbConsentTabComponent implements OnInit {
 
       this.isProcessing = true;
 
-      this.clientsService.updateCrbConsent(this.consentData.id, 'reactivate', {})
-        .subscribe({
-          next: () => {
-            this.isProcessing = false;
-            this.snackBar.open('CRB consent reactivated successfully.', 'Close', { duration: 5000 });
-            this.loadConsentData();
-            this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
-              this.clientViewData = clientData;
-            });
-          },
-          error: (error) => {
-            this.isProcessing = false;
-            this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to reactivate CRB consent.', 'Close', { duration: 5000 });
-          }
-        });
+      this.clientsService.updateCrbConsent(this.consentData.id, 'reactivate', {}).subscribe({
+        next: () => {
+          this.isProcessing = false;
+          this.snackBar.open('CRB consent reactivated successfully.', 'Close', { duration: 5000 });
+          this.loadConsentData();
+          this.clientsService.getClientData(this.clientId).subscribe((clientData: any) => {
+            this.clientViewData = clientData;
+          });
+        },
+        error: (error) => {
+          this.isProcessing = false;
+          this.snackBar.open(error?.error?.defaultUserMessage || 'Failed to reactivate CRB consent.', 'Close', {
+            duration: 5000
+          });
+        }
+      });
     });
   }
 
@@ -323,5 +342,4 @@ export class CrbConsentTabComponent implements OnInit {
         return 'Unknown';
     }
   }
-
 }

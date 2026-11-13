@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 .container {
   max-width: 37rem;
   margin: 1.5rem auto;
@@ -78,7 +86,7 @@ mat-form-field {
   padding: 0.5rem 0;
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .container {
     margin: 1rem auto;
     padding: 0 0.5rem;

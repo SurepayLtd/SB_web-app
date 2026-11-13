@@ -1,12 +1,29 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import {
+  UntypedFormGroup,
+  UntypedFormBuilder,
+  Validators,
+  UntypedFormControl,
+  ReactiveFormsModule
+} from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { CentersService } from 'app/centers/centers.service';
 import { Dates } from 'app/core/utils/dates';
 import { SettingsService } from 'app/settings/settings.service';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatFormField, MatLabel, MatError, MatSuffix, MatHint } from '@angular/material/form-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit Center Meetings Component
@@ -14,9 +31,22 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-edit-center-meeting',
   templateUrl: './edit-center-meeting.component.html',
-  styleUrls: ['./edit-center-meeting.component.scss']
+  styleUrls: ['./edit-center-meeting.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatHint
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditCenterMeetingComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private centersService = inject(CentersService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   /** Minimum date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum date allowed. */
@@ -45,14 +75,7 @@ export class EditCenterMeetingComponent implements OnInit {
    * @param {ActivatedRoute} route Activated Route
    * @param {Router} router Router
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private centersService: CentersService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { centersActionData: any }) => {
       this.calendarTemplate = data.centersActionData;
       this.frequencyOptions = this.calendarTemplate.frequencyOptions;
@@ -63,7 +86,7 @@ export class EditCenterMeetingComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.maxDate = this.settingsService.businessDate;
+    this.maxDate = this.settingsService.maxFutureDate;
     this.createEditCenterMeetingForm();
     this.buildDependencies();
   }
@@ -138,9 +161,10 @@ export class EditCenterMeetingComponent implements OnInit {
       }
     });
     this.centerEditMeetingForm.patchValue({
-      startDate: this.calendarTemplate.startDate && new Date(this.calendarTemplate.startDate),
+      startDate: this.calendarTemplate.startDate && this.dateUtils.parseDate(this.calendarTemplate.startDate),
       frequency: this.calendarTemplate.frequency.id,
-      interval: `${this.calendarTemplate.interval}`
+      // Fineract stores an interval of 1 without INTERVAL in the recurrence and returns it as -1.
+      interval: `${this.calendarTemplate.interval > 0 ? this.calendarTemplate.interval : 1}`
     });
   }
 

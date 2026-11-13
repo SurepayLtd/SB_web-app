@@ -1,9 +1,32 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams, HttpBackend, HttpHeaders } from '@angular/common/http';
 
 /** rxjs Imports */
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
+import { environment } from 'environments/environment';
+
+export interface ClientIdentifierPayload {
+  documentTypeId: number | string;
+  documentKey: string;
+  description?: string;
+  dateFormat: string;
+  locale: string;
+  issuanceDate: string | null;
+  expiryDate: string | null;
+  status?: 'Active' | 'Inactive';
+}
+
 /**
  * Clients service.
  */
@@ -11,10 +34,20 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class ClientsService {
-  /**
-   * @param {HttpClient} http Http Client to send requests.
-   */
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private httpBackend = inject(HttpBackend);
+
+  /** Separate HttpClient that bypasses interceptors (for external API calls) */
+  private externalHttp = new HttpClient(this.httpBackend);
+
+  private isValidDocumentId(documentId: string | number | null | undefined): boolean {
+    const parsedDocumentId = Number(documentId);
+    return Number.isFinite(parsedDocumentId) && parsedDocumentId > 0;
+  }
+
+  private invalidDocumentIdError(): Observable<never> {
+    return throwError(() => new Error('Invalid client document id.'));
+  }
 
   getFilteredClients(
     orderBy: string,
@@ -55,8 +88,12 @@ export class ClientsService {
     return this.http.get(`/clients/${clientId}`);
   }
 
-  createClient(client: any) {
-    return this.http.post(`/clients`, client);
+  createClient(client: any, idempotencyKey?: string) {
+    let headers = new HttpHeaders();
+    if (idempotencyKey) {
+      headers = headers.set('Idempotency-Key', idempotencyKey);
+    }
+    return this.http.post(`/clients`, client, { headers });
   }
 
   updateClient(clientId: string, client: any) {
@@ -129,9 +166,11 @@ export class ClientsService {
    * @param transactionData Transaction Data to be undone.
    */
   undoTransaction(transactionData: any) {
+    const httpParams = new HttpParams().set('command', 'undo');
     return this.http.post(
-      `/clients/${transactionData.clientId}/transactions/${transactionData.transactionId}?command=undo`,
-      transactionData
+      `/clients/${transactionData.clientId}/transactions/${transactionData.transactionId}`,
+      transactionData,
+      { params: httpParams }
     );
   }
 
@@ -158,7 +197,7 @@ export class ClientsService {
    */
   payClientCharge(clientId: string, chargeId: string, payment: any) {
     const httpParams = new HttpParams().set('command', 'paycharge');
-    return this.http.post(`/clients/${clientId}/charges/${chargeId}?command=paycharge`, payment, {
+    return this.http.post(`/clients/${clientId}/charges/${chargeId}`, payment, {
       params: httpParams
     });
   }
@@ -170,9 +209,23 @@ export class ClientsService {
 
   getClientProfileImage(clientId: string) {
     const httpParams = new HttpParams().set('maxHeight', '150');
+    // Keep it simple since our interceptor will handle the 404 errors
     return this.http
-      .skipErrorHandler()
-      .get(`/clients/${clientId}/images`, { params: httpParams, responseType: 'text' });
+      .get(`/clients/${clientId}/images`, {
+        params: httpParams,
+        responseType: 'text'
+      })
+      .pipe(
+        // Handle the error here and return null when no image is found (404)
+        catchError((error) => {
+          if (error.status === 404) {
+            // Client has no profile image - return null without propagating error
+            return of(null);
+          }
+          // For other errors, rethrow the error
+          return throwError(() => error);
+        })
+      );
   }
 
   uploadClientProfileImage(clientId: string, image: File) {
@@ -198,7 +251,10 @@ export class ClientsService {
     return this.http.post(`/clients/${clientId}/documents`, formData);
   }
 
-  getClientSignatureImage(clientId: string, documentId: string) {
+  getClientSignatureImage(clientId: string, documentId: string | number | null | undefined) {
+    if (!this.isValidDocumentId(documentId)) {
+      return this.invalidDocumentIdError();
+    }
     return this.http.get(`/clients/${clientId}/documents/${documentId}/attachment`, { responseType: 'blob' });
   }
 
@@ -230,8 +286,12 @@ export class ClientsService {
     return this.http.get(`/clients/${clientId}/identifiers/template`);
   }
 
-  addClientIdentifier(clientId: string, identifierData: any) {
+  addClientIdentifier(clientId: string, identifierData: ClientIdentifierPayload) {
     return this.http.post(`/clients/${clientId}/identifiers`, identifierData);
+  }
+
+  editClientIdentifier(clientId: string, identifierId: string, identifierData: ClientIdentifierPayload) {
+    return this.http.put(`/clients/${clientId}/identifiers/${identifierId}`, identifierData);
   }
 
   deleteClientIdentifier(clientId: string, identifierId: string) {
@@ -256,7 +316,10 @@ export class ClientsService {
     return this.http.get(`/clients/${clientId}/documents`);
   }
 
-  downloadClientDocument(parentEntityId: string, documentId: string) {
+  downloadClientDocument(parentEntityId: string, documentId: string | number | null | undefined) {
+    if (!this.isValidDocumentId(documentId)) {
+      return this.invalidDocumentIdError();
+    }
     return this.http.get(`/clients/${parentEntityId}/documents/${documentId}/attachment`, { responseType: 'blob' });
   }
 
@@ -264,7 +327,10 @@ export class ClientsService {
     return this.http.post(`/clients/${clientId}/documents`, documentData);
   }
 
-  deleteClientDocument(parentEntityId: string, documentId: string) {
+  deleteClientDocument(parentEntityId: string, documentId: string | number | null | undefined) {
+    if (!this.isValidDocumentId(documentId)) {
+      return this.invalidDocumentIdError();
+    }
     return this.http.delete(`/clients/${parentEntityId}/documents/${documentId}`);
   }
 
@@ -338,7 +404,7 @@ export class ClientsService {
 
   retrieveClientReportTemplate(templateId: string, clientId: string) {
     const httpParams = new HttpParams().set('clientId', clientId);
-    return this.http.post(`/templates/${templateId}`, {}, { params: httpParams, responseType: 'text' });
+    return this.http.get(`/templates/${templateId}`, { params: httpParams, responseType: 'text' });
   }
 
   /**
@@ -432,24 +498,21 @@ export class ClientsService {
     return this.http.post(`/clients/${clientId}/unblockClientPin`, {});
   }
 
-  getCrbConsentTemplate(command?: string): Observable<any>{
+  getCrbConsentTemplate(command?: string): Observable<any> {
     let params = new HttpParams();
 
     if (command) {
       params = params.set('command', command);
     }
-    return this.http.get('/crbconsents/template', {params})
+    return this.http.get('/crbconsents/template', { params });
   }
 
-  getCrbConsentTemplateName(): Observable<any>{
-    return this.http.get('/templates', {  params:
-        {typeId: '2', entityId: '0'}
-    })
+  getCrbConsentTemplateName(): Observable<any> {
+    return this.http.get('/templates', { params: { typeId: '2', entityId: '0' } });
   }
 
-
-  getCrbCheckTemplate(): Observable<any>{
-    return this.http.get('/crbchecks/template')
+  getCrbCheckTemplate(): Observable<any> {
+    return this.http.get('/crbchecks/template');
   }
 
   createCrbCheck(clientId: string, data: any) {
@@ -472,5 +535,35 @@ export class ClientsService {
     const params = new HttpParams().set('command', command);
 
     return this.http.put(`/crbconsents/${consentId}`, data, { params });
+  }
+
+  /**
+   * Lookup external National ID from the configured external system.
+   * Uses a separate HttpClient (via HttpBackend) to bypass Angular interceptors
+   * so that Fineract auth headers are not sent to the external API.
+   *
+   * In development, requests go through the dev proxy (/external-nationalid).
+   * In production, requests go through the nginx reverse proxy.
+   *
+   * @param externalId The National ID string (e.g. CURP)
+   */
+  lookupExternalNationalId(externalId: string): Observable<any> {
+    const apiUrl = environment.externalNationalIdSystemUrl;
+    if (!apiUrl) {
+      return throwError(() => new Error('External National ID System URL is not configured'));
+    }
+
+    let headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    const apiHeader = environment.externalNationalIdSystemApiHeader;
+    const apiKey = environment.externalNationalIdSystemApiKey;
+    if (apiHeader && apiKey) {
+      // Validate header name to prevent Angular from throwing on invalid header
+      if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(apiHeader)) {
+        return throwError(() => new Error(`Invalid API header name: '${apiHeader}'`));
+      }
+      headers = headers.set(apiHeader, apiKey);
+    }
+
+    return this.externalHttp.post(apiUrl, { externalId }, { headers });
   }
 }

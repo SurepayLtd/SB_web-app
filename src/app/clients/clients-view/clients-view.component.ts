@@ -1,15 +1,28 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { environment } from '../../../environments/environment';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
 
 /** Custom Dialogs */
 import { UnassignStaffDialogComponent } from './custom-dialogs/unassign-staff-dialog/unassign-staff-dialog.component';
 import { UploadSignatureDialogComponent } from './custom-dialogs/upload-signature-dialog/upload-signature-dialog.component';
 import { ViewSignatureDialogComponent } from './custom-dialogs/view-signature-dialog/view-signature-dialog.component';
 import { DeleteSignatureDialogComponent } from './custom-dialogs/delete-signature-dialog/delete-signature-dialog.component';
+import { DrawSignatureDialogComponent } from './custom-dialogs/draw-signature-dialog/draw-signature-dialog.component';
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import { UploadImageDialogComponent } from './custom-dialogs/upload-image-dialog/upload-image-dialog.component';
 import { CaptureImageDialogComponent } from './custom-dialogs/capture-image-dialog/capture-image-dialog.component';
@@ -17,13 +30,115 @@ import { MomoActivationDialogComponent } from './custom-dialogs/momo-activation-
 
 /** Custom Services */
 import { ClientsService } from '../clients.service';
+import { CreditBureauService } from 'app/credit-bureau/credit-bureau.service';
+import { LegalFormId } from '../models/legal-form.enum';
+import { MatCardMdImage } from '@angular/material/card';
+import { MatIconButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
+import { EntityNameComponent } from '../../shared/entity-name/entity-name.component';
+import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
+import { MatIcon } from '@angular/material/icon';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { AccountNumberComponent } from '../../shared/account-number/account-number.component';
+import { ExternalIdentifierComponent } from '../../shared/external-identifier/external-identifier.component';
+import { MatTabNav, MatTabLink, MatTabNavPanel } from '@angular/material/tabs';
+import { DateFormatPipe } from '../../pipes/date-format.pipe';
+import { StatusLookupPipe } from '../../pipes/status-lookup.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { formatTabLabel } from 'app/shared/utils/format-tab-label.util';
+import { AccountHeaderComponent } from 'app/shared/account-header/account-header.component';
 
 @Component({
   selector: 'mifosx-clients-view',
   templateUrl: './clients-view.component.html',
-  styleUrls: ['./clients-view.component.scss']
+  styleUrls: ['./clients-view.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    AccountHeaderComponent,
+    MatCardMdImage,
+    MatTooltip,
+    EntityNameComponent,
+    MatIconButton,
+    MatMenuTrigger,
+    MatIcon,
+    FaIconComponent,
+    AccountNumberComponent,
+    ExternalIdentifierComponent,
+    MatMenu,
+    MatMenuItem,
+    MatTabNav,
+    MatTabLink,
+    RouterLinkActive,
+    MatTabNavPanel,
+    RouterOutlet,
+    DateFormatPipe,
+    StatusLookupPipe,
+    FormsModule,
+    MatSlideToggle
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientsViewComponent implements OnInit {
+  complianceHideClientData = environment.complianceHideClientData;
+  /**
+   * Mask a string, keeping first and last letter, masking the rest with *
+   */
+  maskName(name: string): string {
+    if (!name) return '';
+    return name
+      .trim()
+      .split(/(\s+)/)
+      .map((word) => {
+        if (!word.trim()) return word;
+        if (word.length <= 2) return word[0] + '*';
+        return word[0] + '*'.repeat(word.length - 2) + word[word.length - 1];
+      })
+      .join('');
+  }
+
+  /**
+   * Mask external id, mobile, etc (show only first char, rest as *)
+   */
+  maskValue(val: string): string {
+    if (!val) return '';
+    if (val.length <= 2) return val[0] + '*';
+    return val[0] + '*'.repeat(val.length - 1);
+  }
+
+  /**
+   * Mask email: v********@f*******
+   */
+  maskEmail(email: string): string {
+    if (!email) return '';
+    const [
+      user,
+      domain
+    ] = email.split('@');
+    if (!user || !domain || user.length < 1) return this.maskValue(email);
+    let maskedUser = user.length > 1 ? user[0] + '*'.repeat(user.length - 1) : user[0] + '*';
+    const domainLabel = domain.split('.')[0] || '';
+    const domainMaskLen = Math.max(0, domainLabel.length - 1);
+    let maskedDomain = domainLabel.length > 0 ? domainLabel[0] + '*'.repeat(domainMaskLen) : '';
+    let domainRest = '';
+    if (domain.length > domainLabel.length) {
+      domainRest = domain.substring(domainLabel.length);
+    }
+    if (!maskedDomain) return this.maskValue(email);
+    return maskedUser + '@' + maskedDomain + domainRest;
+  }
+  formatTabLabel(label: string): string {
+    return formatTabLabel(label);
+  }
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private clientsService = inject(ClientsService);
+  private creditBureauService = inject(CreditBureauService);
+  private _sanitizer = inject(DomSanitizer);
+  dialog = inject(MatDialog);
+  private destroyRef = inject(DestroyRef);
+  private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
+
   clientViewData: any;
   clientDatatables: any;
   clientImage: any;
@@ -31,35 +146,54 @@ export class ClientsViewComponent implements OnInit {
   showOtpInput = false;
   otpCode: string;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private _sanitizer: DomSanitizer,
-    public dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {
-    this.route.data.subscribe((data: { clientViewData: any; clientTemplateData: any; clientDatatables: any }) => {
-      this.clientViewData = data.clientViewData;
-      this.clientDatatables = data.clientDatatables;
-      this.clientTemplateData = data.clientTemplateData;
-    });
+  constructor() {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { clientViewData: any; clientTemplateData: any; clientDatatables: any }) => {
+        this.clientViewData = data.clientViewData;
+        this.clientDatatables = this.filterDatatablesByClientSubtype(
+          data.clientDatatables,
+          data.clientViewData?.legalForm?.id
+        );
+        this.clientTemplateData = data.clientTemplateData;
+      });
+  }
+
+  /**
+   * Filters datatables based on the client's legal form (Person or Entity).
+   * Datatables without an entitySubType are kept visible for all client types.
+   */
+  private filterDatatablesByClientSubtype(datatables: any[], legalFormId: number): any[] {
+    if (!datatables || !legalFormId) {
+      return datatables || [];
+    }
+    const subtype = legalFormId === LegalFormId.PERSON ? 'person' : 'entity';
+    return datatables.filter((dt: any) => !dt.entitySubType || dt.entitySubType.toLowerCase() === subtype);
   }
 
   ngOnInit() {
-    this.clientsService.getClientProfileImage(this.clientViewData.id).subscribe(
-      (base64Image: any) => {
-        this.clientImage = this._sanitizer.bypassSecurityTrustResourceUrl(base64Image);
+    this.clientsService.getClientProfileImage(this.clientViewData.id).subscribe({
+      next: (base64Image: any) => {
+        // If base64Image is null, client has no profile image
+        if (base64Image) {
+          this.clientImage = this._sanitizer.bypassSecurityTrustResourceUrl(base64Image);
+        } else {
+          this.clientImage = null;
+        }
       },
-      (error: any) => {}
-    );
+      error: (error: any) => {
+        // Handle any unexpected errors
+        console.error('Error loading client profile image:', error);
+        this.clientImage = null;
+      }
+    });
   }
 
   isActive(): boolean {
     return this.clientViewData.status.value === 'Active';
   }
 
-  isCrbPending(): boolean{
+  isCrbPending(): boolean {
     return this.clientViewData.status.value === 'Crb Pending';
   }
 
@@ -86,7 +220,6 @@ export class ClientsViewComponent implements OnInit {
       case 'Undo Rejection':
       case 'Add Charge':
       case 'Create Collateral':
-      case 'Create Self Service User':
       case 'Client Screen Reports':
         this.router.navigate([`actions/${name}`], { relativeTo: this.route });
         break;
@@ -154,6 +287,9 @@ export class ClientsViewComponent implements OnInit {
       data: { deleteContext: `client with id: ${this.clientViewData.id}` }
     });
     deleteClientDialogRef.afterClosed().subscribe((response: any) => {
+      if (!response) {
+        return;
+      }
       if (response.delete) {
         this.clientsService.deleteClient(this.clientViewData.id).subscribe(() => {
           this.router.navigate(['/clients'], { relativeTo: this.route });
@@ -168,6 +304,9 @@ export class ClientsViewComponent implements OnInit {
   private unassignStaff() {
     const unAssignStaffDialogRef = this.dialog.open(UnassignStaffDialogComponent);
     unAssignStaffDialogRef.afterClosed().subscribe((response: { confirm: any }) => {
+      if (!response) {
+        return;
+      }
       if (response.confirm) {
         this.clientsService
           .executeClientCommand(this.clientViewData.id, 'unassignStaff', { staffId: this.clientViewData.staffId })
@@ -190,8 +329,13 @@ export class ClientsViewComponent implements OnInit {
         }
       });
       viewSignatureDialogRef.afterClosed().subscribe((response: any) => {
+        if (!response) {
+          return;
+        }
         if (response.upload) {
           this.uploadSignature();
+        } else if (response.draw) {
+          this.drawSignature();
         } else if (response.delete) {
           this.deleteSignature();
         }
@@ -214,6 +358,20 @@ export class ClientsViewComponent implements OnInit {
   }
 
   /**
+   * Opens draw pad for client signature
+   */
+  private drawSignature() {
+    const drawSignatureDialogRef = this.dialog.open(DrawSignatureDialogComponent);
+    drawSignatureDialogRef.afterClosed().subscribe((signature: File) => {
+      if (signature) {
+        this.clientsService.uploadClientSignatureImage(this.clientViewData.id, signature).subscribe(() => {
+          this.reload();
+        });
+      }
+    });
+  }
+
+  /**
    * Deletes client signature
    */
   private deleteSignature() {
@@ -222,6 +380,9 @@ export class ClientsViewComponent implements OnInit {
         data: documents
       });
       deleteSignatureDialogRef.afterClosed().subscribe((response: any) => {
+        if (!response) {
+          return;
+        }
         if (response.delete) {
           this.clientsService.deleteClientDocument(this.clientViewData.id, response.id).subscribe(() => {
             this.reload();
@@ -269,7 +430,7 @@ export class ClientsViewComponent implements OnInit {
       data: { deleteContext: `the profile image of ${this.clientViewData.displayName}` }
     });
     deleteClientImageDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
+      if (response?.delete) {
         this.clientsService.deleteClientProfileImage(this.clientViewData.id).subscribe(() => {
           this.reload();
         });
@@ -294,6 +455,7 @@ export class ClientsViewComponent implements OnInit {
             (response: any) => {
               this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
                 this.clientViewData = clientData;
+                this.cdr.markForCheck();
               });
               this.snackBar.open('Momo payment deactivated successfully', 'Close', {
                 duration: 3000
@@ -310,6 +472,7 @@ export class ClientsViewComponent implements OnInit {
             (response: any) => {
               this.clientViewData.momoPaymentOtpExpiry = response.momoPaymentOtpExpiry;
               this.showOtpInput = true; // Show OTP input
+              this.cdr.markForCheck();
               this.snackBar.open('OTP sent to client', 'Close', {
                 duration: 3000
               });
@@ -329,30 +492,31 @@ export class ClientsViewComponent implements OnInit {
     const dialogRef = this.dialog.open(MomoActivationDialogComponent, {
       data: {
         title: 'Unblock Client PIN',
-        message: 'Are you sure you want to unblock this client\'s PIN? The client will be able to transact via USSD again.'
+        message:
+          "Are you sure you want to unblock this client's PIN? The client will be able to transact via USSD again."
       }
     });
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-
         if (this.clientViewData.pinBlocked) {
-
           this.clientsService.unblockClientPin(this.clientViewData.id).subscribe(
             (response: any) => {
               this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
-                  this.clientViewData = clientData;}
-              );
+                this.clientViewData = clientData;
+                this.cdr.markForCheck();
+              });
 
               this.snackBar.open('Client PIN unblocked successfully.', 'Close', {
-                  duration: 3000 });
+                duration: 3000
+              });
             },
             (error: any) => {
               this.snackBar.open('Failed to unblock client PIN.', 'Close', {
-                  duration: 3000 });
+                duration: 3000
+              });
             }
           );
-
         }
       }
     });
@@ -363,9 +527,11 @@ export class ClientsViewComponent implements OnInit {
       (response: any) => {
         this.clientsService.getClientData(this.clientViewData.id).subscribe((clientData: any) => {
           this.clientViewData = clientData;
+          this.cdr.markForCheck();
         });
         this.showOtpInput = false;
         this.otpCode = '';
+        this.cdr.markForCheck();
         this.snackBar.open('OTP validation successful', 'Close', {
           duration: 3000
         });
@@ -376,5 +542,17 @@ export class ClientsViewComponent implements OnInit {
         });
       }
     );
+  }
+
+  /**
+   * Returns true if the current CB-ILD role is COMPLIANCE.
+   * Used to show/hide Audit Trail tab in the client profile nav.
+   */
+  get isCbildCompliance(): boolean {
+    return this.creditBureauService.getRole() === 'COMPLIANCE';
+  }
+
+  get cbIldEnabled(): boolean {
+    return environment.cbIldEnabled;
   }
 }

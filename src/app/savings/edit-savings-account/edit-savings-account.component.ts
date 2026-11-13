@@ -1,5 +1,14 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
 
 /** Custom Components */
@@ -11,6 +20,10 @@ import { SavingsAccountChargesStepComponent } from '../savings-account-stepper/s
 import { SavingsService } from '../savings.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { MatStepper, MatStepperIcon, MatStep, MatStepLabel } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { SavingsAccountPreviewStepComponent } from '../savings-account-stepper/savings-account-preview-step/savings-account-preview-step.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Edit Savings Account Component
@@ -18,9 +31,29 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-edit-savings-account',
   templateUrl: './edit-savings-account.component.html',
-  styleUrls: ['./edit-savings-account.component.scss']
+  styleUrls: ['./edit-savings-account.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatStepper,
+    MatStepperIcon,
+    FaIconComponent,
+    MatStep,
+    MatStepLabel,
+    SavingsAccountDetailsStepComponent,
+    SavingsAccountTermsStepComponent,
+    SavingsAccountChargesStepComponent,
+    SavingsAccountPreviewStepComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditSavingsAccountComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private savingsService = inject(SavingsService);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+
   /** Savings Account Template */
   savingsAccountAndTemplate: any;
   /** Savings Account Product Template */
@@ -44,14 +77,8 @@ export class EditSavingsAccountComponent {
    * @param {SavingsService} savingsService Savings Service
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private savingsService: SavingsService,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { savingsAccountAndTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { savingsAccountAndTemplate: any }) => {
       this.savingsAccountAndTemplate = data.savingsAccountAndTemplate;
     });
   }
@@ -116,7 +143,7 @@ export class EditSavingsAccountComponent {
         chargeId: charge.id,
         amount: charge.amount,
         dueDate: this.dateUtils.formatDate(charge.dueDate, dateFormat),
-        feeOnMonthDay: this.dateUtils.formatDate(charge.feeOnMonthDay, dateFormat),
+        feeOnMonthDay: this.formatFeeOnMonthDay(charge.feeOnMonthDay, monthDayFormat),
         feeInterval: charge.feeInterval
       })),
       submittedOnDate: this.dateUtils.formatDate(this.savingsAccount.submittedOnDate, dateFormat),
@@ -134,5 +161,21 @@ export class EditSavingsAccountComponent {
       .subscribe((response: any) => {
         this.router.navigate(['../'], { relativeTo: this.route });
       });
+  }
+
+  /**
+   * Formats the day of an annual or monthly fee with the monthDayFormat sent to Fineract.
+   * A charge loaded from the account holds Fineract's ISO month-day (e.g. "--03-15"), a charge whose date was
+   * changed in the charges step already holds the formatted day (e.g. "15 March").
+   */
+  formatFeeOnMonthDay(feeOnMonthDay: any, monthDayFormat: string): any {
+    const isoMonthDay = typeof feeOnMonthDay === 'string' ? /^--(\d{2})-(\d{2})$/.exec(feeOnMonthDay) : null;
+    if (isoMonthDay) {
+      return this.dateUtils.formatDate(
+        new Date(2000, Number(isoMonthDay[1]) - 1, Number(isoMonthDay[2])),
+        monthDayFormat
+      );
+    }
+    return feeOnMonthDay;
   }
 }

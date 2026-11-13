@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { AlertService } from 'app/core/alert/alert.service';
 import { Dates } from 'app/core/utils/dates';
 
@@ -13,6 +21,9 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class SettingsService {
+  private alertService = inject(AlertService);
+  private dateUtils = inject(Dates);
+
   public static businessDateFormat = 'yyyy-MM-dd';
   public static businessDateConfigName = 'enable-business-date';
   public static businessDateType = 'BUSINESS_DATE';
@@ -20,10 +31,8 @@ export class SettingsService {
   minAllowedDate = new Date(1950, 0, 1);
   maxAllowedDate = new Date(2100, 0, 1);
 
-  constructor(
-    private alertService: AlertService,
-    private dateUtils: Dates
-  ) {}
+  /** Reactive backing for the business date so signal consumers recompute when it changes. */
+  private readonly businessDateValue = signal<string | null>(localStorage.getItem('mifosXServerDate'));
 
   /**
    * Sets date format setting throughout the app.
@@ -31,6 +40,10 @@ export class SettingsService {
    */
   setDateFormat(dateFormat: string) {
     localStorage.setItem('mifosXDateFormat', JSON.stringify(dateFormat));
+  }
+
+  setDatetimeFormat(datetimeFormat: string) {
+    localStorage.setItem('mifosXDatetimeFormat', JSON.stringify(datetimeFormat));
   }
 
   /**
@@ -82,6 +95,17 @@ export class SettingsService {
   }
 
   /**
+   * Records the tenant identifiers read from the tenant management API.
+   *
+   * Kept apart from the configured list because that one is re-seeded from the environment on every
+   * bootstrap and on every visit to the login page, which would erase anything written into it.
+   * @param {string[]} list Tenant identifiers this installation actually has
+   */
+  setDiscoveredTenantIdentifiers(list: string[]) {
+    localStorage.setItem('mifosXDiscoveredTenantIdentifiers', JSON.stringify(list));
+  }
+
+  /**
    * Sets Tenant Identifier setting throughout the app.
    * @param {string} Tenant Identifier
    */
@@ -95,6 +119,7 @@ export class SettingsService {
    */
   setBusinessDate(date: string) {
     localStorage.setItem('mifosXServerDate', date);
+    this.businessDateValue.set(date);
   }
 
   /**
@@ -106,10 +131,37 @@ export class SettingsService {
   }
 
   /**
-   * Returns date format setting.
+   * Returns date format setting with fallback precedence:
+   * 1. User setting (localStorage)
+   * 2. Global env var
+   * 3. Hardcoded default
    */
   get dateFormat() {
-    return JSON.parse(localStorage.getItem('mifosXDateFormat'));
+    const userSetting = localStorage.getItem('mifosXDateFormat');
+    if (userSetting) {
+      return JSON.parse(userSetting);
+    }
+    if (environment.defaultFormatDate) {
+      return environment.defaultFormatDate;
+    }
+    return 'dd MMMM yyyy';
+  }
+
+  /**
+   * Returns datetime format setting with fallback precedence:
+   * 1. User setting (localStorage)
+   * 2. Global env var
+   * 3. Hardcoded default
+   */
+  get datetimeFormat() {
+    const userSetting = localStorage.getItem('mifosXDatetimeFormat');
+    if (userSetting) {
+      return JSON.parse(userSetting);
+    }
+    if (environment.defaultFormatDatetime) {
+      return environment.defaultFormatDatetime;
+    }
+    return 'dd MMMM yyyy HH:mm:ss';
   }
 
   /**
@@ -157,7 +209,11 @@ export class SettingsService {
     if (localStorage.getItem('mifosXServerURL')) {
       return localStorage.getItem('mifosXServerURL');
     }
-    return environment.baseApiUrl;
+    if (environment.baseApiUrl && environment.baseApiUrl !== '') {
+      return environment.baseApiUrl;
+    } else {
+      return this.servers()[0];
+    }
   }
 
   /**
@@ -185,7 +241,10 @@ export class SettingsService {
    * Returns current Business date server
    */
   get businessDate(): Date {
-    return this.dateUtils.convertToDate(localStorage.getItem('mifosXServerDate'), SettingsService.businessDateFormat);
+    return this.dateUtils.convertToDate(
+      this.businessDateValue() ?? localStorage.getItem('mifosXServerDate'),
+      SettingsService.businessDateFormat
+    );
   }
 
   /**
@@ -210,10 +269,25 @@ export class SettingsService {
   }
 
   /**
-   * Returns list of Tenant Identifiers
+   * Returns list of Tenant Identifiers.
+   *
+   * With tenant management enabled the identifiers seen through its API are offered alongside the
+   * configured ones, so the selector reflects the tenants this installation actually has rather
+   * than only those someone remembered to list in the environment. Configured entries keep their
+   * order and come first. Without the feature the configured list is returned unchanged.
    */
   get tenantIdentifiers(): any {
-    return JSON.parse(localStorage.getItem('mifosXTenantIdentifiers'));
+    const configured: string[] = JSON.parse(localStorage.getItem('mifosXTenantIdentifiers')) || [];
+    if (!environment.enableTenantManagement) {
+      return configured;
+    }
+    const discovered: string[] = JSON.parse(localStorage.getItem('mifosXDiscoveredTenantIdentifiers')) || [];
+    return [
+      ...new Set([
+        ...configured,
+        ...discovered
+      ])
+    ];
   }
 
   /**
@@ -240,22 +314,22 @@ export class SettingsService {
   getBusinessDates(businessDateData: any, dateType: string): void {
     businessDateData.some((data: any) => {
       if (data.type === dateType) {
-        const dateVal = new Date(data.date);
+        const dateVal = this.dateUtils.parseDate(data.date);
         this.setBusinessDate(this.dateUtils.formatDate(dateVal, SettingsService.businessDateFormat));
         this.alertService.alert({
           type: dateType + ' Set',
-          message: this.dateUtils.formatDate(dateVal, this.dateFormat())
+          message: this.dateUtils.formatDate(dateVal, this.dateFormat)
         });
         return;
       }
     });
   }
 
-  setThemeDarkEnabled(enabled: string) {
-    localStorage.setItem('mifosXThemeDarkEnabled', enabled);
+  setThemeDarkEnabled(enabled: boolean) {
+    localStorage.setItem('mifosXThemeDarkEnabled', JSON.stringify(enabled));
   }
 
-  get themeDarkEnabled() {
+  get themeDarkEnabled(): boolean {
     return JSON.parse(localStorage.getItem('mifosXThemeDarkEnabled'));
   }
 }

@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 
@@ -12,6 +20,7 @@ import { GeneralTabComponent } from './centers-view/general-tab/general-tab.comp
 import { NotesTabComponent } from './centers-view/notes-tab/notes-tab.component';
 import { DatatableTabComponent } from './centers-view/datatable-tab/datatable-tab.component';
 import { EditCenterComponent } from './edit-center/edit-center.component';
+import { CenterActionsComponent } from './centers-view/center-actions/center-actions.component';
 
 /** Custom Resolvers */
 import { OfficesResolver } from 'app/accounting/common-resolvers/offices.resolver';
@@ -22,14 +31,13 @@ import { CenterSummaryResolver } from './common-resolvers/center-summary.resolve
 import { CenterNotesResolver } from './common-resolvers/center-notes.resolver';
 import { CenterDatatableResolver } from './common-resolvers/center-datatable.resolver';
 import { CenterDatatablesResolver } from './common-resolvers/center-datatables.resolver';
-import { CenterActionsComponent } from './centers-view/center-actions/center-actions.component';
 import { CenterActionsResolver } from './common-resolvers/center-actions.resolver';
 import { CenterDataAndTemplateResolver } from './common-resolvers/center-data-and-template.resolver';
 
 const routes: Routes = [
   Route.withShell([
     {
-      path: 'centers',
+      path: '',
       data: { title: 'Centers', breadcrumb: 'Centers' },
       children: [
         {
@@ -55,10 +63,14 @@ const routes: Routes = [
               path: '',
               component: CentersViewComponent,
               resolve: {
-                centerViewData: CenterViewResolver,
                 centerDatatables: CenterDatatablesResolver
               },
               children: [
+                {
+                  path: '',
+                  redirectTo: 'general',
+                  pathMatch: 'full'
+                },
                 {
                   path: 'general',
                   component: GeneralTabComponent,
@@ -93,19 +105,19 @@ const routes: Routes = [
               ]
             },
             {
-              path: 'edit',
-              component: EditCenterComponent,
-              data: { title: 'Edit Center', breadcrumb: 'Edit', routeParamBreadcrumb: 'Edit' },
-              resolve: {
-                centerData: CenterDataAndTemplateResolver
-              }
-            },
-            {
-              path: 'actions/:name',
-              data: { title: 'Center Actions', routeParamBreadcrumb: 'name' },
+              path: 'actions/:action',
+              data: { title: 'Center Actions', breadcrumb: 'action', routeParamBreadcrumb: 'action' },
               component: CenterActionsComponent,
               resolve: {
                 centersActionData: CenterActionsResolver
+              }
+            },
+            {
+              path: 'edit',
+              component: EditCenterComponent,
+              data: { title: 'Edit Center', breadcrumb: 'Edit', routeParamBreadcrumb: false },
+              resolve: {
+                centerData: CenterDataAndTemplateResolver
               }
             },
             {
@@ -117,7 +129,6 @@ const routes: Routes = [
       ]
     }
   ])
-
 ];
 
 @NgModule({

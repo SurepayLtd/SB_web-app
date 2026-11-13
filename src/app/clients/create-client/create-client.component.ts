@@ -1,5 +1,23 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+  inject
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
 
 /** Custom Services */
@@ -13,6 +31,11 @@ import { ClientDatatableStepComponent } from '../client-stepper/client-datatable
 
 /** Custom Services */
 import { SettingsService } from 'app/settings/settings.service';
+import { MatStepper, MatStepperIcon, MatStep, MatStepLabel } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { ClientPreviewStepComponent } from '../client-stepper/client-preview-step/client-preview-step.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { Datatables } from 'app/core/utils/datatables';
 
 /**
  * Create Client Component.
@@ -20,9 +43,36 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-create-client',
   templateUrl: './create-client.component.html',
-  styleUrls: ['./create-client.component.scss']
+  styleUrls: ['./create-client.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatStepper,
+    MatStepperIcon,
+    FaIconComponent,
+    MatStep,
+    MatStepLabel,
+    ClientGeneralStepComponent,
+    ClientFamilyMembersStepComponent,
+    ClientAddressStepComponent,
+    ClientDatatableStepComponent,
+    ClientPreviewStepComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateClientComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private clientsService = inject(ClientsService);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+  private datatablesService = inject(Datatables);
+  private cdr = inject(ChangeDetectorRef);
+
+  /** True while the create client request is in flight. */
+  isSubmitting = false;
+  /** Idempotency key reused if the same submission is retried. */
+  submitIdempotencyKey?: string;
+
   /** Client General Step */
   @ViewChild(ClientGeneralStepComponent, { static: true }) clientGeneralStep: ClientGeneralStepComponent;
   /** Client Family Members Step */
@@ -47,17 +97,14 @@ export class CreateClientComponent {
    * @param {ClientsService} clientsService Clients Service
    * @param {SettingsService} settingsService Setting service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { clientTemplate: any; clientAddressFieldConfig: any }) => {
-      this.clientTemplate = data.clientTemplate;
-      this.clientAddressFieldConfig = data.clientAddressFieldConfig;
-      this.setDatatables();
-    });
+  constructor() {
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { clientTemplate: any; clientAddressFieldConfig: any }) => {
+        this.clientTemplate = data.clientTemplate;
+        this.clientAddressFieldConfig = data.clientAddressFieldConfig;
+        this.setDatatables();
+      });
   }
 
   /**
@@ -119,10 +166,24 @@ export class CreateClientComponent {
     this.setDatatables();
   }
 
+  datatableLabel(datatable: any): string {
+    return this.datatablesService.getDisplayLabel(datatable.registeredTableName);
+  }
+
   /**
    * Submits the create client form.
    */
   submit() {
+    if (this.isSubmitting) {
+      return;
+    }
+    if (!this.submitIdempotencyKey) {
+      this.submitIdempotencyKey =
+        globalThis.crypto?.randomUUID?.() ?? `create-client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    this.isSubmitting = true;
+    this.cdr.markForCheck();
+
     const locale = this.settingsService.language.code;
     const dateFormat = this.settingsService.dateFormat;
     const clientData = {
@@ -136,17 +197,28 @@ export class CreateClientComponent {
       this.clientDatatables.forEach((clientDatatable: ClientDatatableStepComponent) => {
         datatables.push(clientDatatable.payload);
       });
-      clientData['datatables'] = datatables;
+      if (datatables.length > 0) {
+        clientData['datatables'] = datatables;
+      }
     }
 
-    this.clientsService.createClient(clientData).subscribe((response: any) => {
-      this.router.navigate(
-        [
-          '../',
-          response.resourceId
-        ],
-        { relativeTo: this.route }
-      );
+    this.clientsService.createClient(clientData, this.submitIdempotencyKey).subscribe({
+      next: (response: any) => {
+        this.submitIdempotencyKey = undefined;
+        this.router.navigate(
+          [
+            '../',
+            response.resourceId
+          ],
+          { relativeTo: this.route }
+        );
+      },
+      error: () => {
+        // Fineract replays the stored response for a reused key, so a corrected form needs a new key.
+        this.submitIdempotencyKey = undefined;
+        this.isSubmitting = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 }

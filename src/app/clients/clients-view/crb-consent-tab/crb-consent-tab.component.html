@@ -1,5 +1,12 @@
-<div class="crb-container mat-typography">
+<!--
+  Copyright since 2025 Mifos Initiative
 
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
+<div class="crb-container mat-typography">
   <div class="loading-message" *ngIf="isLoading">
     {{ 'Loading CRB consent...' | translate }}
   </div>
@@ -9,18 +16,29 @@
   </div>
 
   <ng-container *ngIf="!isLoading && consentData">
-
     <!-- Header and Actions -->
     <div class="consent-header">
       <h3>{{ 'CRB Consent' | translate }}</h3>
 
       <div class="consent-actions">
-        <button mat-icon-button type="button" [disabled]="isProcessing || isLoading" (click)="loadConsentData()"
-          [matTooltip]="'Refresh' | translate">
-          <fa-icon icon="refresh"></fa-icon>
+        <button
+          mat-icon-button
+          type="button"
+          [disabled]="isProcessing || isLoading"
+          (click)="loadConsentData()"
+          [matTooltip]="'Refresh' | translate"
+        >
+          <fa-icon icon="sync"></fa-icon>
         </button>
 
-        <button mat-raised-button color="primary" type="button" *ngIf="canValidateOtp" [disabled]="isProcessing" (click)="validateOtp()">
+        <button
+          mat-raised-button
+          color="primary"
+          type="button"
+          *ngIf="canValidateOtp"
+          [disabled]="isProcessing"
+          (click)="validateOtp()"
+        >
           {{ 'Validate OTP' | translate }}
         </button>
 
@@ -28,11 +46,25 @@
           {{ 'Resend OTP' | translate }}
         </button>
 
-        <button mat-raised-button color="warn" type="button" *ngIf="canRevokeConsent" [disabled]="isProcessing" (click)="revokeConsent()">
+        <button
+          mat-raised-button
+          color="warn"
+          type="button"
+          *ngIf="canRevokeConsent"
+          [disabled]="isProcessing"
+          (click)="revokeConsent()"
+        >
           {{ 'Revoke Consent' | translate }}
         </button>
 
-        <button mat-raised-button color="primary" type="button" *ngIf="canReactivateConsent" [disabled]="isProcessing" (click)="reactivateConsent()">
+        <button
+          mat-raised-button
+          color="primary"
+          type="button"
+          *ngIf="canReactivateConsent"
+          [disabled]="isProcessing"
+          (click)="reactivateConsent()"
+        >
           {{ 'Reactivate Consent' | translate }}
         </button>
       </div>
@@ -42,7 +74,6 @@
 
     <!-- Consent Details -->
     <div class="layout-row-wrap consent-details">
-
       <div class="flex-50 detail-item">
         <span class="detail-label">{{ 'Client Name' | translate }}</span>
         <span class="detail-value">
@@ -59,7 +90,8 @@
             'status-verified': consentData.consentStatus?.id === VERIFIED,
             'status-reactivated': consentData.consentStatus?.id === REACTIVATED,
             'status-revoked': consentData.consentStatus?.id === REVOKED
-          }">
+          }"
+        >
           {{ getConsentStatus() | translate }}
         </span>
       </div>
@@ -140,14 +172,10 @@
           {{ formatConsentDate(consentData.reactivatedAt) }}
         </span>
       </div>
-
     </div>
-
 
     <div class="processing-message" *ngIf="isProcessing">
       {{ 'Processing...' | translate }}
     </div>
-
   </ng-container>
-
 </div>

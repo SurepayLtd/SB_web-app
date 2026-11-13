@@ -1,15 +1,40 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
-import { UntypedFormGroup, UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { FormGroup, FormBuilder, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { OrganizationService } from '../organization.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Fund Mapping Component.
@@ -17,15 +42,41 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-fund-mapping',
   templateUrl: './fund-mapping.component.html',
-  styleUrls: ['./fund-mapping.component.scss']
+  styleUrls: ['./fund-mapping.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    FaIconComponent,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FundMappingComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private settingsService = inject(SettingsService);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private destroyRef = inject(DestroyRef);
+
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Date allowed. */
   maxDate = new Date();
   /** Fund mapping form. */
-  fundMappingForm: UntypedFormGroup;
+  fundMappingForm: FormGroup;
   /** Advance Search Template */
   advanceSearchTemplate: any;
   /** Toggles b/w form and table */
@@ -55,14 +106,8 @@ export class FundMappingComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {Dates} dateUtils Date Utils to format date.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService,
-    private settingsService: SettingsService,
-    private route: ActivatedRoute,
-    private dateUtils: Dates
-  ) {
-    this.route.data.subscribe((data: { advanceSearchTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { advanceSearchTemplate: any }) => {
       this.advanceSearchTemplate = data.advanceSearchTemplate;
     });
   }
@@ -78,9 +123,9 @@ export class FundMappingComponent implements OnInit {
    */
   createFundMappingForm() {
     this.fundMappingForm = this.formBuilder.group({
-      loanStatus: [''],
-      loanProducts: [''],
-      offices: [''],
+      loanStatus: [[]],
+      loanProducts: [[]],
+      offices: [[]],
       loanDateOption: [
         '',
         Validators.required
@@ -102,63 +147,102 @@ export class FundMappingComponent implements OnInit {
    * Sets conditional child controls.
    */
   buildDependencies() {
-    this.fundMappingForm.get('includeOutStandingAmountPercentage').valueChanges.subscribe((value: boolean) => {
-      if (value) {
-        this.fundMappingForm.addControl(
-          'outStandingAmountPercentageCondition',
-          new UntypedFormControl('', Validators.required)
-        );
-        this.fundMappingForm.get('outStandingAmountPercentageCondition').valueChanges.subscribe((_value: string) => {
-          if (_value === 'between') {
-            this.fundMappingForm.addControl(
-              'minOutStandingAmountPercentage',
-              new UntypedFormControl('', Validators.required)
-            );
-            this.fundMappingForm.addControl(
-              'maxOutStandingAmountPercentage',
-              new UntypedFormControl('', Validators.required)
-            );
-            this.fundMappingForm.removeControl('outStandingAmountPercentage');
-          } else {
-            this.fundMappingForm.addControl(
-              'outStandingAmountPercentage',
-              new UntypedFormControl('', Validators.required)
-            );
-            this.fundMappingForm.removeControl('minOutStandingAmountPercentage');
-            this.fundMappingForm.removeControl('maxOutStandingAmountPercentage');
-          }
-        });
-        this.fundMappingForm.get('outStandingAmountPercentageCondition').patchValue('between');
-      } else {
-        this.fundMappingForm.removeControl('outStandingAmountPercentageCondition');
-        this.fundMappingForm.removeControl('minOutStandingAmountPercentage');
-        this.fundMappingForm.removeControl('maxOutStandingAmountPercentage');
-        this.fundMappingForm.removeControl('outStandingAmountPercentage');
-      }
-    });
+    this.fundMappingForm
+      .get('includeOutStandingAmountPercentage')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value: boolean) => {
+        if (value) {
+          this.fundMappingForm.addControl(
+            'outStandingAmountPercentageCondition',
+            new FormControl('', Validators.required)
+          );
+          this.fundMappingForm
+            .get('outStandingAmountPercentageCondition')
+            .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((_value: string) => {
+              if (_value === 'between') {
+                this.fundMappingForm.addControl(
+                  'minOutStandingAmountPercentage',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.addControl(
+                  'maxOutStandingAmountPercentage',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.removeControl('outStandingAmountPercentage');
+              } else {
+                this.fundMappingForm.addControl(
+                  'outStandingAmountPercentage',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.removeControl('minOutStandingAmountPercentage');
+                this.fundMappingForm.removeControl('maxOutStandingAmountPercentage');
+              }
+            });
+          this.fundMappingForm.get('outStandingAmountPercentageCondition').patchValue('between');
+        } else {
+          this.fundMappingForm.removeControl('outStandingAmountPercentageCondition');
+          this.fundMappingForm.removeControl('minOutStandingAmountPercentage');
+          this.fundMappingForm.removeControl('maxOutStandingAmountPercentage');
+          this.fundMappingForm.removeControl('outStandingAmountPercentage');
+        }
+      });
     this.fundMappingForm.get('includeOutStandingAmountPercentage').patchValue(true);
-    this.fundMappingForm.get('includeOutstandingAmount').valueChanges.subscribe((value: boolean) => {
-      if (value) {
-        this.fundMappingForm.addControl('outstandingAmountCondition', new UntypedFormControl('', Validators.required));
-        this.fundMappingForm.get('outstandingAmountCondition').valueChanges.subscribe((_value: string) => {
-          if (_value === 'between') {
-            this.fundMappingForm.addControl('minOutstandingAmount', new UntypedFormControl('', Validators.required));
-            this.fundMappingForm.addControl('maxOutstandingAmount', new UntypedFormControl('', Validators.required));
-            this.fundMappingForm.removeControl('outstandingAmount');
-          } else {
-            this.fundMappingForm.addControl('outstandingAmount', new UntypedFormControl('', Validators.required));
-            this.fundMappingForm.removeControl('minOutstandingAmount');
-            this.fundMappingForm.removeControl('maxOutstandingAmount');
-          }
-        });
-        this.fundMappingForm.get('outstandingAmountCondition').patchValue('between');
-      } else {
-        this.fundMappingForm.removeControl('outstandingAmountCondition');
-        this.fundMappingForm.removeControl('minOutstandingAmount');
-        this.fundMappingForm.removeControl('maxOutstandingAmount');
-        this.fundMappingForm.removeControl('outstandingAmount');
-      }
-    });
+    this.fundMappingForm
+      .get('includeOutstandingAmount')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value: boolean) => {
+        if (value) {
+          this.fundMappingForm.addControl('outstandingAmountCondition', new FormControl('', Validators.required));
+          this.fundMappingForm
+            .get('outstandingAmountCondition')
+            .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((_value: string) => {
+              if (_value === 'between') {
+                this.fundMappingForm.addControl(
+                  'minOutstandingAmount',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.addControl(
+                  'maxOutstandingAmount',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.removeControl('outstandingAmount');
+              } else {
+                this.fundMappingForm.addControl(
+                  'outstandingAmount',
+                  new FormControl('', [
+                    Validators.required,
+                    Validators.min(0)
+                  ])
+                );
+                this.fundMappingForm.removeControl('minOutstandingAmount');
+                this.fundMappingForm.removeControl('maxOutstandingAmount');
+              }
+            });
+          this.fundMappingForm.get('outstandingAmountCondition').patchValue('between');
+        } else {
+          this.fundMappingForm.removeControl('outstandingAmountCondition');
+          this.fundMappingForm.removeControl('minOutstandingAmount');
+          this.fundMappingForm.removeControl('maxOutstandingAmount');
+          this.fundMappingForm.removeControl('outstandingAmount');
+        }
+      });
     this.fundMappingForm.get('includeOutstandingAmount').patchValue(true);
   }
 
@@ -179,11 +263,16 @@ export class FundMappingComponent implements OnInit {
     this.isCollapsed = true;
     const fundMappingFormData = this.fundMappingForm.value;
     const locale = this.settingsService.language.code;
-    const dateFormat = this.settingsService.dateFormat;
+    // POST /search/advance binds loanFromDate/loanToDate as ISO dates and ignores dateFormat
+    const dateFormat = 'yyyy-MM-dd';
     const prevLoanFromDate: Date = this.fundMappingForm.value.loanFromDate;
     const prevLoanToDate: Date = this.fundMappingForm.value.loanToDate;
     if (fundMappingFormData.loanFromDate instanceof Date) {
       fundMappingFormData.loanFromDate = this.dateUtils.formatDate(prevLoanFromDate, dateFormat);
+    }
+    if (this.fundMappingForm.invalid) {
+      this.fundMappingForm.markAllAsTouched();
+      return;
     }
     if (fundMappingFormData.loanToDate instanceof Date) {
       fundMappingFormData.loanToDate = this.dateUtils.formatDate(prevLoanToDate, dateFormat);
@@ -194,8 +283,11 @@ export class FundMappingComponent implements OnInit {
       dateFormat,
       locale
     };
-    this.organizationService.retrieveAdvanceSearchResults(data).subscribe((response: any) => {
-      this.setLoans(response);
-    });
+    this.organizationService
+      .retrieveAdvanceSearchResults(data)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.setLoans(response);
+      });
   }
 }

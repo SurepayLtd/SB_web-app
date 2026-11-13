@@ -1,10 +1,28 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions,
+  MatDialogClose
+} from '@angular/material/dialog';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
 /** Data Imports */
 import { columnTypeData } from '../column-type-data';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Column Dialog Component.
@@ -12,24 +30,27 @@ import { columnTypeData } from '../column-type-data';
 @Component({
   selector: 'mifosx-column-dialog',
   templateUrl: './column-dialog.component.html',
-  styleUrls: ['./column-dialog.component.scss']
+  styleUrls: ['./column-dialog.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatDialogTitle,
+    CdkScrollable,
+    MatDialogContent,
+    MatCheckbox,
+    MatDialogActions,
+    MatDialogClose
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ColumnDialogComponent implements OnInit {
+  dialogRef = inject<MatDialogRef<ColumnDialogComponent>>(MatDialogRef);
+  formBuilder = inject(UntypedFormBuilder);
+  data = inject(MAT_DIALOG_DATA);
+
   /** Column Form. */
   columnForm: UntypedFormGroup;
   /** Column Type Data */
   columnTypeData = columnTypeData;
-
-  /**
-   * @param {MatDialogRef} dialogRef Component reference to dialog.
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {any} data Provides the column codes and values for the form (if available).
-   */
-  constructor(
-    public dialogRef: MatDialogRef<ColumnDialogComponent>,
-    public formBuilder: UntypedFormBuilder,
-    @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
 
   /**
    * Creates the add column form.
@@ -45,32 +66,37 @@ export class ColumnDialogComponent implements OnInit {
           value: this.data
             ? this.data.columnDisplayType === ''
               ? ''
-              : this.getColumnType(this.data.columnDisplayType)
+              : this.getColumnType(this.data.columnDisplayType, this.data.columnType)
             : '',
           disabled: this.data.type === 'existing'
         },
         Validators.required
-
       ],
       length: [
         {
           value: this.data ? +this.data.columnLength : '',
-          disabled: this.getColumnType(this.data.columnDisplayType) !== 'String' || this.data.type === 'existing'
+          disabled:
+            this.getColumnType(this.data.columnDisplayType, this.data.columnType) !== 'String' ||
+            this.data.type === 'existing'
         },
-        Validators.required
-
+        [
+          Validators.required,
+          Validators.min(1)
+        ]
       ],
       mandatory: [{ value: this.data.isColumnNullable, disabled: this.data.type === 'existing' }],
       unique: [
-        { value: this.data.isColumnUnique, disabled: this.data.isColumnNullable || this.data.type === 'existing' }],
+        { value: this.data.isColumnUnique, disabled: this.data.isColumnNullable || this.data.type === 'existing' }
+      ],
       indexed: [{ value: this.data.isColumnIndexed, disabled: this.data.type === 'existing' }],
       code: [
         {
           value: this.data ? this.data.columnCode : '',
-          disabled: this.getColumnType(this.data.columnDisplayType) !== 'Dropdown' || this.data.type === 'existing'
+          disabled:
+            this.getColumnType(this.data.columnDisplayType, this.data.columnType) !== 'Dropdown' ||
+            this.data.type === 'existing'
         },
         Validators.required
-
       ]
     });
     this.onColumnTypeChanges();
@@ -81,7 +107,10 @@ export class ColumnDialogComponent implements OnInit {
    * @param {string} columnDisplayType Column Display Type.
    * @returns {string} Column Type.
    */
-  getColumnType(columnDisplayType: string): string {
+  getColumnType(columnDisplayType: string, columnType?: string): string {
+    if (columnDisplayType === 'TEXT' && columnType && columnType.toString().toLowerCase() === 'json') {
+      return 'json';
+    }
     switch (columnDisplayType) {
       case undefined: {
         return '';
@@ -92,8 +121,12 @@ export class ColumnDialogComponent implements OnInit {
       case 'CODELOOKUP': {
         return 'Dropdown';
       }
+      case 'JSON':
+      case 'json': {
+        return 'json';
+      }
       default: {
-        return columnDisplayType[0] + columnDisplayType.substr(1).toLowerCase();
+        return columnDisplayType[0] + columnDisplayType.substring(1).toLowerCase();
       }
     }
   }

@@ -1,32 +1,50 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import {
+  ChangeDetectionStrategy,
   Component,
   OnInit,
   TemplateRef,
   ElementRef,
   ViewChild,
   AfterViewInit,
-  OnDestroy,
   OnChanges,
-  SimpleChanges
+  SimpleChanges,
+  inject,
+  DestroyRef
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 /** Custom Dialogs */
 import { DeleteDialogComponent } from '../../../shared/delete-dialog/delete-dialog.component';
 
 /** Custom Services */
+import { AlertService } from 'app/core/alert/alert.service';
 import { OrganizationService } from '../../organization.service';
 import { PopoverService } from '../../../configuration-wizard/popover/popover.service';
 import { ConfigurationWizardService } from '../../../configuration-wizard/configuration-wizard.service';
 
 /** Custom Dialog Component */
 import { ContinueSetupDialogComponent } from '../../../configuration-wizard/continue-setup-dialog/continue-setup-dialog.component';
-import { takeUntil } from 'rxjs/operators';
-import { ReplaySubject, Subject } from 'rxjs';
+import { ReplaySubject } from 'rxjs';
 import { Currency } from 'app/shared/models/general.model';
+import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
+import { AsyncPipe } from '@angular/common';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatGridList, MatGridTile } from '@angular/material/grid-list';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Manage Currencies component.
@@ -34,9 +52,32 @@ import { Currency } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-manage-currencies',
   templateUrl: './manage-currencies.component.html',
-  styleUrls: ['./manage-currencies.component.scss']
+  styleUrls: ['./manage-currencies.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    NgxMatSelectSearchModule,
+    FaIconComponent,
+    MatGridList,
+    MatGridTile,
+    AsyncPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnChanges {
+  private route = inject(ActivatedRoute);
+  private formBuilder = inject(FormBuilder);
+  private organizationservice = inject(OrganizationService);
+  private alertService = inject(AlertService);
+  dialog = inject(MatDialog);
+  private router = inject(Router);
+  private translateService = inject(TranslateService);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  private destroyRef = inject(DestroyRef);
+
+  //** Defining PlaceHolders for the search bar */
+  placeHolderLabel = '';
+  noEntriesFoundLabel = '';
   /** Selected Currencies data. */
   selectedCurrencies: any[];
   /** Currency options data */
@@ -53,10 +94,7 @@ export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestr
   protected currencyData: ReplaySubject<Currency[]> = new ReplaySubject<Currency[]>(1);
 
   /** control for the filter select */
-  protected filterFormCtrl: UntypedFormControl = new UntypedFormControl('');
-
-  /** Subject that emits when the component has been destroyed. */
-  protected _onDestroy = new Subject<void>();
+  protected filterFormCtrl: FormControl = new FormControl('');
 
   /**
    * Retrieves the currency data from `resolve`.
@@ -65,31 +103,20 @@ export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestr
    * @param {OrganizationService} organizationservice Organization Service
    * @param {MatDialog} dialog Mat Dialog
    */
-  constructor(
-    private route: ActivatedRoute,
-    private formBuilder: UntypedFormBuilder,
-    private organizationservice: OrganizationService,
-    public dialog: MatDialog,
-    private router: Router,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService
-  ) {
-    this.route.parent.data.subscribe((data: { currencies: any }) => {
+  constructor() {
+    this.route.parent.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { currencies: any }) => {
       this.selectedCurrencies = data.currencies.selectedCurrencyOptions;
       this.currencyList = data.currencies.currencyOptions;
     });
   }
 
   ngOnInit() {
-    this.filterFormCtrl.valueChanges.pipe(takeUntil(this._onDestroy)).subscribe(() => {
+    this.placeHolderLabel = this.translateService.instant('labels.text.Search');
+    this.noEntriesFoundLabel = this.translateService.instant('labels.text.No data found');
+    this.filterFormCtrl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.searchItem();
     });
     this.createCurrencyForm();
-  }
-
-  ngOnDestroy(): void {
-    this._onDestroy.next();
-    this._onDestroy.complete();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -132,17 +159,26 @@ export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestr
   addCurrency() {
     const newCurrency = this.currencyForm.value.currency;
     const selectedCurrencyCodes: any[] = this.selectedCurrencies.map((currency) => currency.code);
-    if (!selectedCurrencyCodes.includes(newCurrency.code)) {
-      selectedCurrencyCodes.push(newCurrency.code);
-      this.organizationservice.updateCurrencies(selectedCurrencyCodes).subscribe((response: any) => {
+    if (selectedCurrencyCodes.includes(newCurrency.code)) {
+      this.alertService.alert({
+        type: 'error',
+        message: this.translateService.instant('labels.text.This currency has already been added')
+      });
+      this.formRef.resetForm();
+      return;
+    }
+    selectedCurrencyCodes.push(newCurrency.code);
+    this.organizationservice
+      .updateCurrencies(selectedCurrencyCodes)
+      .pipe(take(1))
+      .subscribe((response: any) => {
         this.selectedCurrencies.push(newCurrency);
         this.formRef.resetForm();
-        if (this.configurationWizardService.showCurrencyForm === true) {
+        if (this.configurationWizardService.showCurrencyForm) {
           this.configurationWizardService.showCurrencyForm = false;
           this.openDialog();
         }
       });
-    }
   }
 
   /**
@@ -158,10 +194,13 @@ export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestr
     });
     deleteCurrencyDialogRef.afterClosed().subscribe((response: any) => {
       if (response.delete) {
-        this.organizationservice.updateCurrencies(selectedCurrencyCodes).subscribe(() => {
-          this.selectedCurrencies.splice(index, 1);
-          this.formRef.resetForm();
-        });
+        this.organizationservice
+          .updateCurrencies(selectedCurrencyCodes)
+          .pipe(take(1))
+          .subscribe(() => {
+            this.selectedCurrencies.splice(index, 1);
+            this.formRef.resetForm();
+          });
       }
     });
   }
@@ -176,7 +215,7 @@ export class ManageCurrenciesComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngAfterViewInit() {
-    if (this.configurationWizardService.showCurrencyForm === true) {
+    if (this.configurationWizardService.showCurrencyForm) {
       setTimeout(() => {
         this.showPopover(this.templateCurrencyFormRef, this.currencyFormRef.nativeElement, 'bottom', true);
       });

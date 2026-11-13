@@ -1,9 +1,26 @@
-import { Component, Input, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { TruncateTextPipe } from '../../pipes/truncate-text.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-long-text',
   templateUrl: './long-text.component.html',
-  styleUrls: ['./long-text.component.scss']
+  styleUrls: ['./long-text.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    TruncateTextPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LongTextComponent implements OnInit {
   @Input() textValue: string;
@@ -31,10 +48,10 @@ export class LongTextComponent implements OnInit {
   }
 
   showValue() {
-    if (this.printChars == 30) {
+    if (this.printChars < 1000) {
       this.printChars = 1000;
     } else {
-      this.printChars = 30;
+      this.printChars = this.chars;
     }
   }
 

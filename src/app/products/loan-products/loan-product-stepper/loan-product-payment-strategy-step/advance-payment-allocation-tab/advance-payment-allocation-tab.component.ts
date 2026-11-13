@@ -1,8 +1,36 @@
-import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { CdkDragDrop, moveItemInArray, CdkDropList, CdkDrag } from '@angular/cdk/drag-drop';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewChild,
+  inject
+} from '@angular/core';
 import { UntypedFormControl, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { MatTable } from '@angular/material/table';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
 import { TranslateService } from '@ngx-translate/core';
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import {
@@ -14,13 +42,38 @@ import {
   PaymentAllocationOrder,
   PaymentAllocationTransactionType
 } from '../payment-allocation-model';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanProductService } from 'app/products/loan-products/services/loan-product.service';
 
 @Component({
   selector: 'mifosx-advance-payment-allocation-tab',
   templateUrl: './advance-payment-allocation-tab.component.html',
-  styleUrls: ['./advance-payment-allocation-tab.component.scss']
+  styleUrls: ['./advance-payment-allocation-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    CdkDropList,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    CdkDrag
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdvancePaymentAllocationTabComponent implements OnInit {
+  private dialog = inject(MatDialog);
+  private advancedPaymentStrategy = inject(AdvancedPaymentStrategy);
+  private translateService = inject(TranslateService);
+  protected loanProductService = inject(LoanProductService);
+
   @Input() advancedPaymentAllocation: AdvancedPaymentAllocation;
   @Input() advancedCreditAllocation: AdvancedCreditAllocation;
 
@@ -39,17 +92,14 @@ export class AdvancePaymentAllocationTabComponent implements OnInit {
 
   futureInstallmentAllocationRule = new UntypedFormControl('', Validators.required);
 
-  @ViewChild('table') table: MatTable<any>;
+  creditAllocationStrategy = new UntypedFormControl('', Validators.required);
 
-  constructor(
-    private dialog: MatDialog,
-    private advancedPaymentStrategy: AdvancedPaymentStrategy,
-    private translateService: TranslateService
-  ) {}
+  @ViewChild('table') table: MatTable<any>;
 
   ngOnInit(): void {
     if (this.advancedCreditAllocation) {
       this.creditAllocationsData = this.advancedCreditAllocation?.creditAllocationOrder;
+      this.creditAllocationStrategy.patchValue(this.advancedCreditAllocation.creditAllocationStrategy);
     }
 
     if (this.advancedPaymentAllocation) {
@@ -89,6 +139,20 @@ export class AdvancePaymentAllocationTabComponent implements OnInit {
       this.table.renderRows();
       this.allocationChanged.emit(true);
     }
+  }
+
+  creditAllocationStrategyChanged(value: string): void {
+    this.advancedCreditAllocation.creditAllocationStrategy = value;
+    this.allocationChanged.emit(true);
+  }
+
+  /** The strategy selector is only offered when the backend publishes the strategy options. */
+  hasCreditAllocationStrategyOptions(): boolean {
+    return this.advancedCreditAllocation?.creditAllocationStrategyOptions?.length > 0;
+  }
+
+  isPrincipalOnly(): boolean {
+    return this.advancedPaymentStrategy.isPrincipalOnly(this.advancedCreditAllocation);
   }
 
   isDefault(): boolean {

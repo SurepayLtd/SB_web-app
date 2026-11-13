@@ -1,12 +1,24 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports. */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 /** Custom Services. */
 import { OrganizationService } from '../organization.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Bulk Loan Reassignment component.
@@ -14,11 +26,24 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-bulk-loan-reassignmnet',
   templateUrl: './bulk-loan-reassignmnet.component.html',
-  styleUrls: ['./bulk-loan-reassignmnet.component.scss']
+  styleUrls: ['./bulk-loan-reassignmnet.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BulkLoanReassignmnetComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private organizationSevice = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private router = inject(Router);
+
   /** Bulk Loan form. */
-  bulkLoanForm: UntypedFormGroup;
+  bulkLoanForm: FormGroup;
   /** Office data. */
   offices: any;
   /** To Loan Officers. */
@@ -44,15 +69,8 @@ export class BulkLoanReassignmnetComponent implements OnInit {
    * @param {SettingsService} settingsService Settings Service.
    * @param {Router} router Router.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private organizationSevice: OrganizationService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { offices: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { offices: any }) => {
       this.offices = data.offices;
     });
   }
@@ -67,8 +85,12 @@ export class BulkLoanReassignmnetComponent implements OnInit {
    */
   setBulkLoanForm() {
     this.bulkLoanForm = this.formBuilder.group({
+      officeId: [
+        '',
+        Validators.required
+      ],
       assignmentDate: [
-        new Date(),
+        '',
         Validators.required
       ],
       toLoanOfficerId: [
@@ -83,11 +105,14 @@ export class BulkLoanReassignmnetComponent implements OnInit {
    * @param officeId Office Id.
    */
   getOffice(officeId: string) {
-    this.organizationSevice.getOfficeTemplate(officeId).subscribe((response: any) => {
-      this.officeTemplate = response;
-      this.fromLoanOfficers = this.officeTemplate.loanOfficerOptions;
-      this.bulkLoanForm.addControl('fromLoanOfficerId', new UntypedFormControl('', Validators.required));
-    });
+    this.organizationSevice
+      .getOfficeTemplate(officeId)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.officeTemplate = response;
+        this.fromLoanOfficers = this.officeTemplate.loanOfficerOptions;
+        this.bulkLoanForm.addControl('fromLoanOfficerId', new FormControl('', Validators.required));
+      });
   }
 
   /**
@@ -95,10 +120,17 @@ export class BulkLoanReassignmnetComponent implements OnInit {
    * @param officerId Office Id.
    */
   getFromOfficers(officerId: any) {
-    this.toLoanOfficers = this.fromLoanOfficers.filter((officer: any) => officer.id !== officerId);
-    this.organizationSevice.getOfficerTemplate(officerId, this.officeTemplate.officeId).subscribe((response: any) => {
-      this.officerTemplate = response;
-    });
+    this.toLoanOfficers = this.fromLoanOfficers?.filter((officer: any) => officer.id !== officerId) || [];
+    if (officerId && this.officeTemplate && this.officeTemplate.officeId) {
+      this.organizationSevice
+        .getOfficerTemplate(officerId, this.officeTemplate.officeId)
+        .pipe(take(1))
+        .subscribe((response: any) => {
+          this.officerTemplate = response;
+        });
+    } else {
+      this.officerTemplate = undefined;
+    }
   }
 
   /**
@@ -120,7 +152,7 @@ export class BulkLoanReassignmnetComponent implements OnInit {
    * Submits bulk loan reassignment form.
    */
   submit() {
-    const bulkLoanFormData = this.bulkLoanForm.value;
+    const { officeId, ...bulkLoanFormData } = this.bulkLoanForm.value;
     const locale = this.settingsService.language.code;
     const dateFormat = this.settingsService.dateFormat;
     const prevAssignmentDate = this.bulkLoanForm.value.assignmentDate;
@@ -133,8 +165,11 @@ export class BulkLoanReassignmnetComponent implements OnInit {
       locale
     };
     data.loans = this.loans;
-    this.organizationSevice.createLoanReassignment(data).subscribe((response: any) => {
-      this.router.navigate(['../'], { relativeTo: this.route });
-    });
+    this.organizationSevice
+      .createLoanReassignment(data)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.router.navigate(['../'], { relativeTo: this.route });
+      });
   }
 }

@@ -1,24 +1,47 @@
-/** Recurring Deposits Account Buttons Configuration */
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { OptionData } from 'app/shared/models/option-data.model';
+
+/**
+ * One entry of the account actions menu.
+ *
+ * `disabled` and `disabledTooltip` let an action stay visible while being
+ * blocked by a business rule, so the user reads why instead of discovering it
+ * through a rejected request.
+ */
+export interface LoansAccountButton {
+  name: string;
+  icon?: string;
+  taskPermissionName?: string;
+  disabled?: boolean;
+  disabledTooltip?: string;
+}
+
+/** Loan/Working Capital Account Buttons Configuration */
 export class LoansAccountButtonConfiguration {
-  optionArray: {
-    name: string;
-    taskPermissionName?: string;
-  }[];
+  optionArray: LoansAccountButton[];
 
-  optionPaymentArray: {
-    name: string;
-    taskPermissionName?: string;
-  }[];
+  optionPaymentArray: LoansAccountButton[];
 
-  buttonsArray: {
-    name: string;
-    icon: string;
-    taskPermissionName?: string;
-  }[];
+  buttonsArray: LoansAccountButton[];
 
-  constructor(status: string) {
-    this.setOptions(status);
-    this.setButtons(status);
+  private readonly isWorkingCapital: boolean;
+
+  constructor(isWorkingCapital: boolean, status: string, substatus: OptionData) {
+    this.isWorkingCapital = isWorkingCapital;
+    if (!isWorkingCapital) {
+      this.setOptions(status, substatus);
+      this.setButtons(status);
+    } else {
+      this.setWorkingCapitalOptions(status, substatus);
+      this.setWorkingCapitalButtons(status);
+    }
   }
 
   get singleButtons() {
@@ -35,6 +58,28 @@ export class LoansAccountButtonConfiguration {
 
   setButtons(status: string) {
     switch (status) {
+      case 'Submitted and pending approval':
+        this.addCommonActions(status);
+        break;
+      case 'Approved':
+        this.buttonsArray = [
+          {
+            name: 'Disburse',
+            icon: 'hand-holding-usd',
+            taskPermissionName: 'DISBURSE_LOAN'
+          },
+          {
+            name: 'Disburse to Savings',
+            icon: 'piggy-bank',
+            taskPermissionName: 'DISBURSETOSAVINGS_LOAN'
+          },
+          {
+            name: 'Undo Approval',
+            icon: 'undo',
+            taskPermissionName: 'APPROVALUNDO_LOAN'
+          }
+        ];
+        break;
       case 'Active':
         this.buttonsArray = [
           {
@@ -64,51 +109,13 @@ export class LoansAccountButtonConfiguration {
           }
         ];
         break;
-      case 'Submitted and pending approval':
+      case 'Overpaid':
         this.buttonsArray = [
           {
             name: 'Add Loan Charge',
             icon: 'plus',
             taskPermissionName: 'CREATE_LOANCHARGE'
           },
-          {
-            name: 'Approve',
-            icon: 'check',
-            taskPermissionName: 'APPROVE_LOAN'
-          },
-          {
-            name: 'Modify Application',
-            icon: 'edit',
-            taskPermissionName: 'UPDATE_LOAN'
-          },
-          {
-            name: 'Reject',
-            icon: 'times',
-            taskPermissionName: 'REJECT_LOAN'
-          }
-        ];
-        break;
-      case 'Approved':
-        this.buttonsArray = [
-          {
-            name: 'Disburse',
-            icon: 'hand-holding-usd',
-            taskPermissionName: 'DISBURSE_LOAN'
-          },
-          {
-            name: 'Disburse to Savings',
-            icon: 'piggy-bank',
-            taskPermissionName: 'DISBURSETOSAVINGS_LOAN'
-          },
-          {
-            name: 'Undo Approval',
-            icon: 'undo',
-            taskPermissionName: 'APPROVALUNDO_LOAN'
-          }
-        ];
-        break;
-      case 'Overpaid':
-        this.buttonsArray = [
           {
             name: 'Transfer Funds',
             icon: 'exchange',
@@ -117,7 +124,12 @@ export class LoansAccountButtonConfiguration {
           {
             name: 'Credit Balance Refund',
             icon: 'coins',
-            taskPermissionName: 'CREATE_CREDIT_BALANCE_REFUND'
+            taskPermissionName: 'CREDITBALANCEREFUND_LOAN'
+          },
+          {
+            name: 'Make Repayment',
+            icon: 'coins',
+            taskPermissionName: 'REPAYMENT_LOAN'
           }
         ];
         break;
@@ -127,6 +139,11 @@ export class LoansAccountButtonConfiguration {
             name: 'Recovery Payment',
             icon: 'briefcase',
             taskPermissionName: 'RECOVERYPAYMENT_LOAN'
+          },
+          {
+            name: 'Undo Write-off',
+            icon: 'undo',
+            taskPermissionName: 'UNDOWRITEOFF_LOAN'
           }
         ];
         break;
@@ -159,7 +176,140 @@ export class LoansAccountButtonConfiguration {
     }
   }
 
-  setOptions(status: string) {
+  setWorkingCapitalButtons(status: string) {
+    switch (status) {
+      case 'Submitted and pending approval':
+        this.addCommonActions(status);
+        break;
+      case 'Approved':
+        this.buttonsArray = [
+          {
+            name: 'Add Loan Charge',
+            icon: 'plus',
+            taskPermissionName: 'CREATE_WORKINGCAPITALLOANCHARGE'
+          },
+          {
+            name: 'Disburse',
+            icon: 'hand-holding-usd',
+            taskPermissionName: 'DISBURSE_LOAN'
+          },
+          {
+            name: 'Undo Approval',
+            icon: 'undo',
+            taskPermissionName: 'APPROVALUNDO_LOAN'
+          }
+        ];
+        break;
+      case 'Active':
+        this.buttonsArray = [
+          {
+            name: 'Add Loan Charge',
+            icon: 'plus',
+            taskPermissionName: 'CREATE_WORKINGCAPITALLOANCHARGE'
+          },
+          {
+            name: 'Make Repayment',
+            icon: 'coins',
+            taskPermissionName: 'REPAYMENT_WORKINGCAPITALLOAN'
+          },
+          // A prepayment is posted as a repayment for the full outstanding
+          // balance, so it is the repayment permission that gates it.
+          {
+            name: 'Prepay Loan',
+            icon: 'coins',
+            taskPermissionName: 'REPAYMENT_WORKINGCAPITALLOAN'
+          },
+          {
+            name: 'Payout Refund',
+            icon: 'coins',
+            taskPermissionName: 'PAYOUTREFUND_WORKINGCAPITALLOAN'
+          },
+          {
+            name: 'Undo Disbursal',
+            icon: 'undo',
+            taskPermissionName: 'DISBURSALUNDO_LOAN'
+          }
+        ];
+        break;
+      // Repayment, Goodwill Credit, Payout Refund and Add Loan Charge share the same rule on the
+      // backend: they are accepted while the loan is Active, Closed (obligations met) or Overpaid.
+      // Posting one of them reopens the loan, which is the reason the backend allows them.
+      case 'Closed (obligations met)':
+        this.buttonsArray = [
+          {
+            name: 'Add Loan Charge',
+            icon: 'plus',
+            taskPermissionName: 'CREATE_WORKINGCAPITALLOANCHARGE'
+          },
+          {
+            name: 'Make Repayment',
+            icon: 'coins',
+            taskPermissionName: 'REPAYMENT_WORKINGCAPITALLOAN'
+          },
+          {
+            name: 'Goodwill Credit',
+            icon: 'coins',
+            taskPermissionName: 'CREATE_GOODWILL_TRANSACTION'
+          },
+          {
+            name: 'Payout Refund',
+            icon: 'coins',
+            taskPermissionName: 'PAYOUTREFUND_WORKINGCAPITALLOAN'
+          }
+        ];
+        break;
+      case 'Overpaid':
+        this.buttonsArray = [
+          {
+            name: 'Add Loan Charge',
+            icon: 'plus',
+            taskPermissionName: 'CREATE_WORKINGCAPITALLOANCHARGE'
+          },
+          {
+            name: 'Make Repayment',
+            icon: 'coins',
+            taskPermissionName: 'REPAYMENT_WORKINGCAPITALLOAN'
+          },
+          {
+            name: 'Goodwill Credit',
+            icon: 'coins',
+            taskPermissionName: 'CREATE_GOODWILL_TRANSACTION'
+          },
+          {
+            name: 'Payout Refund',
+            icon: 'coins',
+            taskPermissionName: 'PAYOUTREFUND_WORKINGCAPITALLOAN'
+          },
+          // Only an overpaid loan carries a credit balance to refund.
+          {
+            name: 'Credit Balance Refund',
+            icon: 'coins',
+            taskPermissionName: 'CREDITBALANCEREFUND_WORKINGCAPITALLOAN'
+          }
+        ];
+        break;
+      case 'Closed (written off)':
+        // The loan stays closed: a recovery payment records money collected
+        // after the write-off without reopening it.
+        this.buttonsArray = [
+          {
+            name: 'Recovery Payment',
+            icon: 'briefcase',
+            taskPermissionName: 'RECOVERYPAYMENT_WORKINGCAPITALLOAN'
+          },
+          {
+            name: 'Undo Write-off',
+            icon: 'undo',
+            taskPermissionName: 'UNDOWRITEOFF_WORKINGCAPITALLOAN'
+          }
+        ];
+        break;
+      default:
+        this.buttonsArray = [];
+    }
+  }
+
+  setOptions(status: string, substatus: OptionData) {
     switch (status) {
       case 'Active':
         this.optionArray = [
@@ -204,6 +354,12 @@ export class LoansAccountButtonConfiguration {
             taskPermissionName: 'SALE_LOAN'
           }
         ];
+        if (!this.isContractTermination(substatus)) {
+          this.optionArray.push({
+            name: 'Contract Termination',
+            taskPermissionName: 'CONTRACT_TERMINATION_LOAN'
+          });
+        }
         this.optionPaymentArray = [
           {
             name: 'Goodwill Credit',
@@ -279,11 +435,107 @@ export class LoansAccountButtonConfiguration {
     }
   }
 
-  addOption(option: { name: string; icon?: string; taskPermissionName?: string }) {
+  setWorkingCapitalOptions(status: string, substatus: OptionData) {
+    switch (status) {
+      case 'Submitted and pending approval':
+        this.optionArray = [
+          {
+            name: 'Withdrawn by Client',
+            taskPermissionName: 'WITHDRAW_LOAN'
+          },
+          {
+            name: 'Delete',
+            taskPermissionName: 'DELETE_LOAN'
+          }
+        ];
+        this.optionPaymentArray = [];
+        break;
+      case 'Approved':
+        this.optionArray = [];
+        this.optionPaymentArray = [];
+        break;
+      case 'Active':
+        this.optionArray = [
+          {
+            name: 'Goodwill Credit',
+            taskPermissionName: 'CREATE_GOODWILL_TRANSACTION'
+          },
+          {
+            name: 'Write Off',
+            taskPermissionName: 'WRITEOFF_WORKINGCAPITALLOAN'
+          }
+        ];
+        this.optionPaymentArray = [];
+        break;
+      default:
+        this.optionArray = [];
+        this.optionPaymentArray = [];
+    }
+  }
+
+  addOption(option: LoansAccountButton) {
     this.optionArray.push(option);
   }
 
-  addButton(option: { name: string; icon: string; taskPermissionName?: string }) {
+  addButton(option: LoansAccountButton) {
     this.buttonsArray.push(option);
+  }
+
+  /**
+   * Blocks an action that is visible but not allowed right now.
+   *
+   * The button is kept in the menu on purpose: hiding it would leave the user
+   * wondering where the action went, while a disabled entry with a tooltip
+   * states the rule.
+   * @param name Action name as declared in the configuration
+   * @param tooltipKey Translation key explaining why it is blocked
+   */
+  disableButton(name: string, tooltipKey: string) {
+    const button = this.buttonsArray?.find((item) => item.name === name);
+    if (button) {
+      button.disabled = true;
+      button.disabledTooltip = tooltipKey;
+    }
+  }
+
+  private isContractTermination(substatus: OptionData): boolean {
+    if (substatus == null) {
+      return false;
+    }
+    return substatus.code === 'loanSubStatus.loanSubStatusType.contractTermination';
+  }
+
+  private addCommonActions(status: string) {
+    switch (status) {
+      case 'Submitted and pending approval':
+        this.buttonsArray = [
+          {
+            name: 'Add Loan Charge',
+            icon: 'plus',
+            taskPermissionName: this.isWorkingCapital ? 'CREATE_WORKINGCAPITALLOANCHARGE' : 'CREATE_LOANCHARGE'
+          },
+          {
+            name: 'Approve',
+            icon: 'check',
+            taskPermissionName: 'APPROVE_LOAN'
+          },
+          {
+            name: 'Modify Application',
+            icon: 'edit',
+            taskPermissionName: 'UPDATE_LOAN'
+          },
+          {
+            name: 'Reject',
+            icon: 'times',
+            taskPermissionName: 'REJECT_LOAN'
+          },
+          {
+            name: 'Attach Loan Originator',
+            icon: 'edit',
+            taskPermissionName: 'ATTACH_LOAN_ORIGINATOR'
+          }
+        ];
+        break;
+    }
   }
 }

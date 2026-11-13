@@ -1,18 +1,18 @@
-.container {
-  .action-button {
-    margin-left: auto;
-  }
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-  .search-button {
-    min-width: 30px;
-    margin: 4px;
-  }
-}
+@use 'assets/styles/entity-list';
 
-table {
-  width: 100%;
+/* Shared entity-list system: tokens + toolbar/rows/pager/empty state. */
+@include entity-list.tokens;
+@include entity-list.list;
 
-  .select-row:hover {
-    cursor: pointer;
-  }
+/* Secondary search box (external id) next to the name search */
+.search.secondary {
+  flex: 0 1 240px;
 }

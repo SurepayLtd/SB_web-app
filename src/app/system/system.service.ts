@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 
 /** rxjs Imports */
@@ -13,12 +21,11 @@ import { RunJobWithParamPayloadType } from './manage-jobs/scheduler-jobs/custom-
   providedIn: 'root'
 })
 export class SystemService {
-  emptyPayload: any = {};
+  private http = inject(HttpClient);
 
-  /**
-   * @param {HttpClient} http Http Client to send requests.
-   */
-  constructor(private http: HttpClient) {}
+  public static CONFIG_ASSET_EXTERNALIZATION = 'asset-externalization-of-non-active-loans';
+
+  emptyPayload: any = {};
 
   /**
    * @returns {Observable<any>} Data tables.
@@ -567,6 +574,23 @@ export class SystemService {
   }
 
   /**
+   * Installs an Eclipse BIRT report design in the reports directory of the tenant the session is
+   * authenticated against. The destination is the server's to decide, so nothing but the file is
+   * sent.
+   *
+   * No Content-Type is set: the browser has to write the multipart boundary itself, and setting the
+   * header by hand would send one without it.
+   *
+   * @param {File} file The .rptdesign file to upload.
+   * @returns {Observable<any>} The stored file name, its size and whether it replaced a design.
+   */
+  uploadBirtReportFile(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post('/birt/reports', formData);
+  }
+
+  /**
    * @param {any} filterBy Properties by which entries should be filtered.
    * @param {string} orderBy Property by which entries should be sorted.
    * @param {string} sortOrder Sort order: ascending or descending.
@@ -736,6 +760,11 @@ export class SystemService {
   editEntityDatatableEntry(entityId: string, datatableName: string, data: any) {
     const httpParams = new HttpParams().set('genericResultSet', 'true');
     return this.http.put(`/datatables/${datatableName}/${entityId}`, data, { params: httpParams });
+  }
+
+  editEntityDatatableEntryOneToMany(entityId: string, rowId: string, datatableName: string, data: any) {
+    const httpParams = new HttpParams().set('genericResultSet', 'true');
+    return this.http.put(`/datatables/${datatableName}/${entityId}/${rowId}`, data, { params: httpParams });
   }
 
   deleteDatatableContent(entityId: string, datatableName: string) {

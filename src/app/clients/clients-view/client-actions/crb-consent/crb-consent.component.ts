@@ -1,16 +1,38 @@
-import { Component, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { Component, OnInit, inject } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClientsService } from '../../../clients.service';
 import { SettingsService } from '../../../../settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'mifosx-crb-consent',
   templateUrl: './crb-consent.component.html',
-  styleUrls: ['./crb-consent.component.scss']
+  styleUrls: ['./crb-consent.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule
+  ]
 })
 export class CrbConsentComponent implements OnInit {
-
+  private formBuilder = inject(UntypedFormBuilder);
+  private clientsService = inject(ClientsService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private settingsService = inject(SettingsService);
 
   /** CRB consent form. */
   crbConsentForm: UntypedFormGroup;
@@ -37,16 +59,9 @@ export class CrbConsentComponent implements OnInit {
    * @param {Router} router Router
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private clientsService: ClientsService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.clientId = this.route.parent.snapshot.params['clientId'];
   }
-
 
   /**
    * Initializes the CRB consent form and loads available channels.
@@ -62,8 +77,14 @@ export class CrbConsentComponent implements OnInit {
    */
   createCrbConsentForm(): void {
     this.crbConsentForm = this.formBuilder.group({
-      consentChannel: ['', Validators.required],
-      consentText: ['', Validators.required]
+      consentChannel: [
+        '',
+        Validators.required
+      ],
+      consentText: [
+        '',
+        Validators.required
+      ]
     });
   }
 
@@ -84,16 +105,14 @@ export class CrbConsentComponent implements OnInit {
     });
   }
   /**
-    * Loads the CRB consent text from the templates API.
-  */
+   * Loads the CRB consent text from the templates API.
+   */
   loadConsentTemplateText(): void {
     this.isLoading = true;
 
     this.clientsService.getCrbConsentTemplateName().subscribe({
       next: (templates: any[]) => {
-        const consentTemplate = templates.find(
-          (template: any) => template.name === this.consentTemplateName
-        );
+        const consentTemplate = templates.find((template: any) => template.name === this.consentTemplateName);
 
         if (consentTemplate) {
           this.crbConsentForm.patchValue({
@@ -142,5 +161,4 @@ export class CrbConsentComponent implements OnInit {
       }
     });
   }
-
 }

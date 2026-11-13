@@ -1,12 +1,44 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, OnInit, Input, inject } from '@angular/core';
+import {
+  UntypedFormGroup,
+  UntypedFormBuilder,
+  UntypedFormControl,
+  Validators,
+  ReactiveFormsModule
+} from '@angular/forms';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatDivider } from '@angular/material/divider';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-recurring-deposit-product-settings-step',
   templateUrl: './recurring-deposit-product-settings-step.component.html',
-  styleUrls: ['./recurring-deposit-product-settings-step.component.scss']
+  styleUrls: ['./recurring-deposit-product-settings-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    MatTooltip,
+    MatDivider,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecurringDepositProductSettingsStepComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+
   @Input() recurringDepositProductsTemplate: any;
 
   recurringDepositProductSettingsForm: UntypedFormGroup;
@@ -16,7 +48,7 @@ export class RecurringDepositProductSettingsStepComponent implements OnInit {
   preClosurePenalInterestOnTypeData: any;
   taxGroupData: any;
 
-  constructor(private formBuilder: UntypedFormBuilder) {
+  constructor() {
     this.createrecurringDepositProductSettingsForm();
     this.setConditionalControls();
   }
@@ -42,11 +74,11 @@ export class RecurringDepositProductSettingsStepComponent implements OnInit {
           : '',
         inMultiplesOfDepositTerm: this.recurringDepositProductsTemplate.inMultiplesOfDepositTerm,
         inMultiplesOfDepositTermTypeId: this.recurringDepositProductsTemplate.inMultiplesOfDepositTermType
-          ? this.recurringDepositProductsTemplate.inMultiplesOfDepositTerm.id
+          ? this.recurringDepositProductsTemplate.inMultiplesOfDepositTermType.id
           : '',
         maxDepositTerm: this.recurringDepositProductsTemplate.maxDepositTerm,
         maxDepositTermTypeId: this.recurringDepositProductsTemplate.maxDepositTermType
-          ? this.recurringDepositProductsTemplate.minDepositTermType.id
+          ? this.recurringDepositProductsTemplate.maxDepositTermType.id
           : '',
         preClosurePenalApplicable: this.recurringDepositProductsTemplate.preClosurePenalApplicable,
         preClosurePenalInterest: this.recurringDepositProductsTemplate.preClosurePenalInterest,
@@ -71,22 +103,37 @@ export class RecurringDepositProductSettingsStepComponent implements OnInit {
       isMandatoryDeposit: [false],
       adjustAdvanceTowardsFuturePayments: [false],
       allowWithdrawal: [false],
-      lockinPeriodFrequency: [''],
+      lockinPeriodFrequency: [
+        '',
+        Validators.min(0)
+      ],
       lockinPeriodFrequencyType: [''],
       minDepositTerm: [
         '',
-        Validators.required
+        [
+          Validators.required,
+          Validators.min(0)
+        ]
       ],
       minDepositTermTypeId: [
         '',
         Validators.required
       ],
-      inMultiplesOfDepositTerm: [''],
+      inMultiplesOfDepositTerm: [
+        '',
+        Validators.min(0)
+      ],
       inMultiplesOfDepositTermTypeId: [''],
-      maxDepositTerm: [''],
+      maxDepositTerm: [
+        '',
+        Validators.min(0)
+      ],
       maxDepositTermTypeId: [''],
       preClosurePenalApplicable: [false],
-      preClosurePenalInterest: [''],
+      preClosurePenalInterest: [
+        '',
+        Validators.min(0)
+      ],
       preClosurePenalInterestOnTypeId: [''],
       withHoldTax: [false]
     });

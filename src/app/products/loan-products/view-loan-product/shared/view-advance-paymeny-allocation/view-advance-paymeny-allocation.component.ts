@@ -1,16 +1,39 @@
-import { Component, Input } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, inject, Input } from '@angular/core';
 import {
   AdvancePaymentAllocationData,
+  AdvancedPaymentStrategy,
   CreditAllocation,
+  CreditAllocationStrategies,
   PaymentAllocation
 } from 'app/products/loan-products/loan-product-stepper/loan-product-payment-strategy-step/payment-allocation-model';
+import { MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle } from '@angular/material/expansion';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanProductService } from 'app/products/loan-products/services/loan-product.service';
 
 @Component({
   selector: 'mifosx-view-advance-paymeny-allocation',
   templateUrl: './view-advance-paymeny-allocation.component.html',
-  styleUrls: ['./view-advance-paymeny-allocation.component.scss']
+  styleUrls: ['./view-advance-paymeny-allocation.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViewAdvancePaymenyAllocationComponent {
+  protected loanProductService = inject(LoanProductService);
+  private advancedPaymentStrategy = inject(AdvancedPaymentStrategy);
+
   @Input() paymentAllocation: PaymentAllocation | null;
   @Input() creditAllocation: CreditAllocation | null;
   @Input() advancePaymentAllocationData: AdvancePaymentAllocationData;
@@ -31,6 +54,19 @@ export class ViewAdvancePaymenyAllocationComponent {
     }
     const allocationType = this.advancePaymentAllocationData.allocationTypes.find((t) => t.code === code);
     return allocationType.value;
+  }
+
+  /** A credit allocation without strategy predates the strategy support and is rule based. */
+  creditAllocationStrategyValue(code: string): string {
+    const strategyCode = code || CreditAllocationStrategies.RULE_BASED;
+    const strategy = this.advancePaymentAllocationData?.creditAllocationStrategies?.find(
+      (t) => t.code === strategyCode
+    );
+    return strategy ? strategy.value : strategyCode;
+  }
+
+  isPrincipalOnly(creditAllocation: CreditAllocation): boolean {
+    return this.advancedPaymentStrategy.isPrincipalOnly(creditAllocation);
   }
 
   futureInstallmentRuleValue(code: string): string {

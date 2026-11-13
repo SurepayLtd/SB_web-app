@@ -1,6 +1,26 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnChanges, Input, Output, EventEmitter, OnInit } from '@angular/core';
-import { Validators, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnChanges,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  inject,
+  DestroyRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { take } from 'rxjs';
+import { Validators, FormGroup, FormControl, ReactiveFormsModule } from '@angular/forms';
 
 /** Custom Services */
 import { ReportsService } from 'app/reports/reports.service';
@@ -10,6 +30,10 @@ import { SettingsService } from 'app/settings/settings.service';
 import { ReportParameter } from 'app/reports/common-models/report-parameter.model';
 import { SelectOption } from 'app/reports/common-models/select-option.model';
 import { Dates } from 'app/core/utils/dates';
+import { MatDivider } from '@angular/material/divider';
+import { NgFor, NgSwitch, NgIf, NgSwitchCase } from '@angular/common';
+import { MatStepperNext } from '@angular/material/stepper';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Business Rule Parameters Component.
@@ -17,16 +41,29 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-business-rule-parameters',
   templateUrl: './business-rule-parameters.component.html',
-  styleUrls: ['./business-rule-parameters.component.scss']
+  styleUrls: ['./business-rule-parameters.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatDivider,
+    NgSwitch,
+    NgSwitchCase,
+    MatStepperNext
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BusinessRuleParametersComponent implements OnInit, OnChanges {
+  private reportsService = inject(ReportsService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private destroyRef = inject(DestroyRef);
+
   /** Run Report Parameters Data */
   @Input() paramData: any;
 
   /** Report Name */
   reportName: string;
   /** Initializes new form group ReportForm */
-  ReportForm = new UntypedFormGroup({});
+  ReportForm = new FormGroup({});
   /** Array of all parent parameters */
   parentParameters: any[] = [];
   /** Minimum Date allowed. */
@@ -37,24 +74,13 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
   /** Template Parameters Event Emitter */
   @Output() templateParameters = new EventEmitter();
 
-  /**
-   * @param {ReportsService} reportsService Reports Service.
-   * @param {SettingsService} settingsService Settings Service.
-   * @param {Dates} dateUtils Date Utils.
-   */
-  constructor(
-    private reportsService: ReportsService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates
-  ) {}
-
   ngOnInit(): void {
     this.maxDate = this.settingsService.businessDate;
   }
 
   ngOnChanges() {
     if (this.paramData) {
-      this.ReportForm = new UntypedFormGroup({});
+      this.ReportForm = new FormGroup({});
       this.reportName = this.paramData.reportName;
       this.paramData = this.paramData.response;
       this.createRunReportForm();
@@ -78,7 +104,7 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
     this.paramData.forEach((param: any) => {
       if (!param.parentParameterName) {
         // Non-Child Parameter
-        this.ReportForm.addControl(param.name, new UntypedFormControl('', Validators.required));
+        this.ReportForm.addControl(param.name, new FormControl('', Validators.required));
         if (param.displayType === 'select') {
           this.fetchSelectOptions(param, param.name);
         }
@@ -113,19 +139,21 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
    */
   setChildControls() {
     this.parentParameters.forEach((param: ReportParameter) => {
-      this.ReportForm.get(param.name).valueChanges.subscribe((option: any) => {
-        param.childParameters.forEach((child: ReportParameter) => {
-          if (child.displayType === 'none') {
-            this.ReportForm.addControl(child.name, new UntypedFormControl(child.defaultVal));
-          } else {
-            this.ReportForm.addControl(child.name, new UntypedFormControl('', Validators.required));
-          }
-          if (child.displayType === 'select') {
-            const inputstring = `${child.name}?${param.inputName}=${option.id}`;
-            this.fetchSelectOptions(child, inputstring);
-          }
+      this.ReportForm.get(param.name)
+        .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((option: any) => {
+          param.childParameters.forEach((child: ReportParameter) => {
+            if (child.displayType === 'none') {
+              this.ReportForm.addControl(child.name, new FormControl(child.defaultVal));
+            } else {
+              this.ReportForm.addControl(child.name, new FormControl('', Validators.required));
+            }
+            if (child.displayType === 'select') {
+              const inputstring = `${child.name}?${param.inputName}=${option.id}`;
+              this.fetchSelectOptions(child, inputstring);
+            }
+          });
         });
-      });
     });
   }
 
@@ -135,12 +163,15 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
    * @param {string} inputstring url substring for API call.
    */
   fetchSelectOptions(param: ReportParameter, inputstring: string) {
-    this.reportsService.getSelectOptions(inputstring).subscribe((options: SelectOption[]) => {
-      param.selectOptions = options;
-      if (param.selectAll === 'Y') {
-        param.selectOptions.push({ id: '-1', name: 'All' });
-      }
-    });
+    this.reportsService
+      .getSelectOptions(inputstring)
+      .pipe(take(1))
+      .subscribe((options: SelectOption[]) => {
+        param.selectOptions = options;
+        if (param.selectAll === 'Y') {
+          param.selectOptions.push({ id: '-1', name: 'All' });
+        }
+      });
   }
 
   /**
@@ -161,7 +192,7 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
           formattedResponse[newKey] = value;
           break;
         case 'select':
-          formattedResponse[newKey] = value['id'];
+          formattedResponse[newKey] = (value as { id: string | number })['id'];
           break;
         case 'date':
           const dateFormat = this.settingsService.dateFormat;
@@ -182,13 +213,16 @@ export class BusinessRuleParametersComponent implements OnInit, OnChanges {
    */
   getResponseHeaders() {
     const formattedresponse = this.formatUserResponse(this.ReportForm.value, true);
-    this.reportsService.getRunReportData(this.reportName, formattedresponse).subscribe(
-      (response: any) => {
-        this.templateParameters.emit(response.columnHeaders);
-      },
-      (error: any) => {
-        this.templateParameters.emit(null);
-      }
-    );
+    this.reportsService
+      .getRunReportData(this.reportName, formattedresponse)
+      .pipe(take(1))
+      .subscribe({
+        next: (response: any) => {
+          this.templateParameters.emit(response.columnHeaders);
+        },
+        error: (error: any) => {
+          this.templateParameters.emit(null);
+        }
+      });
   }
 }

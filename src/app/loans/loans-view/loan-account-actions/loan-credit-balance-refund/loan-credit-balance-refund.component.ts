@@ -1,20 +1,35 @@
-import { Component, Input, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
-import { LoansService } from 'app/loans/loans.service';
-import { SettingsService } from 'app/settings/settings.service';
 import { Currency } from 'app/shared/models/general.model';
+import { InputAmountComponent } from '../../../../shared/input-amount/input-amount.component';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 
 @Component({
   selector: 'mifosx-loan-credit-balance-refund',
   templateUrl: './loan-credit-balance-refund.component.html',
-  styleUrls: ['./loan-credit-balance-refund.component.scss']
+  styleUrls: ['./loan-credit-balance-refund.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LoanCreditBalanceRefundComponent implements OnInit {
-  @Input() dataObject: any;
-  /** Loan Id */
-  loanId: string;
+export class LoanCreditBalanceRefundComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private dateUtils = inject(Dates);
+
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Date allowed. */
@@ -23,22 +38,8 @@ export class LoanCreditBalanceRefundComponent implements OnInit {
   creditBalanceLoanForm: UntypedFormGroup;
   currency: Currency;
 
-  /**
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {LoansService} loanService Loan Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   * @param {SettingsService} settingsService Settings Service
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  constructor() {
+    super();
   }
 
   /**
@@ -54,13 +55,17 @@ export class LoanCreditBalanceRefundComponent implements OnInit {
     }
   }
 
+  get requiredPermission(): string {
+    return this.isWorkingCapital ? 'CREDITBALANCEREFUND_WORKINGCAPITALLOAN' : 'CREDITBALANCEREFUND_LOAN';
+  }
+
   /**
    * Creates the create close form.
    */
   createCreditBalanceLoanForm() {
     this.creditBalanceLoanForm = this.formBuilder.group({
       transactionDate: [
-        new Date(),
+        this.isWorkingCapital ? this.settingsService.businessDate : new Date(),
         Validators.required
       ],
       transactionAmount: [
@@ -74,7 +79,7 @@ export class LoanCreditBalanceRefundComponent implements OnInit {
 
   setCreditBalanceLoanDetails() {
     this.creditBalanceLoanForm.patchValue({
-      transactionAmount: this.dataObject.amount
+      transactionAmount: this.dataObject.amount ?? this.dataObject.expectedAmount
     });
   }
 
@@ -92,10 +97,12 @@ export class LoanCreditBalanceRefundComponent implements OnInit {
       dateFormat,
       locale
     };
-    const command = this.dataObject.type.code.split('.')[1];
     data['transactionAmount'] = data['transactionAmount'] * 1;
-    this.loanService.submitLoanActionButton(this.loanId, data, command).subscribe((response: any) => {
-      this.router.navigate(['../../transactions'], { relativeTo: this.route });
+    const request = this.isWorkingCapital
+      ? this.loanService.applyWorkingCapitalLoanActionCommand(this.loanId, data, 'creditBalanceRefund')
+      : this.loanService.submitLoanActionButton(this.loanId, data, this.dataObject.type.code.split('.')[1]);
+    request.subscribe((_response: any) => {
+      this.gotoLoanView('transactions');
     });
   }
 }
