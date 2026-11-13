@@ -1,0 +1,69 @@
+
+<div class="container">
+  <mat-card>
+    <form [formGroup]="creditEnquiryForm" (ngSubmit)="submitEnquiry()">
+      <mat-card-content>
+        <div fxLayout="column">
+
+          <!-- Credit Validation Type -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Validation Type' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbCreditValidationType" required>
+              <mat-option *ngFor="let type of creditValidationTypes" [value]="type.id">
+                {{ type.value }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error
+              *ngIf="creditEnquiryForm.controls.crbCreditValidationType.hasError('required')"
+            >
+              {{ 'labels.inputs.Validation Type' | translate }}
+              {{ 'labels.commons.is' | translate }}
+              <strong>{{ 'labels.commons.required' | translate }}</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Enquiry Reason -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Enquiry Reason' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="enquiryReasonId" required>
+              <mat-option *ngFor="let narration of creditData" [value]="narration.id" [disabled]="!narration.active">
+                {{ narration.name }}
+                <span *ngIf="narration.mandatory">*</span>
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditEnquiryForm.controls.enquiryReasonId.hasError('required')">
+              {{ 'labels.inputs.Enquiry Reason' | translate }}
+              {{ 'labels.commons.is' | translate }}
+              <strong>{{ 'labels.commons.required' | translate }}</strong>
+            </mat-error>
+          </mat-form-field>
+
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+        <button type="button" mat-raised-button (click)="cancel()" [disabled]="isSubmitting">
+          {{ 'labels.buttons.Cancel' | translate }}
+        </button>
+
+        <button type="submit" mat-raised-button color="primary" [disabled]="!creditEnquiryForm.valid || isSubmitting || isLoading">
+          <span *ngIf="!isSubmitting">
+            {{ 'labels.buttons.Confirm' | translate }}
+          </span>
+
+          <span *ngIf="isSubmitting">
+            {{ 'labels.buttons.Processing' | translate }}...
+          </span>
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card>
+</div>

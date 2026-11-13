@@ -122,6 +122,19 @@ export class LoansViewComponent implements OnInit {
           taskPermissionName: 'ADJUST_REPAYMENT_SCHEDULE'
         });
       }
+      if (this.loanDetailsData.isLoanProductCrbEnabled) {
+        this.buttonConfig.addOption({
+          name: 'Credit Enquiry',
+          icon: 'search-dollar',
+          taskPermissionName: 'CREATE_CRBCREDIT'
+        });
+
+        this.buttonConfig.addOption({
+          name: 'Credit Score',
+          icon: 'chart-line',
+          taskPermissionName: 'CREATE_CRBCREDIT'
+        });
+      }
     } else if (this.status === 'Approved' || this.status === 'Active') {
       this.buttonConfig.addButton({
         name: this.loanDetailsData.loanOfficerName ? 'Change Loan Officer' : 'Assign Loan Officer',

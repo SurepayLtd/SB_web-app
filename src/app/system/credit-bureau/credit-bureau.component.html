@@ -1,0 +1,72 @@
+<div class="container">
+
+  <div fxLayout="row" fxLayoutAlign="space-between center">
+    <div>
+      <h3>Credit Bureau Providers</h3>
+      <p class="description">
+        Select a credit bureau provider to manage its organisations
+        and loan product mappings.
+      </p>
+    </div>
+  </div>
+
+  <div fxLayout="row wrap" fxLayoutGap="16px" fxLayoutAlign="start stretch">
+
+    <div *ngFor="let creditBureau of creditBureauProviders" fxFlex="0 1 calc(33.333% - 16px)" fxFlex.lt-md="0 1 calc(50% - 16px)" fxFlex.lt-sm="100%">
+
+      <mat-card class="credit-bureau-card clickable-card" (click)="viewOrganisations(creditBureau)"
+        tabindex="0" role="button" (keydown.enter)="viewOrganisations(creditBureau)"
+        (keydown.space)="viewOrganisations(creditBureau); $event.preventDefault()">
+
+        <mat-card-content>
+
+          <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+
+            <div fxFlex>
+              <h3>{{ creditBureau.creditBureauName }}</h3>
+
+              <span class="text-muted">
+                {{ creditBureau.implementationKey }}
+              </span>
+            </div>
+
+            <mat-icon color="primary">chevron_right</mat-icon>
+
+          </div>
+
+          <mat-divider class="m-t-16 m-b-16"></mat-divider>
+
+          <div fxLayout="row" fxLayoutAlign="space-between center">
+
+            <span>
+              <mat-icon inline>public</mat-icon>
+              {{ creditBureau.country }}
+            </span>
+
+            <span class="text-muted">
+              {{ creditBureau.creditBureauSummary }}
+            </span>
+
+          </div>
+
+        </mat-card-content>
+
+      </mat-card>
+
+    </div>
+
+  </div>
+
+  <div *ngIf="creditBureauProviders.length === 0" fxLayout="column" fxLayoutAlign="center center" class="m-t-32">
+
+    <mat-icon>account_balance</mat-icon>
+
+    <h3>No Credit Bureau Providers Found</h3>
+
+    <p class="text-muted">
+      There are currently no credit bureau providers configured.
+    </p>
+
+  </div>
+
+</div>

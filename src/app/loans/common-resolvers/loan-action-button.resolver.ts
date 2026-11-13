@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 
 /** Custom Services */
 import { LoansService } from '../loans.service';
+import { ClientsService } from '../../clients/clients.service';
 
 /**
  * Loans notes data resolver.
@@ -14,9 +15,12 @@ import { LoansService } from '../loans.service';
 @Injectable()
 export class LoanActionButtonResolver implements Resolve<Object> {
   /**
-   * @param {LoansService} LoansService Loans service.
+   * @param loansService
+   * @param clientService
    */
-  constructor(private loansService: LoansService) {}
+  constructor(private loansService: LoansService,
+              private clientService: ClientsService
+              ) {}
 
   /**
    * Returns the Loans Notes Data.
@@ -76,6 +80,8 @@ export class LoanActionButtonResolver implements Resolve<Object> {
       return this.loansService.getLoanActionTemplate(loanId, 'charge-off');
     } else if (loanActionButton === 'Mass Penalty Waiver') {
       return this.loansService.getLoanPenaltyActionTemplate(loanId, 'mass-waiver');
+    } else if (loanActionButton === 'Credit Enquiry') {
+      return this.clientService.getClientCommandTemplate('kyc');
     } else {
       return undefined;
     }

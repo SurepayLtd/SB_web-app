@@ -85,6 +85,10 @@ import { LoanReamortizeComponent } from './loans-view/loan-account-actions/loan-
 import { LoanTermVariationsTabComponent } from './loans-view/loan-term-variations-tab/loan-term-variations-tab.component';
 import { AddInterestPauseComponent } from './loans-view/loan-account-actions/add-interest-pause/add-interest-pause.component';
 import { MassWaiverComponent } from './loans-view/loan-account-actions/mass-waiver/mass-waiver.component';
+import { CreditEnquiryComponent } from './loans-view/loan-account-actions/credit-enquiry/credit-enquiry.component';
+import { CreditScoreComponent } from './loans-view/loan-account-actions/credit-score/credit-score.component';
+import { CrbCreditEnquiryTabComponent } from './loans-view/crb-credit-enquiry-tab/crb-credit-enquiry-tab.component';
+import { CrbCreditScoreTabComponent } from './loans-view/crb-credit-score-tab/crb-credit-score-tab.component';
 
 /**
  * Loans Module
@@ -173,7 +177,11 @@ import { MassWaiverComponent } from './loans-view/loan-account-actions/mass-waiv
     LoanReamortizeComponent,
     LoanTermVariationsTabComponent,
     AddInterestPauseComponent,
-    MassWaiverComponent
+    MassWaiverComponent,
+    CreditEnquiryComponent,
+    CreditScoreComponent,
+    CrbCreditEnquiryTabComponent,
+    CrbCreditScoreTabComponent
   ],
   providers: []
 })

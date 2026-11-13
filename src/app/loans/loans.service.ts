@@ -669,4 +669,18 @@ export class LoansService {
 
     return loansAccountData;
   }
+
+  createCrbEnquiryOrScore(loanId: any, loanData: any): Observable<any> {
+    return this.http.post(`/crbchecks/${loanId}/credit`, loanData);
+  }
+
+  getCrbEnquiry(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '200');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
+
+  getCrbScore(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '300');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
 }

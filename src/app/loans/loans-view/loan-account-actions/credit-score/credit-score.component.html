@@ -1,0 +1,66 @@
+
+<div class="container">
+  <mat-card>
+    <form [formGroup]="creditScoreForm" (ngSubmit)="submitScore()">
+      <mat-card-content>
+        <div fxLayout="column">
+
+          <!-- Credit Validation Type -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Validation Type' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbCreditValidationType" required>
+              <mat-option *ngFor="let type of creditValidationTypes" [value]="type.id">
+                {{ type.value }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditScoreForm.controls.crbCreditValidationType.hasError('required')">
+              {{ 'labels.inputs.Validation Type' | translate }}
+              {{ 'labels.commons.is' | translate }}
+              <strong>{{ 'labels.commons.required' | translate }}</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Credit Score Type -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Credit Score Type' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbCreditScoreType" required>
+              <mat-option *ngFor="let scoreType of creditScoreTypes" [value]="scoreType.id">
+                {{ scoreType.value }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditScoreForm.controls.crbCreditScoreType.hasError('required')">
+              {{ 'labels.inputs.Credit Score Type' | translate }}
+              {{ 'labels.commons.is' | translate }}
+              <strong>{{ 'labels.commons.required' | translate }}</strong>
+            </mat-error>
+          </mat-form-field>
+
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+        <button type="button" mat-raised-button (click)="cancel()" [disabled]="isSubmitting">
+          {{ 'labels.buttons.Cancel' | translate }}
+        </button>
+
+        <button type="submit" mat-raised-button color="primary" [disabled]="!creditScoreForm.valid || isSubmitting || isLoading">
+          <span *ngIf="!isSubmitting">
+            {{ 'labels.buttons.Confirm' | translate }}
+          </span>
+
+          <span *ngIf="isSubmitting">
+            {{ 'labels.buttons.Processing' | translate }}...
+          </span>
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card>
+</div>

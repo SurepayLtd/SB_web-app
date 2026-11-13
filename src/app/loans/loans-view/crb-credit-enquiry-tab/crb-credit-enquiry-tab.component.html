@@ -1,0 +1,405 @@
+
+<div class="enquiry-container">
+
+  <div class="empty-state" *ngIf="!creditEnquiryChecks.length">
+    <mat-icon>search_off</mat-icon>
+    <h3>No Credit Enquiry Attempts</h3>
+    <p>No credit enquiry attempts found for this loan.</p>
+  </div>
+
+  <mat-accordion class="enquiry-accordion" multi>
+
+    <mat-expansion-panel
+      *ngFor="let check of creditEnquiryChecks"
+      class="enquiry-panel">
+
+      <mat-expansion-panel-header>
+
+        <mat-panel-title>
+          <div class="panel-title-content">
+
+            <div class="attempt-icon">
+              <mat-icon>search</mat-icon>
+            </div>
+
+            <div>
+              <strong>Credit Enquiry #{{ check.id }}</strong>
+              <small>
+                {{ check.providerReference || 'No provider reference' }}
+              </small>
+            </div>
+
+          </div>
+        </mat-panel-title>
+
+        <mat-panel-description>
+          <span
+            class="status-badge"
+            [ngClass]="{
+              'status-success': check.status?.id === 3,
+              'status-failed': check.status?.id === 4,
+              'status-pending': check.status?.id === 2 || check.status?.id === 7
+            }">
+            {{ check.status?.value || 'Unknown' }}
+          </span>
+        </mat-panel-description>
+
+      </mat-expansion-panel-header>
+
+      <div class="panel-content">
+
+        <!-- JSON parsing error -->
+        <div class="error-message" *ngIf="check.parseError">
+          <mat-icon>warning</mat-icon>
+          <span>
+            Unable to read the provider response for this enquiry attempt.
+          </span>
+        </div>
+
+        <!-- Missing response -->
+        <div
+          class="empty-sector" *ngIf="!check.parseError && !check.parsedResponse">
+          <mat-icon>info</mat-icon>
+          <span>No provider response is available for this enquiry attempt.</span>
+        </div>
+
+        <ng-container *ngIf="check.parsedResponse as response">
+
+          <!-- Enquiry Summary -->
+          <div class="report-section" *ngIf="response.enquiry">
+
+            <div class="section-heading">
+              <div class="section-icon">
+                <mat-icon>receipt_long</mat-icon>
+              </div>
+
+              <div>
+                <h3>Enquiry Summary</h3>
+                <p>Information returned by the credit bureau provider</p>
+              </div>
+            </div>
+
+            <div class="information-grid">
+
+              <div class="info-item">
+                <label>Entity</label>
+                <span>{{ response.enquiry.entity || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Enquiry Status</label>
+                <span class="status-text">
+                  {{ response.enquiry.status || 'N/A' }}
+                </span>
+              </div>
+
+              <div class="info-item">
+                <label>Provider Timestamp</label>
+                <span>{{ response.enquiry.timestamp || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Provider Reference</label>
+                <span>{{ response.enquiry.reference || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Search Criteria</label>
+                <span>{{ response.enquiry.criteria || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Search Value</label>
+                <span>{{ response.enquiry.search_value || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Identification Type</label>
+                <span>{{ response.enquiry.identification_type || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Provider Count</label>
+                <span>{{ response.count ?? 0 }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Provider Cost</label>
+                <span>{{ response.enquiry.cost ?? 0 | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>VAT</label>
+                <span>{{ response.enquiry.vat ?? 0 | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Charge</label>
+                <span>{{ response.enquiry.charge ?? 0 | number:'1.2-2' }}</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Formal and Informal Sectors -->
+          <div *ngFor="let sector of getSectors(response)" class="report-section sector-section">
+
+            <div class="section-heading">
+
+              <div class="section-icon">
+                <mat-icon>business_center</mat-icon>
+              </div>
+
+              <div>
+                <h3>{{ sector.name }}</h3>
+                <p>Credit bureau records returned for this sector</p>
+              </div>
+
+              <span class="match-count">
+                {{ sector.data.matches ?? 0 }} Match(es)
+              </span>
+
+            </div>
+
+            <!-- Individual Matches -->
+            <div *ngIf="sector.data.individuals?.length">
+
+              <h4 class="subsection-title">
+                <mat-icon>person</mat-icon>
+                Individual Matches
+              </h4>
+
+              <div
+                class="record-card"
+                *ngFor="let person of sector.data.individuals">
+
+                <div class="individual-layout">
+
+                  <div class="profile-container">
+
+                    <img *ngIf="person.image" [src]="person.image" alt="Individual photo" class="profile-image">
+
+                    <div class="profile-placeholder" *ngIf="!person.image">
+                      <mat-icon>person</mat-icon>
+                      <span>No Photo</span>
+                    </div>
+
+                    <span class="record-id">
+                      ID: {{ person.individual_id || 'N/A' }}
+                    </span>
+
+                  </div>
+
+                  <div class="record-details">
+
+                    <div class="record-heading">
+                      <h4>
+                        {{ getIndividualFullName(person) || 'Unknown Individual' }}
+                      </h4>
+
+                      <span class="record-type">INDIVIDUAL</span>
+                    </div>
+
+                    <div class="information-grid">
+
+                      <div class="info-item">
+                        <label>Gender</label>
+                        <span>{{ person.gender || 'N/A' }}</span>
+                      </div>
+
+                      <div class="info-item">
+                        <label>Date of Birth</label>
+                        <span>{{ person.date_of_birth || 'N/A' }}</span>
+                      </div>
+
+                      <div class="info-item">
+                        <label>Nationality</label>
+                        <span>{{ person.nationality || 'N/A' }}</span>
+                      </div>
+
+                      <div class="info-item">
+                        <label>Marital Status</label>
+                        <span>{{ person.marital_status || 'N/A' }}</span>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Non-Individual Matches -->
+            <div *ngIf="sector.data.nonindividuals?.length">
+
+              <h4 class="subsection-title">
+                <mat-icon>apartment</mat-icon>
+                Non-Individual Matches
+              </h4>
+
+              <div
+                class="record-card"
+                *ngFor="let business of sector.data.nonindividuals">
+
+                <div class="business-heading">
+
+                  <div class="business-icon">
+                    <mat-icon>business</mat-icon>
+                  </div>
+
+                  <div>
+                    <h4>{{ business.business_name || 'Unnamed Business' }}</h4>
+                    <p>{{ business.trading_name || 'No trading name' }}</p>
+                  </div>
+
+                  <span class="record-type">NON-INDIVIDUAL</span>
+
+                </div>
+
+                <div class="information-grid business-grid">
+
+                  <div class="info-item">
+                    <label>Business Name</label>
+                    <span>{{ business.business_name || 'N/A' }}</span>
+                  </div>
+
+                  <div class="info-item">
+                    <label>Trading Name</label>
+                    <span>{{ business.trading_name || 'N/A' }}</span>
+                  </div>
+
+                  <div class="info-item">
+                    <label>Business Type</label>
+                    <span>{{ business.business_type || 'N/A' }}</span>
+                  </div>
+
+                  <div class="info-item">
+                    <label>Industry</label>
+                    <span>{{ business.industry || 'N/A' }}</span>
+                  </div>
+
+                  <div class="info-item">
+                    <label>Date Registered</label>
+                    <span>{{ business.date_registered || 'N/A' }}</span>
+                  </div>
+
+                  <div class="info-item full-width">
+                    <label>Activity Description</label>
+                    <span>{{ business.activity_description || 'N/A' }}</span>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+
+            <!-- No Matches -->
+            <div
+              class="empty-sector"
+              *ngIf="
+                !sector.data.individuals?.length &&
+                !sector.data.nonindividuals?.length
+              ">
+              <mat-icon>info</mat-icon>
+              <span>No records found in this sector.</span>
+            </div>
+
+          </div>
+
+          <!-- No Sector Data -->
+          <div
+            class="empty-sector"
+            *ngIf="!response.enquiry?.formal && !response.enquiry?.informal">
+            <mat-icon>info</mat-icon>
+            <span>
+              No formal or informal sector information was returned by the provider.
+            </span>
+          </div>
+
+        </ng-container>
+
+        <!-- Attempt Information -->
+        <div class="report-section attempt-section">
+
+          <div class="section-heading">
+
+            <div class="section-icon">
+              <mat-icon>fact_check</mat-icon>
+            </div>
+
+            <div>
+              <h3>Attempt Information</h3>
+              <p>Internal details recorded for this credit enquiry attempt</p>
+            </div>
+
+          </div>
+
+          <div class="information-grid">
+
+            <div class="info-item">
+              <label>Client</label>
+              <span>{{ check.clientName || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Client Account</label>
+              <span>{{ check.clientAccount || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Loan Account</label>
+              <span>{{ check.loanAccount || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Loan Product</label>
+              <span>{{ check.loanProductName || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Proposed Principal</label>
+              <span>{{ check.proposedPrincipal ?? 0 | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Request Type</label>
+              <span>{{ check.requestType?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Validation Status</label>
+              <span>{{ check.status?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Consent Status</label>
+              <span>{{ check.consentStatus?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Provider Validation ID</label>
+              <span>{{ check.providerValidationId || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Provider Reference</label>
+              <span>{{ check.providerReference || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Recorded Cost</label>
+              <span>{{ check.cost ?? 0 | number:'1.2-2' }}</span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </mat-expansion-panel>
+
+  </mat-accordion>
+
+</div>

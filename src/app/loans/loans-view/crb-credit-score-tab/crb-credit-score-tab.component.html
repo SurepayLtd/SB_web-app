@@ -1,0 +1,834 @@
+
+<div class="score-container">
+
+  <div class="empty-state" *ngIf="!creditScoreAttempts.length">
+    <mat-icon>analytics</mat-icon>
+    <h3>No Credit Score Attempts</h3>
+    <p>No credit score attempts found for this loan.</p>
+  </div>
+
+  <mat-accordion class="score-accordion" multi>
+
+    <mat-expansion-panel
+      *ngFor="let attempt of creditScoreAttempts"
+      class="score-panel">
+
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <div class="panel-title-content">
+            <div class="attempt-icon">
+              <mat-icon>assessment</mat-icon>
+            </div>
+
+            <div>
+              <strong>Credit Score Attempt #{{ attempt.id }}</strong>
+              <small>
+                {{ attempt.clientName }} |
+                {{ attempt.providerReference || 'No provider reference' }}
+              </small>
+            </div>
+          </div>
+        </mat-panel-title>
+
+        <mat-panel-description>
+          <span
+            class="status-badge"
+            [ngClass]="attempt.status?.id === 3 ? 'status-success' : 'status-pending'">
+            {{ attempt.status?.value || 'Unknown' }}
+          </span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="panel-content">
+
+        <!-- Attempt Information -->
+        <section class="report-section attempt-section">
+
+          <div class="section-heading">
+            <div class="section-icon">
+              <mat-icon>receipt-long</mat-icon>
+            </div>
+
+            <div>
+              <h3>Attempt Information</h3>
+              <p>Details of this credit score request</p>
+            </div>
+          </div>
+
+          <div class="information-grid">
+
+            <div class="info-item">
+              <label>Client</label>
+              <span>{{ attempt.clientName || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Client Account</label>
+              <span>{{ attempt.clientAccount || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Loan Account</label>
+              <span>{{ attempt.loanAccount || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Loan Product</label>
+              <span>{{ attempt.loanProductName || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Proposed Principal</label>
+              <span>{{ formatAmount(attempt.proposedPrincipal, 'UGX') }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Validation Type</label>
+              <span>{{ attempt.validationType?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Request Type</label>
+              <span>{{ attempt.requestType?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Consent Status</label>
+              <span>{{ attempt.consentStatus?.value || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Provider Validation ID</label>
+              <span class="text-break">{{ attempt.providerValidationId || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Provider Reference</label>
+              <span class="text-break">{{ attempt.providerReference || 'N/A' }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Created At</label>
+              <span>{{ getCreatedAt(attempt.createdAt) }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Completed At</label>
+              <span>{{ getCompletedAt(attempt.completedAt) }}</span>
+            </div>
+
+            <div class="info-item">
+              <label>Attempt Cost</label>
+              <span>{{ formatAmount(attempt.cost, 'UGX') }}</span>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Invalid Response -->
+        <div class="error-message" *ngIf="attempt.parseError">
+          <mat-icon>error_outline</mat-icon>
+          <span>Unable to parse the provider response for this attempt.</span>
+        </div>
+
+        <ng-container *ngIf="attempt.parsedResponse as response">
+
+          <!-- Provider Response -->
+          <div class="provider-message" *ngIf="response.message">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>{{ response.message }}</strong>
+              <span>Provider status: {{ response.status }}</span>
+            </div>
+          </div>
+
+          <!-- Provider Enquiry -->
+          <section class="report-section" *ngIf="response.data?.Enquiry as enquiry">
+
+            <div class="section-heading">
+              <div class="section-icon">
+                <mat-icon>manage_search</mat-icon>
+              </div>
+
+              <div>
+                <h3>Provider Enquiry</h3>
+                <p>Identification and reference details returned by the provider</p>
+              </div>
+            </div>
+
+            <div class="information-grid">
+
+              <div class="info-item">
+                <label>Enquiry ID</label>
+                <span class="text-break">{{ enquiry.ID || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Reference</label>
+                <span class="text-break">{{ enquiry.Reference || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Entity</label>
+                <span>{{ enquiry.Entity || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Identifier</label>
+                <span>{{ enquiry.Identifier || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Timestamp</label>
+                <span>{{ enquiry.Timestamp || 'N/A' }}</span>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- CRB Provider Error -->
+          <div class="error-message provider-error"
+               *ngIf="response.data?.CRB?.Errors as providerError">
+
+            <mat-icon>warning_amber</mat-icon>
+
+            <div>
+              <strong>CRB Provider Error</strong>
+              <span>{{ providerError.Code || '' }}</span>
+              <span>{{ providerError.Message || 'The provider returned an error.' }}</span>
+            </div>
+          </div>
+
+          <!-- CRB Score -->
+          <ng-container *ngIf="getScore(attempt) as score">
+
+            <!-- Customer Information -->
+            <section class="report-section" *ngIf="score.Customer as customer">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>person</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Customer Information</h3>
+                  <p>Customer identity details returned by the CRB</p>
+                </div>
+              </div>
+
+              <div class="information-grid">
+
+                <div class="info-item">
+                  <label>Customer Name</label>
+                  <span>{{ customer.Name || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Gender</label>
+                  <span>{{ customer.Gender || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Date of Birth</label>
+                  <span>{{ customer.Date_of_Birth || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Age</label>
+                  <span>{{ customer.Age ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Disputed</label>
+                  <span>{{ customer.Disputed ?? 'N/A' }}</span>
+                </div>
+
+              </div>
+            </section>
+
+            <!-- Credit Score Summary -->
+            <section class="report-section score-summary"
+                     *ngIf="score.Scoring as scoring">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>speed</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Credit Score Summary</h3>
+                  <p>Credit risk assessment and scoring results</p>
+                </div>
+              </div>
+
+              <div class="score-metrics">
+
+                <div class="score-metric primary-metric">
+                  <label>Credit Score</label>
+                  <strong>{{ scoring.Score ?? 'N/A' }}</strong>
+                </div>
+
+                <div class="score-metric">
+                  <label>Rating</label>
+                  <strong>{{ scoring.Rating || 'N/A' }}</strong>
+                </div>
+
+                <div class="score-metric">
+                  <label>Score Band</label>
+                  <strong>{{ scoring.Band || 'N/A' }}</strong>
+                </div>
+
+                <div class="score-metric">
+                  <label>Probability of Default</label>
+                  <strong>
+                    {{ scoring.Probability_of_Default_Percent ?? 'N/A' }}
+                    <span *ngIf="scoring.Probability_of_Default_Percent !== undefined">%</span>
+                  </strong>
+                </div>
+
+              </div>
+
+              <div class="information-grid score-details">
+
+                <div class="info-item">
+                  <label>Scoring Period</label>
+                  <span>{{ scoring.Period || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Likelihood to Default</label>
+                  <span>{{ scoring.Likelihood_to_Default || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Previous Score</label>
+                  <span>{{ scoring.Previous_Score ?? 'N/A' }}</span>
+                </div>
+
+              </div>
+            </section>
+
+            <!-- Score History -->
+            <section class="report-section" *ngIf="getHistory(score).length">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>history</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Credit Score History</h3>
+                  <p>Historical credit scores over the last 12 months</p>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th>Score</th>
+                  </tr>
+                  </thead>
+
+                  <tbody>
+                  <tr *ngFor="let item of getHistory(score)">
+                    <td>{{ item.period }}</td>
+                    <td><strong>{{ item.value }}</strong></td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- Credit Applications -->
+            <section class="report-section"
+                     *ngIf="score.Credit_Applications as applications">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>description</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Credit Applications</h3>
+                  <p>Summary of credit applications recorded by the bureau</p>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Application Category</th>
+                    <th>Number of Applications</th>
+                    <th>Application Value</th>
+                  </tr>
+                  </thead>
+
+                  <tbody>
+                  <tr>
+                    <td>Total Applications</td>
+                    <td>{{ getApplicationTotal(applications.Total_Applications) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Total_Applications),
+                      applications.Total_Applications?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>Applications - Last 12 Months</td>
+                    <td>{{ getApplicationTotal(applications.Applications_12Months) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Applications_12Months),
+                      applications.Applications_12Months?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>Pending Applications</td>
+                    <td>{{ getApplicationTotal(applications.Pending_Applications) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Pending_Applications),
+                      applications.Pending_Applications?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>Approved Applications</td>
+                    <td>{{ getApplicationTotal(applications.Approved_Applications) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Approved_Applications),
+                      applications.Approved_Applications?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>Rejected Applications</td>
+                    <td>{{ getApplicationTotal(applications.Rejected_Applications) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Rejected_Applications),
+                      applications.Rejected_Applications?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>Cancelled Applications</td>
+                    <td>{{ getApplicationTotal(applications.Cancelled_Applications) }}</td>
+                    <td>
+                      {{ formatAmount(
+                      getApplicationValue(applications.Cancelled_Applications),
+                      applications.Cancelled_Applications?.[0]?.Currency
+                    ) }}
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- Credit Accounts -->
+            <section class="report-section"
+                     *ngIf="score.Credit_Accounts as accounts">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>account_balance</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Credit Accounts Overview</h3>
+                  <p>Current and historical credit account information</p>
+                </div>
+              </div>
+
+              <div class="information-grid">
+
+                <div class="info-item">
+                  <label>Total Accounts</label>
+                  <span>{{ accounts.Total_Accounts ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Open Accounts</label>
+                  <span>{{ accounts.Open_Accounts ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Closed Accounts</label>
+                  <span>{{ accounts.Closed_Accounts ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Adverse Accounts</label>
+                  <span>{{ accounts.Adverse_Accounts ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Total Accounts - Last 12 Months</label>
+                  <span>{{ accounts.Total_Accounts_12Months ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Open Accounts - Last 12 Months</label>
+                  <span>{{ accounts.Open_Accounts_12Months ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Closed Accounts - Last 12 Months</label>
+                  <span>{{ accounts.Closed_Accounts_12Months ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Adverse Accounts - Last 12 Months</label>
+                  <span>{{ accounts.Adverse_Accounts_12Months ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Worst Active Days in Arrears</label>
+                  <span>{{ accounts.Worst_Active_Days_in_arrears ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Worst Days in Arrears</label>
+                  <span>{{ accounts.Worst_Days_in_Arrears ?? 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Worst Days in Arrears - Last 12 Months</label>
+                  <span>{{ accounts.Worst_Days_in_arrears_12Months ?? 'N/A' }}</span>
+                </div>
+
+              </div>
+
+              <!-- Outstanding Credit Values -->
+              <div class="table-section" *ngIf="accounts.Total_Value?.length">
+
+                <h4 class="subsection-title">
+                  <mat-icon>payments</mat-icon>
+                  Outstanding Credit Values
+                </h4>
+
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                    <tr>
+                      <th>Currency</th>
+                      <th>Loan Amount</th>
+                      <th>Loan Balance</th>
+                      <th>Amount Overdue</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr *ngFor="let value of accounts.Total_Value">
+                      <td>{{ value.Currency || 'N/A' }}</td>
+                      <td>{{ formatAmount(value.Loan_Amount, value.Currency) }}</td>
+                      <td>{{ formatAmount(value.Loan_Balance, value.Currency) }}</td>
+                      <td>{{ formatAmount(value.Amount_Overdue, value.Currency) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Monthly Installments -->
+              <div class="table-section" *ngIf="accounts.Monthly_Installment?.length">
+
+                <h4 class="subsection-title">
+                  <mat-icon>calendar_month</mat-icon>
+                  Monthly Installments
+                </h4>
+
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                    <tr>
+                      <th>Currency</th>
+                      <th>Accounts</th>
+                      <th>Monthly Amount</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr *ngFor="let installment of accounts.Monthly_Installment">
+                      <td>{{ installment.Currency || 'N/A' }}</td>
+                      <td>{{ installment.Count ?? 'N/A' }}</td>
+                      <td>{{ formatAmount(installment.Amount, installment.Currency) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- Collateral -->
+            <section class="report-section"
+                     *ngIf="score.Collateral_Material?.length || score.Collateral_Guarantor?.length">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>real_estate_agent</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Collateral Information</h3>
+                  <p>Material and guarantor collateral recorded by the bureau</p>
+                </div>
+              </div>
+
+              <div class="table-section" *ngIf="score.Collateral_Material?.length">
+
+                <h4 class="subsection-title">Material Collateral</h4>
+
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                    <tr>
+                      <th>Currency</th>
+                      <th>Items</th>
+                      <th>Value</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr *ngFor="let item of score.Collateral_Material">
+                      <td>{{ item.Currency || 'N/A' }}</td>
+                      <td>{{ item.Items ?? 'N/A' }}</td>
+                      <td>{{ formatAmount(item.Value, item.Currency) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="table-section" *ngIf="score.Collateral_Guarantor?.length">
+
+                <h4 class="subsection-title">Guarantor Collateral</h4>
+
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                    <tr>
+                      <th>Currency</th>
+                      <th>Accounts</th>
+                      <th>Loan Amount</th>
+                      <th>Loan Balance</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr *ngFor="let item of score.Collateral_Guarantor">
+                      <td>{{ item.Currency || 'N/A' }}</td>
+                      <td>{{ item.Accounts ?? 'N/A' }}</td>
+                      <td>{{ formatAmount(item.Loan_Amount, item.Currency) }}</td>
+                      <td>{{ formatAmount(item.Loan_Balance, item.Currency) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- Bounced Cheques -->
+            <section class="report-section" *ngIf="score.Bounced_Cheques?.length">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>money_off</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Bounced Cheques</h3>
+                  <p>Returned or dishonoured cheque records</p>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Currency</th>
+                    <th>Number of Cheques</th>
+                    <th>Value</th>
+                  </tr>
+                  </thead>
+
+                  <tbody>
+                  <tr *ngFor="let item of score.Bounced_Cheques">
+                    <td>{{ item.Currency || 'N/A' }}</td>
+                    <td>{{ item.Cheques ?? 'N/A' }}</td>
+                    <td>{{ formatAmount(item.Value, item.Currency) }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- Financial Fraud -->
+            <section class="report-section" *ngIf="score.Financial_Fraud?.length">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>report</mat-icon>
+                </div>
+
+                <div>
+                  <h3>Financial Fraud Records</h3>
+                  <p>Financial fraud records returned by the bureau</p>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Currency</th>
+                    <th>Cases</th>
+                    <th>Loss Amount</th>
+                  </tr>
+                  </thead>
+
+                  <tbody>
+                  <tr *ngFor="let item of score.Financial_Fraud">
+                    <td>{{ item.Currency || 'N/A' }}</td>
+                    <td>{{ item.Cases ?? 'N/A' }}</td>
+                    <td>{{ formatAmount(item.Loss_Amount, item.Currency) }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- CRB Cost -->
+            <section class="report-section" *ngIf="score.Cost as cost">
+
+              <div class="section-heading">
+                <div class="section-icon">
+                  <mat-icon>receipt</mat-icon>
+                </div>
+
+                <div>
+                  <h3>CRB Cost</h3>
+                  <p>Cost returned for the CRB score request</p>
+                </div>
+              </div>
+
+              <div class="information-grid">
+                <div class="info-item">
+                  <label>Currency</label>
+                  <span>{{ cost.Currency || 'N/A' }}</span>
+                </div>
+
+                <div class="info-item">
+                  <label>Amount</label>
+                  <span>{{ formatAmount(cost.Amount, cost.Currency) }}</span>
+                </div>
+              </div>
+            </section>
+
+          </ng-container>
+
+          <!-- MNO Score -->
+          <section class="report-section" *ngIf="getMnoScore(attempt) as mno">
+
+            <div class="section-heading">
+              <div class="section-icon">
+                <mat-icon>phone_android</mat-icon>
+              </div>
+
+              <div>
+                <h3>MNO Score Information</h3>
+                <p>Mobile network operator credit information</p>
+              </div>
+            </div>
+
+            <div *ngIf="mno.Customer as customer">
+              <h4 class="subsection-title">Customer</h4>
+              <pre class="provider-json">{{ customer | json }}</pre>
+            </div>
+
+            <div *ngIf="mno.Scoring as scoring">
+              <h4 class="subsection-title">Scoring</h4>
+              <pre class="provider-json">{{ scoring | json }}</pre>
+            </div>
+
+            <div *ngIf="mno.Credit_Accounts as accounts">
+              <h4 class="subsection-title">Credit Accounts</h4>
+              <pre class="provider-json">{{ accounts | json }}</pre>
+            </div>
+
+            <div *ngIf="mno.Income_Proxy as income">
+              <h4 class="subsection-title">Income Proxy</h4>
+              <pre class="provider-json">{{ income | json }}</pre>
+            </div>
+
+            <div *ngIf="mno.Errors as error" class="error-message">
+              <mat-icon>warning_amber</mat-icon>
+              <span>{{ error.Code }} - {{ error.Message }}</span>
+            </div>
+
+          </section>
+
+          <!-- No Score Returned -->
+          <div class="empty-sector"
+               *ngIf="!response.data?.CRB && !response.data?.MNO">
+
+            <mat-icon>info</mat-icon>
+            <span>The provider response does not contain a CRB or MNO score.</span>
+          </div>
+
+          <!-- Provider-level Cost -->
+          <section class="report-section" *ngIf="response.data?.Cost as cost">
+
+            <div class="section-heading">
+              <div class="section-icon">
+                <mat-icon>payments</mat-icon>
+              </div>
+
+              <div>
+                <h3>Provider Cost</h3>
+                <p>Overall cost information returned by the provider</p>
+              </div>
+            </div>
+
+            <div class="information-grid">
+
+              <div class="info-item">
+                <label>Currency</label>
+                <span>{{ cost.Currency || 'N/A' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Amount</label>
+                <span>{{ formatAmount(cost.Amount, cost.Currency) }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Charge</label>
+                <span>{{ formatAmount(cost.Charge, cost.Currency) }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>VAT</label>
+                <span>{{ cost.VAT ?? 'N/A' }}</span>
+              </div>
+
+            </div>
+          </section>
+
+        </ng-container>
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

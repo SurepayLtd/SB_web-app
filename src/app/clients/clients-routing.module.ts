@@ -50,6 +50,8 @@ import { CrbConsentTabComponent } from './clients-view/crb-consent-tab/crb-conse
 import { ClientCrbConsentResolver } from './common-resolvers/client-crb-consent.resolver';
 import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-tab.component';
 import { ClientCrbCheckResolver } from './common-resolvers/client-crb-check.resolver';
+import { KycEnquiryTabComponent } from './clients-view/kyc-enquiry-tab/kyc-enquiry-tab.component';
+import { KycEnquiryResolver } from './common-resolvers/kyc-enquiry.resolver';
 
 const routes: Routes = [
   Route.withShell([
@@ -109,6 +111,14 @@ const routes: Routes = [
               data: { title: 'Crb Check', breadcrumb: 'Crb Check', routeParamBreadcrumb: false },
               resolve: {
                 consentData: ClientCrbCheckResolver,
+              }
+            },
+            {
+              path: 'kyc-enquiry',
+              component: KycEnquiryTabComponent,
+              data: { title: 'Kyc Enquiry', breadcrumb: 'Kyc Enquiry', routeParamBreadcrumb: false },
+              resolve: {
+                kycEnquiryData: KycEnquiryResolver,
               }
             },
             {

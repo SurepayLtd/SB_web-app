@@ -85,7 +85,7 @@ export class LoansAccountButtonConfiguration {
             name: 'Reject',
             icon: 'times',
             taskPermissionName: 'REJECT_LOAN'
-          }
+          },
         ];
         break;
       case 'Approved':

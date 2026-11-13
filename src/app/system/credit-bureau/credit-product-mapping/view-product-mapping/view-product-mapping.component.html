@@ -1,0 +1,72 @@
+<div class="container">
+
+  <div fxLayout="row" fxLayoutAlign="space-between center">
+    <div>
+      <h3>Loan Product Mapping Details</h3>
+      <p class="text-muted">
+        View the credit bureau configuration for this loan product.
+      </p>
+    </div>
+
+    <div fxLayout="row" fxLayoutGap="8px">
+      <button mat-stroked-button [routerLink]="['../../../']">
+        <fa-icon icon="arrow-left"></fa-icon>
+        Back
+      </button>
+
+      <button mat-raised-button color="primary" (click)="editMapping()">
+        <fa-icon icon="edit"></fa-icon>
+        Edit
+      </button>
+    </div>
+  </div>
+
+  <mat-card *ngIf="mapping">
+
+    <mat-card-content>
+
+      <h4>Mapping Information</h4>
+
+      <div fxLayout="row wrap" fxLayoutGap="24px">
+
+        <div fxFlex="45%">
+          <strong>Loan Product</strong>
+          <p>{{ mapping.loanProductName }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Credit Bureau</strong>
+          <p>{{ mapping.creditbureauSummary }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Organisation</strong>
+          <p>{{ mapping.alias }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Status</strong>
+          <p>{{ mapping.active ? 'Active' : 'Inactive' }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Credit Check Mandatory</strong>
+          <p>{{ mapping.isCreditCheckMandatory ? 'Yes' : 'No' }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Skip Credit Check on Failure</strong>
+          <p>{{ mapping.skipCrediCheckInFailure ? 'Yes' : 'No' }}</p>
+        </div>
+
+        <div fxFlex="45%">
+          <strong>Stale Period</strong>
+          <p>{{ mapping.stalePeriod }} days</p>
+        </div>
+
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

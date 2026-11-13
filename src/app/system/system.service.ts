@@ -771,4 +771,56 @@ export class SystemService {
   updateTwoFactorConfiguration(data: any): Observable<any> {
     return this.http.put('/twofactor/configure', data);
   }
+
+  /**
+   * @returns {Observable<any>} Credit-Bureau Configuration.
+   */
+  getCreditBureauProviders(): Observable<any> {
+    return this.http.get('/CreditBureauConfiguration');
+  }
+
+  /**
+   * @returns {Observable<any>} Credit-Bureau Organisation Loan Product.
+   */
+  getCreditBureauLoanProductMapping(orgId: string): Observable<any> {
+    return this.http.get(`/CreditBureauConfiguration/mappings/${orgId}`);
+  }
+
+  /**
+   * @returns {Observable<any>} Credit-Bureau Organisation Credit Bureau.
+   */
+  getOrganisationCreditBureau(bureauId: string): Observable<any> {
+    return this.http.get(`/CreditBureauConfiguration/organisationCreditBureau/${bureauId}`);
+  }
+
+  /**
+   * @returns {Observable<any>} Loan Products.
+   */
+  fetchLoanProducts(): Observable<any> {
+    return this.http.get('/CreditBureauConfiguration/loanProduct');
+  }
+
+  /**
+   * @returns {Observable<any>} Loan Product Mappings.
+   */
+  fetchMappingByLoanProductId(loanProductId: string): Observable<any> {
+    return this.http.get(`/CreditBureauConfiguration/loanProduct/${loanProductId}`);
+  }
+
+  /**
+   * @returns {Observable<any>} Create Loan Product Mappings.
+   */
+  createCreditBureauLoanProductMapping(organisationCreditBureauId: string, data: any): Observable<any> {
+    return this.http.post(`/CreditBureauConfiguration/mappings/${organisationCreditBureauId}`, data);
+  }
+
+  /**
+   * Updates an existing Credit Bureau Loan Product Mapping.
+   *
+   * @param data Credit Bureau Loan Product Mapping update request.
+   * @returns Observable containing the updated mapping response.
+   */
+  updateCreditBureauLoanProductMapping(data: any): Observable<any> {
+    return this.http.put('/CreditBureauConfiguration/mappings', data);
+  }
 }

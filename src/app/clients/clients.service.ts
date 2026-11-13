@@ -456,6 +456,10 @@ export class ClientsService {
     return this.http.post(`/crbchecks/${clientId}`, data);
   }
 
+  createCrbKycCheck(clientId: string, data: any) {
+    return this.http.post(`/crbchecks/${clientId}/kyc`, data);
+  }
+
   getCrbCheckHistory(clientId: string): Observable<any> {
     return this.http.get(`/crbchecks/${clientId}`);
   }
@@ -472,5 +476,9 @@ export class ClientsService {
     const params = new HttpParams().set('command', command);
 
     return this.http.put(`/crbconsents/${consentId}`, data, { params });
+  }
+
+  getCrbKycChecks(clientId: string): Observable<any> {
+    return this.http.get(`/crbchecks/${clientId}/kyc`);
   }
 }

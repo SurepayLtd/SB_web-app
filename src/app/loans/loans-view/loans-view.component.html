@@ -181,6 +181,27 @@
       >
         {{ 'labels.inputs.Account Details' | translate }}
       </a>
+      <ng-container *ngIf="loanDetailsData.isLoanProductCrbEnabled">
+        <a
+          mat-tab-link
+          [routerLink]="['./crb-credit-enquiry']"
+          routerLinkActive
+          #creditEnquiry="routerLinkActive"
+          [active]="creditEnquiry.isActive"
+        >
+          {{ 'labels.inputs.CRB Credit Enquiry' | translate }}
+        </a>
+        <a
+          mat-tab-link
+          [routerLink]="['./crb-credit-score']"
+          routerLinkActive
+          #creditScore="routerLinkActive"
+          [active]="creditScore.isActive"
+        >
+          {{ 'labels.inputs.CRB Credit Score' | translate }}
+        </a>
+      </ng-container>
+
       <ng-container *ngIf="loanDetailsData.originalSchedule">
         <a
           mat-tab-link

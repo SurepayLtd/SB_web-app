@@ -62,6 +62,10 @@ import { LoanDelinquencyDataResolver } from './common-resolvers/loan-delinquency
 import { LoanDelinquencyActionsResolver } from './common-resolvers/loan-delinquency-actions.resolver';
 import { LoanTermVariationsTabComponent } from './loans-view/loan-term-variations-tab/loan-term-variations-tab.component';
 import { LoanTermVariationsResolver } from './common-resolvers/loan-term-variations.resolver';
+import { CrbCreditEnquiryTabComponent } from './loans-view/crb-credit-enquiry-tab/crb-credit-enquiry-tab.component';
+import { CreditEnquiryResolver } from './common-resolvers/credit-enquiry.resolver';
+import { CrbCreditScoreTabComponent } from './loans-view/crb-credit-score-tab/crb-credit-score-tab.component';
+import { CreditScoreResolver } from './common-resolvers/credit-score.resolver';
 
 /** Loans Route. */
 const routes: Routes = [
@@ -105,6 +109,22 @@ const routes: Routes = [
             path: 'accountdetail',
             component: AccountDetailsComponent,
             data: { title: 'Account Detail', breadcrumb: 'Account Detail', routeParamBreadcrumb: false }
+          },
+          {
+            path: 'crb-credit-enquiry',
+            component: CrbCreditEnquiryTabComponent,
+            data: { title: 'CRB Credit Enquiry', breadcrumb: 'CRB Credit Enquiry', routeParamBreadcrumb: false },
+            resolve: {
+              creditEnquiryData: CreditEnquiryResolver,
+            }
+          },
+          {
+            path: 'crb-credit-score',
+            component: CrbCreditScoreTabComponent,
+            data: { title: 'CRB Credit Score', breadcrumb: 'CRB Credit Score', routeParamBreadcrumb: false },
+            resolve: {
+              creditScoreData: CreditScoreResolver,
+            }
           },
           {
             path: 'original-schedule',

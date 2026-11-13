@@ -81,6 +81,10 @@ import { TwoFactorConfigComponent } from './two-factor-config/two-factor-config.
 import { EditTwoFactorEmailComponent } from './two-factor-config/edit-two-factor-email/edit-two-factor-email.component';
 import { EditTwoFactorSmsComponent } from './two-factor-config/edit-two-factor-sms/edit-two-factor-sms.component';
 import { EditTwoFactorTokenComponent } from './two-factor-config/edit-two-factor-token/edit-two-factor-token.component';
+import { CreditBureauComponent } from './credit-bureau/credit-bureau.component';
+import { CreditProductMappingComponent } from './credit-bureau/credit-product-mapping/credit-product-mapping.component';
+import { ViewProductMappingComponent } from './credit-bureau/credit-product-mapping/view-product-mapping/view-product-mapping.component';
+import { CreditBureauOrganisationComponent } from './credit-bureau/credit-bureau-organisation/credit-bureau-organisation.component';
 
 @NgModule({
   imports: [
@@ -161,7 +165,11 @@ import { EditTwoFactorTokenComponent } from './two-factor-config/edit-two-factor
     TwoFactorConfigComponent,
     EditTwoFactorEmailComponent,
     EditTwoFactorSmsComponent,
-    EditTwoFactorTokenComponent
+    EditTwoFactorTokenComponent,
+    CreditBureauComponent,
+    CreditProductMappingComponent,
+    ViewProductMappingComponent,
+    CreditBureauOrganisationComponent
   ]
 })
 export class SystemModule {}

@@ -319,6 +319,11 @@
             {{ 'labels.buttons.Activate' | translate }}
           </button></span
         >
+        <span *ngIf="clientViewData.status.value === 'Pending' || clientViewData.status.value === 'Active'"
+        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBKYC'" (click)="doAction('Kyc Enquiry')">
+            {{ 'labels.buttons.Kyc Enquiry' | translate }}
+          </button></span
+        >
         <span *ngIf="clientViewData.status.value === 'Pending'"
           ><button mat-menu-item (click)="doAction('Withdraw')">
             {{ 'labels.buttons.Withdraw' | translate }}
@@ -436,6 +441,16 @@
         *mifosxHasPermission="'READ_CRBCHECK'"
       >
         {{ 'labels.inputs.Crb Check' | translate }}
+      </a>
+      <a
+        mat-tab-link
+        [routerLink]="['./kyc-enquiry']"
+        routerLinkActive
+        #kyc="routerLinkActive"
+        [active]="kyc.isActive"
+        *mifosxHasPermission="'READ_CRBKYC'"
+      >
+        {{ 'labels.inputs.Kyc Enquiry' | translate }}
       </a>
       <a
         mat-tab-link
