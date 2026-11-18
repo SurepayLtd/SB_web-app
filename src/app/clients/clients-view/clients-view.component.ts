@@ -78,6 +78,7 @@ export class ClientsViewComponent implements OnInit {
       case 'Crb Consent':
       case 'Crb Check':
       case 'Kyc Enquiry':
+      case 'Kyc Report':
       case 'Update Default Savings':
       case 'Transfer Client':
       case 'Undo Transfer':

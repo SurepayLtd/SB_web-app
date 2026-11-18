@@ -89,6 +89,8 @@ import { CreditEnquiryComponent } from './loans-view/loan-account-actions/credit
 import { CreditScoreComponent } from './loans-view/loan-account-actions/credit-score/credit-score.component';
 import { CrbCreditEnquiryTabComponent } from './loans-view/crb-credit-enquiry-tab/crb-credit-enquiry-tab.component';
 import { CrbCreditScoreTabComponent } from './loans-view/crb-credit-score-tab/crb-credit-score-tab.component';
+import { CrbCreditReportTabComponent } from './loans-view/crb-credit-report-tab/crb-credit-report-tab.component';
+import { CrbCreditReportComponent } from './loans-view/loan-account-actions/crb-credit-report/crb-credit-report.component';
 
 /**
  * Loans Module
@@ -181,7 +183,9 @@ import { CrbCreditScoreTabComponent } from './loans-view/crb-credit-score-tab/cr
     CreditEnquiryComponent,
     CreditScoreComponent,
     CrbCreditEnquiryTabComponent,
-    CrbCreditScoreTabComponent
+    CrbCreditScoreTabComponent,
+    CrbCreditReportTabComponent,
+    CrbCreditReportComponent
   ],
   providers: []
 })

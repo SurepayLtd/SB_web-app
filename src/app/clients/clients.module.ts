@@ -66,6 +66,8 @@ import { CrbCheckComponent } from './clients-view/client-actions/crb-check/crb-c
 import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-tab.component';
 import { KycEnquiryComponent } from './clients-view/client-actions/kyc-enquiry/kyc-enquiry.component';
 import { KycEnquiryTabComponent } from './clients-view/kyc-enquiry-tab/kyc-enquiry-tab.component';
+import { KycReportTabComponent } from './clients-view/kyc-report-tab/kyc-report-tab.component';
+import { KycReportComponent } from './clients-view/client-actions/kyc-report/kyc-report.component';
 
 /**
  * Clients Module
@@ -137,7 +139,9 @@ import { KycEnquiryTabComponent } from './clients-view/kyc-enquiry-tab/kyc-enqui
     CrbCheckComponent,
     CrbChecksTabComponent,
     KycEnquiryComponent,
-    KycEnquiryTabComponent
+    KycEnquiryTabComponent,
+    KycReportTabComponent,
+    KycReportComponent
   ],
   entryComponents: [MomoActivationDialogComponent],
   providers: []

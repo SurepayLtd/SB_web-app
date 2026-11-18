@@ -683,4 +683,13 @@ export class LoansService {
     const httpParams = new HttpParams().set('type', '300');
     return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
   }
+
+  getCrbReport(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '500');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
+
+  createCrbReport(loanData: any): Observable<any> {
+    return this.http.post(`/creditBureauIntegration/creditReport`, loanData);
+  }
 }

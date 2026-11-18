@@ -479,6 +479,12 @@ export class ClientsService {
   }
 
   getCrbKycChecks(clientId: string): Observable<any> {
-    return this.http.get(`/crbchecks/${clientId}/kyc`);
+    const httpParams = new HttpParams().set('type', '100');
+    return this.http.get(`/crbchecks/${clientId}/kyc`, {params: httpParams});
+  }
+
+  getCrbKycReport(clientId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '600');
+    return this.http.get(`/crbchecks/${clientId}/kyc`, {params: httpParams});
   }
 }

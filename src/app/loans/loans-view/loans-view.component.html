@@ -197,8 +197,20 @@
           routerLinkActive
           #creditScore="routerLinkActive"
           [active]="creditScore.isActive"
+          *mifosxHasPermission="'READ_CRBCREDIT'"
+
         >
           {{ 'labels.inputs.CRB Credit Score' | translate }}
+        </a>
+        <a
+          mat-tab-link
+          [routerLink]="['./crb-credit-report']"
+          routerLinkActive
+          #creditReport="routerLinkActive"
+          [active]="creditReport.isActive"
+          *mifosxHasPermission="'READ_CRBCREDIT'"
+        >
+          {{ 'labels.inputs.CRB Credit Reports' | translate }}
         </a>
       </ng-container>
 

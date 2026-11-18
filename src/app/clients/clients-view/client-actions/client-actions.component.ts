@@ -33,6 +33,7 @@ export class ClientActionsComponent {
     'Crb Consent': boolean;
     'Crb Check': boolean;
     'Kyc Enquiry': boolean;
+    'Kyc Report': boolean;
   } = {
     'Assign Staff': false,
     Close: false,
@@ -54,6 +55,7 @@ export class ClientActionsComponent {
     'Crb Consent': false,
     'Crb Check': false,
     'Kyc Enquiry': false,
+    'Kyc Report': false,
   };
 
   /**

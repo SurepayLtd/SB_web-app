@@ -66,6 +66,8 @@ import { CrbCreditEnquiryTabComponent } from './loans-view/crb-credit-enquiry-ta
 import { CreditEnquiryResolver } from './common-resolvers/credit-enquiry.resolver';
 import { CrbCreditScoreTabComponent } from './loans-view/crb-credit-score-tab/crb-credit-score-tab.component';
 import { CreditScoreResolver } from './common-resolvers/credit-score.resolver';
+import { CrbCreditReportTabComponent } from './loans-view/crb-credit-report-tab/crb-credit-report-tab.component';
+import { CreditReportResolver } from './common-resolvers/credit-report.resolver';
 
 /** Loans Route. */
 const routes: Routes = [
@@ -124,6 +126,14 @@ const routes: Routes = [
             data: { title: 'CRB Credit Score', breadcrumb: 'CRB Credit Score', routeParamBreadcrumb: false },
             resolve: {
               creditScoreData: CreditScoreResolver,
+            }
+          },
+          {
+            path: 'crb-credit-report',
+            component: CrbCreditReportTabComponent,
+            data: { title: 'CRB Credit Report', breadcrumb: 'CRB Credit Report', routeParamBreadcrumb: false },
+            resolve: {
+              creditReportData: CreditReportResolver,
             }
           },
           {

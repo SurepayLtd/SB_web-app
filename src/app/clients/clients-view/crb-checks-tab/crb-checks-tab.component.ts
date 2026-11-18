@@ -5,10 +5,54 @@ import { ClientsService } from '../../clients.service';
 
 type ValidationGroup = 'details' | 'nin' | 'phone';
 
+interface ValidationBlock {
+  id?: string;
+  reference?: string;
+  timestamp?: string;
+  status?: string;
+  message?: string | null;
+  error_message?: string | null;
+
+  // NIN / Details
+  nin?: string;
+  nin_status?: string;
+  matching_status?: string;
+  card_status?: string;
+  document_id?: string;
+  surname?: string;
+  given_name?: string | null;
+  other_name?: string | null;
+  name?: string;
+  date_of_birth?: string;
+
+  // Phone
+  phonenumber?: string;
+  firstname?: string;
+  middlename?: string;
+  phone_status?: string;
+
+  cost?: string | number;
+  vat?: string | number;
+  currency?: string;
+}
+
+interface ParsedPayload {
+  message?: string;
+  status?: number;
+  count?: number;
+  validation?: ValidationBlock;
+}
+
+interface ExtraField {
+  key: string;
+  label: string;
+  value: unknown;
+}
+
 @Component({
   selector: 'mifosx-crb-checks-tab',
   templateUrl: './crb-checks-tab.component.html',
-  styleUrls: ['./crb-checks-tab.component.scss']
+  styleUrls: ['./crb-checks-tab.component.scss'],
 })
 export class CrbChecksTabComponent implements OnInit {
 
@@ -19,13 +63,25 @@ export class CrbChecksTabComponent implements OnInit {
   loaded = false;
   errorMessage = '';
 
+  /** Keys already rendered by the typed sections — everything else goes to "Additional Fields". */
+  private readonly KNOWN_VALIDATION_KEYS = new Set<string>([
+    // envelope
+    'id', 'reference', 'timestamp', 'status', 'message', 'error_message',
+    'cost', 'vat', 'currency',
+    // NIN / details
+    'nin', 'nin_status', 'matching_status', 'card_status',
+    'document_id', 'surname', 'given_name', 'other_name', 'name', 'date_of_birth',
+    // phone
+    'phonenumber', 'firstname', 'middlename', 'phone_status',
+  ]);
+
   constructor(
     private route: ActivatedRoute,
     private clientService: ClientsService,
     private snackBar: MatSnackBar
   ) {
     this.route.data.subscribe((data: { checks: any }) => {
-      this.checks = data.checks;
+      this.checks = this.sortChecks(data.checks ?? []);
       this.clientId = this.route.parent.snapshot.paramMap.get('clientId');
     });
   }
@@ -35,24 +91,15 @@ export class CrbChecksTabComponent implements OnInit {
   }
 
   refreshHistory(): void {
-    if (!this.clientId) {
-      return;
-    }
+    if (!this.clientId) return;
 
     this.loading = true;
     this.errorMessage = '';
 
     this.clientService.getCrbCheckHistory(this.clientId).subscribe({
-      next: (response: any ) => {
-        const records = Array.isArray(response)
-          ? response
-          : response?.pageItems ?? [];
-
-        this.checks = [...records].sort(
-          (a, b) => this.toTimestamp(b.createdAt) -
-            this.toTimestamp(a.createdAt)
-        );
-
+      next: (response: any) => {
+        const records = Array.isArray(response) ? response : response?.pageItems ?? [];
+        this.checks = this.sortChecks(records);
         this.loading = false;
         this.loaded = true;
       },
@@ -61,142 +108,183 @@ export class CrbChecksTabComponent implements OnInit {
         this.loaded = true;
         this.errorMessage = 'Unable to load CRB verification history.';
         this.snackBar.open(this.errorMessage, 'Close', { duration: 5000 });
-      }
+      },
     });
   }
 
-  get detailsChecks() {
-    return this.filterByType('details');
-  }
 
-  get ninChecks() {
-    return this.filterByType('nin');
-  }
-
-  get phoneChecks() {
-    return this.filterByType('phone');
-  }
+  get detailsChecks() { return this.filterByType('details'); }
+  get ninChecks()     { return this.filterByType('nin'); }
+  get phoneChecks()   { return this.filterByType('phone'); }
 
   get latestChecks() {
     const groups: ValidationGroup[] = ['details', 'nin', 'phone'];
-
     return groups
       .map((group) => this.filterByType(group)[0])
       .filter((check) => !!check);
   }
 
+  filterByType(type: ValidationGroup): any[] {
+    return this.checks.filter((check) => this.groupOf(check) === type);
+  }
+
+  groupOf(check: any): ValidationGroup | null {
+    const value = (check?.validationType?.value ?? '').toLowerCase();
+
+    if (value.includes('phone')) return 'phone';
+    if (value.includes('nin'))   return 'nin';
+    if (value.includes('customer details') || value.includes('personal details')) return 'details';
+
+    return null;
+  }
+
+
   get latestConsentStatus(): string {
-    return this.checks.find((check) => check.consentStatus?.value)
-      ?.consentStatus?.value ?? 'Not available';
+    return this.checks.find((c) => c.consentStatus?.value)?.consentStatus?.value
+      ?? 'Not available';
   }
 
   get totalCost(): number {
-    return this.checks.reduce(
-      (total, check) => total + Number(check.cost ?? 0),
-      0
-    );
+    return this.checks.reduce((sum, c) => sum + Number(c.cost ?? 0), 0);
   }
 
   get verifiedCount(): number {
     return this.checks.filter(
-      (check) => check.status?.value?.toLowerCase() === 'verified'
+      (c) => (c.status?.value ?? '').toLowerCase() === 'verified'
     ).length;
   }
 
-  filterByType(type: ValidationGroup): any[] {
-    return this.checks.filter((check) => {
-      const value = check.validationType?.value?.toLowerCase() ?? '';
-      const code = check.validationType?.code?.toLowerCase() ?? '';
-
-      switch (type) {
-        case 'details':
-          return value.includes('customer details') ||
-            value.includes('personal details');
-
-        case 'nin':
-          return value.includes('nin') || code.endsWith('.nin');
-
-        case 'phone':
-          return value.includes('phone') || code.endsWith('.phone');
-
-        default:
-          return false;
-      }
-    });
+  get currency(): string {
+    return this.checks[0]?.currency ?? 'UGX';
   }
 
-  parseResponsePayload(check: any): unknown {
-    if (!check.responsePayload) {
+
+  parseResponsePayload(check: any): ParsedPayload | null {
+    if (!check?.responsePayload) return null;
+    try {
+      return typeof check.responsePayload === 'string'
+        ? (JSON.parse(check.responsePayload) as ParsedPayload)
+        : (check.responsePayload as ParsedPayload);
+    } catch {
       return null;
     }
+  }
 
-    try {
-      return JSON.parse(check.responsePayload);
-    } catch {
-      return check.responsePayload;
+  validationOf(check: any): ValidationBlock | null {
+    return this.parseResponsePayload(check)?.validation ?? null;
+  }
+
+  attemptMessage(check: any): string | null {
+    return check?.message ?? this.parseResponsePayload(check)?.message ?? null;
+  }
+
+  /** Any `validation` keys the typed sections don't already render. */
+  extraValidationFields(check: any): ExtraField[] {
+    const v = this.validationOf(check) as Record<string, unknown> | null;
+    if (!v) return [];
+
+    return Object.keys(v)
+      .filter((k) => !this.KNOWN_VALIDATION_KEYS.has(k))
+      .filter((k) => v[k] !== null && v[k] !== undefined && v[k] !== '')
+      .sort((a, b) => a.localeCompare(b))
+      .map((k) => ({
+        key: k,
+        label: this.humaniseKey(k),
+        value: v[k],
+      }));
+  }
+
+
+  attemptStatusClass(check: any): string {
+    const label = (check?.status?.value ?? '').toLowerCase();
+    switch (label) {
+      case 'verified':   return 'status-success';
+      case 'failed':
+      case 'rejected':
+      case 'error':      return 'status-failed';
+      case 'pending':
+      case 'processing': return 'status-pending';
+      default:           return 'status-neutral';
     }
   }
 
+  resultStatusClass(value?: string | null): string {
+    switch ((value ?? '').toUpperCase()) {
+      case 'VALID':
+      case 'FOUND':
+      case 'YES':
+      case 'SUCCESSFUL': return 'status-success';
+      case 'NOT FOUND':
+      case 'INVALID':
+      case 'NO':
+      case 'FAILED':     return 'status-failed';
+      case 'PENDING':    return 'status-pending';
+      default:           return 'status-neutral';
+    }
+  }
+
+
   formatDate(value?: number[] | string): string {
-    if (!value) {
-      return '—';
-    }
+    const date = this.toDate(value);
+    return date ? date.toLocaleString() : '—';
+  }
 
-    let date: Date;
-
+  toDate(value?: number[] | string): Date | null {
+    if (!value) return null;
     if (Array.isArray(value)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = value;
-      date = new Date(year, month - 1, day, hour, minute, second);
-    } else {
-      date = new Date(value);
+      const [y, m, d, h = 0, min = 0, s = 0] = value;
+      const date = new Date(y, m - 1, d, h, min, s);
+      return isNaN(date.getTime()) ? null : date;
     }
-
-    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
   }
 
   formatCost(check: any): string {
-    if (check.cost == null) {
-      return '—';
-    }
-
-    return `${check.currency ?? ''} ${Number(check.cost).toLocaleString(
-      undefined,
-      { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-    )}`.trim();
+    if (check?.cost == null) return '—';
+    const amount = Number(check.cost).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${check.currency ?? ''} ${amount}`.trim();
   }
 
-  statusClass(status?: string): string {
-    switch (status?.toLowerCase()) {
-      case 'verified':
-        return 'status-success';
-      case 'failed':
-      case 'rejected':
-      case 'error':
-        return 'status-failed';
-      case 'pending':
-      case 'processing':
-        return 'status-pending';
-      default:
-        return 'status-neutral';
-    }
+  /** 'response_code' → 'Response Code' */
+  humaniseKey(key: string): string {
+    return key
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  trackByCheckId(_index: number, check: any): number {
-    return check.id;
+  /** Safe rendering for any unknown value — no [object Object]. */
+  formatUnknown(value: unknown): string {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) {
+      return value.length ? value.map((v) => this.formatUnknown(v)).join(', ') : '—';
+    }
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, val]) => `${this.humaniseKey(k)}: ${this.formatUnknown(val)}`)
+        .join(' · ');
+    }
+    return String(value);
+  }
+
+
+  trackByIndex = (index: number) => index;
+  trackByCheckId = (_: number, check: any) => check.id;
+  trackByFieldKey = (_: number, field: ExtraField) => field.key;
+
+  private sortChecks(records: any[]): any[] {
+    return [...records].sort(
+      (a, b) => this.toTimestamp(b.createdAt) - this.toTimestamp(a.createdAt)
+    );
   }
 
   private toTimestamp(value?: number[] | string): number {
-    if (!value) {
-      return 0;
-    }
-
-    if (Array.isArray(value)) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = value;
-      return new Date(year, month - 1, day, hour, minute, second).getTime();
-    }
-
-    const timestamp = new Date(value).getTime();
-    return Number.isNaN(timestamp) ? 0 : timestamp;
+    return this.toDate(value)?.getTime() ?? 0;
   }
-
 }

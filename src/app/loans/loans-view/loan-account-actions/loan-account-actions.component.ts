@@ -54,6 +54,7 @@ export class LoanAccountActionsComponent {
     'Mass Penalty Waiver': boolean;
     'Credit Enquiry': boolean;
     'Credit Score': boolean;
+    'Credit Report': boolean;
   } = {
     Close: false,
     'Undo Approval': false,
@@ -93,6 +94,7 @@ export class LoanAccountActionsComponent {
     'Mass Penalty Waiver': false,
     'Credit Enquiry': false,
     'Credit Score': false,
+    'Credit Report': false,
   };
 
   actionButtonData: any;

@@ -1,0 +1,177 @@
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import {
+  CrbCreditReportCheck,
+  CreditReportJsonResponse,
+} from '../../models/loan-account.model';
+
+@Component({
+  selector: 'mifosx-crb-credit-report-tab',
+  templateUrl: './crb-credit-report-tab.component.html',
+  styleUrls: ['./crb-credit-report-tab.component.scss'],
+})
+export class CrbCreditReportTabComponent implements OnInit {
+
+  checks: CrbCreditReportCheck[] = [];
+
+  constructor(private route: ActivatedRoute) {
+    this.route.data.subscribe((data: { creditReportData: CrbCreditReportCheck[] }) => {
+      this.checks = this.parseCreditReportChecks(data.creditReportData || []);
+    });
+  }
+
+  ngOnInit(): void {}
+
+
+  private parseCreditReportChecks(raw: CrbCreditReportCheck[]): CrbCreditReportCheck[] {
+    return raw
+      .map((check) => this.parseCreditReportCheck(check))
+      .sort((a, b) => this.dateValue(b.createdAt) - this.dateValue(a.createdAt));
+  }
+
+  private parseCreditReportCheck(check: CrbCreditReportCheck): CrbCreditReportCheck {
+    if (!check.responsePayload) {
+      return { ...check, parsedResponse: null, parseError: false };
+    }
+    try {
+      const parsedResponse = JSON.parse(check.responsePayload) as CreditReportJsonResponse;
+      return { ...check, parsedResponse, parseError: false };
+    } catch (error) {
+      console.error('Failed to parse CRB credit report response', error);
+      return { ...check, parsedResponse: null, parseError: true };
+    }
+  }
+
+
+  hasPdf(check: CrbCreditReportCheck): boolean {
+    return this.hasValue(check.reportUrl);
+  }
+
+  hasJson(check: CrbCreditReportCheck): boolean {
+    return !!check.parsedResponse?.credit_information;
+  }
+
+  openCreditReportPdf(url?: string): void {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  statusLabel(status: any): string {
+    if (!status) return 'Unknown';
+    return typeof status === 'string' ? status : (status.value ?? status.code ?? 'Unknown');
+  }
+
+  statusCode(status: any): string {
+    if (!status) return 'unknown';
+    const raw = typeof status === 'string' ? status : (status.code ?? status.value ?? '');
+    return String(raw).split('.').pop()!.toLowerCase();
+  }
+
+  labelOf(value: any): string {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    if (typeof value === 'object') return value.value ?? value.name ?? value.code ?? 'N/A';
+    return String(value);
+  }
+
+
+  /** Handles ISO strings AND LocalDate arrays like [2026, 11, 17, 16, 55, 7]. */
+  toDate(value: unknown): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (Array.isArray(value) && value.length >= 3) {
+      const [y, m, d, h = 0, min = 0, s = 0] = value as number[];
+      return new Date(y, m - 1, d, h, min, s);
+    }
+    return null;
+  }
+
+  private dateValue(value: unknown): number {
+    return this.toDate(value)?.getTime() ?? 0;
+  }
+
+
+  hasRows(rows?: unknown[] | null): boolean {
+    return Array.isArray(rows) && rows.length > 0;
+  }
+
+  hasValue(value: unknown): boolean {
+    return value !== null && value !== undefined && value !== '';
+  }
+
+  /** Primitive (or null) — rendered inline in a table cell. */
+  isScalar(value: unknown): boolean {
+    return value === null
+      || value === undefined
+      || typeof value === 'string'
+      || typeof value === 'number'
+      || typeof value === 'boolean';
+  }
+
+  /** Array of objects — rendered as a nested sub-table. */
+  isNestedTable(value: unknown): value is Record<string, unknown>[] {
+    return Array.isArray(value)
+      && value.length > 0
+      && typeof value[0] === 'object'
+      && value[0] !== null;
+  }
+
+
+  /** snake_case / kebab-case → "Human Readable". */
+  humaniseKey(key: string): string {
+    return key
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  /** Renders scalars correctly. Objects are flattened (no JSON.stringify). */
+  formatValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+      return value.length ? value.map((v) => this.formatValue(v)).join(', ') : 'N/A';
+    }
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${this.humaniseKey(k)}: ${this.formatValue(v)}`)
+        .join(' · ');
+    }
+    return String(value);
+  }
+
+  /** Column keys for a nested table of any row shape. */
+  columnsOf(rows?: readonly object[] | null): string[] {
+    if (!rows?.length) return [];
+    const keys = new Set<string>();
+    rows.forEach((row) => Object.keys(row ?? {}).forEach((k) => keys.add(k)));
+    return Array.from(keys);
+  }
+
+  /** Read a cell by key from a row of any shape. */
+  cellValue(row: object, col: string): unknown {
+    return (row as Record<string, unknown>)[col];
+  }
+
+
+  get reportCount(): number {
+    return this.checks.filter((c) => this.hasJson(c)).length;
+  }
+
+  get pdfOnlyCount(): number {
+    return this.checks.filter((c) => this.hasPdf(c) && !this.hasJson(c)).length;
+  }
+
+  get latestCheck(): CrbCreditReportCheck | undefined {
+    return this.checks[0];
+  }
+
+  trackByIndex = (index: number) => index;
+  trackByCheckId = (_: number, check: CrbCreditReportCheck) => check.id;
+}

@@ -134,6 +134,12 @@ export class LoansViewComponent implements OnInit {
           icon: 'chart-line',
           taskPermissionName: 'CREATE_CRBCREDIT'
         });
+
+        this.buttonConfig.addOption({
+          name: 'Credit Report',
+          icon: 'chart-line',
+          taskPermissionName: 'GET_CREDITREPORT'
+        });
       }
     } else if (this.status === 'Approved' || this.status === 'Active') {
       this.buttonConfig.addButton({
