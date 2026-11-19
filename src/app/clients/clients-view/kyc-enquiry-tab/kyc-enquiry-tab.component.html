@@ -13,10 +13,10 @@
       <span class="overview-label">Total Matches</span>
       <strong>{{ totalMatches }}</strong>
     </div>
-    <div class="overview-item">
-      <span class="overview-label">Total Cost</span>
-      <strong>{{ totalCost | number:'1.2-2' }}</strong>
-    </div>
+<!--    <div class="overview-item">-->
+<!--      <span class="overview-label">Total Cost</span>-->
+<!--      <strong>{{ totalCost | number:'1.2-2' }}</strong>-->
+<!--    </div>-->
     <div class="overview-item">
       <span class="overview-label">Latest Enquiry</span>
       <strong>
@@ -102,8 +102,7 @@
         </div>
 
         <!-- No payload -->
-        <div class="report-notice"
-             *ngIf="!check.parseError && !check.parsedResponse">
+        <div class="report-notice" *ngIf="!check.parseError && !check.parsedResponse">
           <mat-icon>info</mat-icon>
           <span>No JSON response is available for this enquiry.</span>
         </div>
@@ -158,20 +157,20 @@
                   <strong>{{ response.count ?? 0 }}</strong>
                 </div>
               </div>
-              <div class="metric-card">
-                <span class="metric-icon"><mat-icon>payments</mat-icon></span>
-                <div>
-                  <span class="metric-label">Provider Cost</span>
-                  <strong>{{ (response.enquiry.cost ?? 0) | number:'1.2-2' }}</strong>
-                </div>
-              </div>
-              <div class="metric-card">
-                <span class="metric-icon"><mat-icon>receipt_long</mat-icon></span>
-                <div>
-                  <span class="metric-label">Provider Charge</span>
-                  <strong>{{ (response.enquiry.charge ?? 0) | number:'1.2-2' }}</strong>
-                </div>
-              </div>
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>payments</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Provider Cost</span>-->
+<!--                  <strong>{{ (response.enquiry.cost ?? 0) | number:'1.2-2' }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>receipt_long</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Provider Charge</span>-->
+<!--                  <strong>{{ (response.enquiry.charge ?? 0) | number:'1.2-2' }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
             </div>
           </section>
 
@@ -327,15 +326,14 @@
                 <span>Provider Reference</span>
                 <strong>{{ check.providerReference || 'N/A' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Attempt Cost</span>
-                <strong>{{ (check.cost ?? 0) | number:'1.2-2' }}</strong>
-              </div>
+<!--              <div class="detail-item">-->
+<!--                <span>Attempt Cost</span>-->
+<!--                <strong>{{ (check.cost ?? 0) | number:'1.2-2' }}</strong>-->
+<!--              </div>-->
             </div>
           </section>
 
         </ng-container>
-        <!-- ================= /Full enquiry ================= -->
 
       </div>
     </mat-expansion-panel>

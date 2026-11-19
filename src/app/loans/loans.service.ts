@@ -692,4 +692,8 @@ export class LoansService {
   createCrbReport(loanData: any): Observable<any> {
     return this.http.post(`/creditBureauIntegration/creditReport`, loanData);
   }
+
+  getCrbCreditReportPdf(checkId: any): Observable<Blob> {
+    return this.http.get(`/crbchecks/${checkId}/report-pdf`, { responseType: 'blob' });
+  }
 }

@@ -348,3 +348,16 @@ mat-accordion .attempt-panel {
   font-size: 13px;
   margin: 0;
 }
+
+.pdf-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  button mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    margin-right: 4px;
+  }
+}

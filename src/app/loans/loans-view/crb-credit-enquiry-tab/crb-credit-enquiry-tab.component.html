@@ -19,10 +19,10 @@
       <strong>{{ totalMatches }}</strong>
     </div>
 
-    <div class="overview-item">
-      <span class="overview-label">Total Cost</span>
-      <strong>{{ formatNumber(totalCost) }}</strong>
-    </div>
+<!--    <div class="overview-item">-->
+<!--      <span class="overview-label">Total Cost</span>-->
+<!--      <strong>{{ formatNumber(totalCost) }}</strong>-->
+<!--    </div>-->
 
     <div class="overview-item">
       <span class="overview-label">Latest Enquiry</span>
@@ -34,7 +34,6 @@
     </div>
   </div>
 
-  <!-- ===================== Attempts ===================== -->
   <mat-accordion class="enquiry-accordion" multi *ngIf="creditEnquiryChecks.length">
 
     <mat-expansion-panel
@@ -69,7 +68,6 @@
         </mat-panel-description>
       </mat-expansion-panel-header>
 
-      <!-- ---------- Body ---------- -->
       <div class="attempt-content">
 
         <!-- Actions bar -->
@@ -93,7 +91,7 @@
             </span>
           </div>
 
-          <span class="cost-pill">{{ formatNumber(check.cost) }}</span>
+<!--          <span class="cost-pill">{{ formatNumber(check.cost) }}</span>-->
         </div>
 
         <!-- Parse error -->
@@ -160,29 +158,29 @@
               </div>
             </div>
 
-            <div class="metric-grid">
-              <div class="metric-card">
-                <span class="metric-icon"><mat-icon>payments</mat-icon></span>
-                <div>
-                  <span class="metric-label">Provider Cost</span>
-                  <strong>{{ formatNumber(enquiry.cost) }}</strong>
-                </div>
-              </div>
-              <div class="metric-card">
-                <span class="metric-icon"><mat-icon>receipt</mat-icon></span>
-                <div>
-                  <span class="metric-label">VAT</span>
-                  <strong>{{ formatNumber(enquiry.vat) }}</strong>
-                </div>
-              </div>
-              <div class="metric-card">
-                <span class="metric-icon"><mat-icon>request_quote</mat-icon></span>
-                <div>
-                  <span class="metric-label">Charge</span>
-                  <strong>{{ formatNumber(enquiry.charge) }}</strong>
-                </div>
-              </div>
-            </div>
+<!--            <div class="metric-grid">-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>payments</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Provider Cost</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.cost) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>receipt</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">VAT</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.vat) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>request_quote</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Charge</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.charge) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </div>-->
           </section>
 
           <!-- Sectors -->
@@ -309,7 +307,6 @@
 
         </ng-container>
 
-        <!-- ================= Attempt information ================= -->
         <section class="report-section">
           <div class="section-heading">
             <mat-icon>fact_check</mat-icon>
@@ -359,10 +356,10 @@
               <span>Provider Reference</span>
               <strong class="break-word">{{ check.providerReference ?? 'N/A' }}</strong>
             </div>
-            <div class="detail-item">
-              <span>Recorded Cost</span>
-              <strong>{{ formatNumber(check.cost) }}</strong>
-            </div>
+<!--            <div class="detail-item">-->
+<!--              <span>Recorded Cost</span>-->
+<!--              <strong>{{ formatNumber(check.cost) }}</strong>-->
+<!--            </div>-->
           </div>
         </section>
 

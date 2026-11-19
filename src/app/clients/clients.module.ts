@@ -68,6 +68,7 @@ import { KycEnquiryComponent } from './clients-view/client-actions/kyc-enquiry/k
 import { KycEnquiryTabComponent } from './clients-view/kyc-enquiry-tab/kyc-enquiry-tab.component';
 import { KycReportTabComponent } from './clients-view/kyc-report-tab/kyc-report-tab.component';
 import { KycReportComponent } from './clients-view/client-actions/kyc-report/kyc-report.component';
+import { CrbConsentDocViewerDialogComponent } from './clients-view/custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
 
 /**
  * Clients Module
@@ -141,7 +142,8 @@ import { KycReportComponent } from './clients-view/client-actions/kyc-report/kyc
     KycEnquiryComponent,
     KycEnquiryTabComponent,
     KycReportTabComponent,
-    KycReportComponent
+    KycReportComponent,
+    CrbConsentDocViewerDialogComponent
   ],
   entryComponents: [MomoActivationDialogComponent],
   providers: []

@@ -57,13 +57,13 @@
               </mat-card-content>
             </mat-card>
 
-            <mat-card class="summary-card">
-              <mat-card-content>
-                <span class="summary-label">{{ 'Total Cost' | translate }}</span>
-                <strong>{{ totalCost | number:'1.2-2' }}</strong>
-                <small>{{ currency }}</small>
-              </mat-card-content>
-            </mat-card>
+<!--            <mat-card class="summary-card">-->
+<!--              <mat-card-content>-->
+<!--                <span class="summary-label">{{ 'Total Cost' | translate }}</span>-->
+<!--                <strong>{{ totalCost | number:'1.2-2' }}</strong>-->
+<!--                <small>{{ currency }}</small>-->
+<!--              </mat-card-content>-->
+<!--            </mat-card>-->
           </div>
 
           <h4 class="sub-heading">{{ 'Latest Verification Results' | translate }}</h4>
@@ -73,8 +73,7 @@
           </div>
 
           <div class="result-grid">
-            <mat-card *ngFor="let check of latestChecks; trackBy: trackByCheckId"
-                      class="result-card">
+            <mat-card *ngFor="let check of latestChecks; trackBy: trackByCheckId" class="result-card">
               <mat-card-header>
                 <mat-card-title>{{ check.validationType?.value }}</mat-card-title>
                 <mat-card-subtitle>{{ check.requestType?.value }}</mat-card-subtitle>
@@ -93,10 +92,10 @@
                   <strong>{{ formatDate(check.createdAt) }}</strong>
                 </div>
 
-                <div class="detail-row">
-                  <span>{{ 'Cost' | translate }}</span>
-                  <strong>{{ formatCost(check) }}</strong>
-                </div>
+<!--                <div class="detail-row">-->
+<!--                  <span>{{ 'Cost' | translate }}</span>-->
+<!--                  <strong>{{ formatCost(check) }}</strong>-->
+<!--                </div>-->
 
                 <ng-container [ngSwitch]="groupOf(check)">
                   <div *ngSwitchCase="'nin'" class="detail-row">
@@ -133,29 +132,25 @@
       <!-- ================= Group tabs ================= -->
       <mat-tab label="{{ 'Personal Details' | translate }}">
         <div class="tab-content">
-          <ng-container *ngTemplateOutlet="attemptList;
-                          context: { $implicit: detailsChecks }"></ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: detailsChecks }"></ng-container>
         </div>
       </mat-tab>
 
       <mat-tab label="{{ 'NIN' | translate }}">
         <div class="tab-content">
-          <ng-container *ngTemplateOutlet="attemptList;
-                          context: { $implicit: ninChecks }"></ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: ninChecks }"></ng-container>
         </div>
       </mat-tab>
 
       <mat-tab label="{{ 'Phone' | translate }}">
         <div class="tab-content">
-          <ng-container *ngTemplateOutlet="attemptList;
-                          context: { $implicit: phoneChecks }"></ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: phoneChecks }"></ng-container>
         </div>
       </mat-tab>
 
       <mat-tab label="{{ 'All Attempts' | translate }}">
         <div class="tab-content">
-          <ng-container *ngTemplateOutlet="attemptList;
-                          context: { $implicit: checks }"></ng-container>
+          <ng-container *ngTemplateOutlet="attemptList; context: { $implicit: checks }"></ng-container>
         </div>
       </mat-tab>
 
@@ -222,7 +217,7 @@
             </span>
           </div>
 
-          <span class="cost-pill">{{ formatCost(check) }}</span>
+<!--          <span class="cost-pill">{{ formatCost(check) }}</span>-->
         </div>
 
         <!-- Provider meta -->
@@ -392,22 +387,22 @@
                 <span>Timestamp</span>
                 <strong>{{ v.timestamp ?? '—' }}</strong>
               </div>
-              <div class="detail-item">
-                <span>Reference</span>
-                <strong>{{ v.reference ?? '—' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Cost</span>
-                <strong>{{ v.cost ?? '—' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>VAT</span>
-                <strong>{{ v.vat ?? '—' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Currency</span>
-                <strong>{{ v.currency ?? '—' }}</strong>
-              </div>
+<!--              <div class="detail-item">-->
+<!--                <span>Reference</span>-->
+<!--                <strong>{{ v.reference ?? '—' }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>Cost</span>-->
+<!--                <strong>{{ v.cost ?? '—' }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>VAT</span>-->
+<!--                <strong>{{ v.vat ?? '—' }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>Currency</span>-->
+<!--                <strong>{{ v.currency ?? '—' }}</strong>-->
+<!--              </div>-->
               <div class="detail-item full-width" *ngIf="v.message">
                 <span>Provider Message</span>
                 <strong>{{ v.message }}</strong>

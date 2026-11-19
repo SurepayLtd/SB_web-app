@@ -28,11 +28,11 @@
       </strong>
     </div>
 
-    <div class="overview-item">
-      <span class="overview-label">Total Cost</span>
-      <strong>{{ totalCost | number:'1.2-2' }}</strong>
-      <small>UGX</small>
-    </div>
+<!--    <div class="overview-item">-->
+<!--      <span class="overview-label">Total Cost</span>-->
+<!--      <strong>{{ totalCost | number:'1.2-2' }}</strong>-->
+<!--      <small>UGX</small>-->
+<!--    </div>-->
   </div>
 
   <mat-accordion class="score-accordion" multi *ngIf="creditScoreAttempts.length">
@@ -90,7 +90,7 @@
             </span>
           </div>
 
-          <span class="cost-pill">{{ formatAmount(attempt.cost, 'UGX') }}</span>
+<!--          <span class="cost-pill">{{ formatAmount(attempt.cost, 'UGX') }}</span>-->
         </div>
 
         <!-- Attempt Information -->
@@ -543,23 +543,23 @@
             </section>
 
             <!-- CRB Cost -->
-            <section class="report-section" *ngIf="score.Cost as cost">
-              <div class="section-heading">
-                <mat-icon>receipt</mat-icon>
-                <h3>CRB Cost</h3>
-              </div>
+<!--            <section class="report-section" *ngIf="score.Cost as cost">-->
+<!--              <div class="section-heading">-->
+<!--                <mat-icon>receipt</mat-icon>-->
+<!--                <h3>CRB Cost</h3>-->
+<!--              </div>-->
 
-              <div class="details-grid">
-                <div class="detail-item">
-                  <span>Currency</span>
-                  <strong>{{ cost.Currency ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Amount</span>
-                  <strong>{{ formatAmount(cost.Amount, cost.Currency) }}</strong>
-                </div>
-              </div>
-            </section>
+<!--              <div class="details-grid">-->
+<!--                <div class="detail-item">-->
+<!--                  <span>Currency</span>-->
+<!--                  <strong>{{ cost.Currency ?? 'N/A' }}</strong>-->
+<!--                </div>-->
+<!--                <div class="detail-item">-->
+<!--                  <span>Amount</span>-->
+<!--                  <strong>{{ formatAmount(cost.Amount, cost.Currency) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </section>-->
 
           </ng-container>
 
@@ -787,31 +787,31 @@
           </div>
 
           <!-- Provider cost -->
-          <section class="report-section" *ngIf="response.data?.Cost as cost">
-            <div class="section-heading">
-              <mat-icon>payments</mat-icon>
-              <h3>Provider Cost</h3>
-            </div>
+<!--          <section class="report-section" *ngIf="response.data?.Cost as cost">-->
+<!--            <div class="section-heading">-->
+<!--              <mat-icon>payments</mat-icon>-->
+<!--              <h3>Provider Cost</h3>-->
+<!--            </div>-->
 
-            <div class="details-grid">
-              <div class="detail-item">
-                <span>Currency</span>
-                <strong>{{ cost.Currency ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Amount</span>
-                <strong>{{ formatAmount(cost.Amount, cost.Currency) }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Charge</span>
-                <strong>{{ formatAmount(cost.Charge, cost.Currency) }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>VAT</span>
-                <strong>{{ cost.VAT ?? 'N/A' }}</strong>
-              </div>
-            </div>
-          </section>
+<!--            <div class="details-grid">-->
+<!--              <div class="detail-item">-->
+<!--                <span>Currency</span>-->
+<!--                <strong>{{ cost.Currency ?? 'N/A' }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>Amount</span>-->
+<!--                <strong>{{ formatAmount(cost.Amount, cost.Currency) }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>Charge</span>-->
+<!--                <strong>{{ formatAmount(cost.Charge, cost.Currency) }}</strong>-->
+<!--              </div>-->
+<!--              <div class="detail-item">-->
+<!--                <span>VAT</span>-->
+<!--                <strong>{{ cost.VAT ?? 'N/A' }}</strong>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          </section>-->
 
         </ng-container>
 

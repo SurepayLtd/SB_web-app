@@ -90,14 +90,25 @@
             </span>
           </div>
 
-          <button
-            mat-raised-button
-            color="primary"
-            *ngIf="hasPdf(check)"
-            (click)="openCreditReportPdf(check.reportUrl)">
-            <mat-icon>picture_as_pdf</mat-icon>
-            View PDF Report
-          </button>
+          <!-- AFTER -->
+          <div class="pdf-actions" *ngIf="hasPdf(check)">
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="openCreditReportPdf(check)">
+              <mat-icon>visibility</mat-icon>
+              View PDF Report
+            </button>
+
+<!--            <button-->
+<!--              mat-stroked-button-->
+<!--              type="button"-->
+<!--              (click)="downloadCreditReportPdf(check)">-->
+<!--              <mat-icon>download</mat-icon>-->
+<!--              Download-->
+<!--            </button>-->
+          </div>
         </div>
 
         <!-- Parse error -->

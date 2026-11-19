@@ -4,6 +4,13 @@ import {
   CrbCreditReportCheck,
   CreditReportJsonResponse,
 } from '../../models/loan-account.model';
+import { LoansService } from '../../loans.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import {
+  CrbConsentDocViewerDialogComponent,
+  CrbDocViewerData
+} from '../../../clients/clients-view/custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
 
 @Component({
   selector: 'mifosx-crb-credit-report-tab',
@@ -14,7 +21,12 @@ export class CrbCreditReportTabComponent implements OnInit {
 
   checks: CrbCreditReportCheck[] = [];
 
-  constructor(private route: ActivatedRoute) {
+  constructor(
+    private route: ActivatedRoute,
+    private loanService: LoansService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
+    ) {
     this.route.data.subscribe((data: { creditReportData: CrbCreditReportCheck[] }) => {
       this.checks = this.parseCreditReportChecks(data.creditReportData || []);
     });
@@ -51,9 +63,87 @@ export class CrbCreditReportTabComponent implements OnInit {
     return !!check.parsedResponse?.credit_information;
   }
 
-  openCreditReportPdf(url?: string): void {
-    if (!url) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  openCreditReportPdf(check: CrbCreditReportCheck): void {
+    if (!check?.reportUrl) return;
+
+    const blobUrl$ = this.loanService.getCrbCreditReportPdf(check.id);
+
+    blobUrl$.subscribe({
+      next: (response: any) => {
+        const blob = this.toBlob(response);
+        if (!blob) {
+          this.snackBar.open('The credit report PDF is empty.', 'Close', { duration: 5000 });
+          return;
+        }
+
+        const blobUrl = URL.createObjectURL(blob) + '#view=FitH';
+
+        const data: CrbDocViewerData = {
+          title: 'CRB Credit Report',
+          subtitle: `${check.clientName ?? ''} · ${check.loanAccount ?? ''}`.trim() || 'Credit report',
+          blobUrl,
+          fileName: this.reportFileName(check),
+        };
+
+        const ref = this.dialog.open(CrbConsentDocViewerDialogComponent, {
+          width: '95vw',
+          maxWidth: '95vw',
+          height: '95vh',
+          maxHeight: '95vh',
+          panelClass: 'crb-doc-viewer-panel',
+          data,
+        });
+
+        // Free memory as soon as the modal closes
+        ref.afterClosed().subscribe(() => URL.revokeObjectURL(blobUrl));
+      },
+      error: (error) => {
+        this.snackBar.open(
+          error?.error?.defaultUserMessage || 'Failed to load the credit report PDF.',
+          'Close',
+          { duration: 5000 }
+        );
+      },
+    });
+  }
+
+  /** Normalise a service response into a Blob (handles Blob, ArrayBuffer, string). */
+  private toBlob(response: any): Blob | null {
+    if (response instanceof Blob) return response;
+    if (response instanceof ArrayBuffer) {
+      return new Blob([response], { type: 'application/pdf' });
+    }
+    if (typeof response === 'string' || response instanceof Uint8Array) {
+      return new Blob([response], { type: 'application/pdf' });
+    }
+    return null;
+  }
+
+  /** Friendly download / modal filename. */
+  private reportFileName(check: CrbCreditReportCheck): string {
+    const safe = (check.clientName ?? 'client').replace(/[^a-z0-9]+/gi, '_');
+    return `CRB_Credit_Report_${safe}_${check.id}.pdf`;
+  }
+
+  downloadCreditReportPdf(check: CrbCreditReportCheck): void {
+    if (!check?.reportUrl) return;
+
+    this.loanService.getCrbCreditReportPdf(check.id).subscribe({
+      next: (response: any) => {
+        const blob = this.toBlob(response);
+        if (!blob) return;
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = this.reportFileName(check);
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.snackBar.open('Failed to download the credit report PDF.', 'Close', { duration: 5000 });
+      },
+    });
   }
 
   statusLabel(status: any): string {
