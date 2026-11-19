@@ -93,6 +93,15 @@ import { SurveyResolver } from './manage-surveys/survey.resolver';
 import { RolesAndPermissionsResolver } from './roles-and-permissions/roles-and-permissions.resolver';
 import { ViewRoleResolver } from './roles-and-permissions/view-role/view-role.resolver';
 import { TwoFactorConfigResolver } from './two-factor-config/two-factor-config.resolver';
+import { CreditBureauComponent } from './credit-bureau/credit-bureau.component';
+import { CreditBureauResolver } from './credit-bureau/credit-bureau.resolver';
+import { CreditBureauOrganisationComponent } from './credit-bureau/credit-bureau-organisation/credit-bureau-organisation.component';
+import { CreditBureauOrganisationResolver } from './credit-bureau/credit-bureau-organisation.resolver';
+import { CreditProductMappingComponent } from './credit-bureau/credit-product-mapping/credit-product-mapping.component';
+import { ViewProductMappingComponent } from './credit-bureau/credit-product-mapping/view-product-mapping/view-product-mapping.component';
+import {
+  CreditBureauLoanProductResolver
+} from './credit-bureau/credit-product-mapping/credit-bureau-loan-product.resolver';
 
 const routes: Routes = [
   Route.withShell([
@@ -635,6 +644,54 @@ const routes: Routes = [
                 auditTrail: AuditTrailResolver
               }
             }
+          ]
+        },
+        {
+          path: 'credit-bureau',
+          data: { title: 'Credit Bureau', breadcrumb: 'Credit Bureau' },
+          children: [
+            {
+              path: '',
+              component: CreditBureauComponent,
+              resolve: {
+                creditBureauProviders: CreditBureauResolver
+              }
+            },
+            {
+              path: ':creditBureauId/organisations',
+              resolve: {
+                pageData: CreditBureauOrganisationResolver
+              },
+              children: [
+                {
+                  path: '',
+                  component: CreditBureauOrganisationComponent,
+                  data: { title: 'View Credit Bureau Organisation', routeParamBreadcrumb: 'creditBureauId' },
+                },
+
+                {
+                  path: 'mappings/new',
+                  component: CreditProductMappingComponent,
+                  data: { title: 'Create Loan Product Mapping', breadcrumb: 'Create', mode: 'create' },
+                },
+                {
+                  path: 'mappings/:loanProductId/edit',
+                  component: CreditProductMappingComponent,
+                  data: { title: 'Edit Loan Product Mapping', routeParamBreadcrumb: 'loanProductId', breadcrumb: 'Edit', mode: 'edit'},
+                  resolve: {
+                    mapping: CreditBureauLoanProductResolver
+                  },
+                },
+                {
+                  path: 'mappings/:loanProductId/view',
+                  component: ViewProductMappingComponent,
+                  data: { title: 'View Loan Product Mapping', routeParamBreadcrumb: 'loanProductId' },
+                  resolve: {
+                    mapping: CreditBureauLoanProductResolver
+                  },
+                }
+              ]
+            },
           ]
         }
       ]

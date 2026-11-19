@@ -456,12 +456,23 @@ export class ClientsService {
     return this.http.post(`/crbchecks/${clientId}`, data);
   }
 
+  createCrbKycCheck(clientId: string, data: any) {
+    return this.http.post(`/crbchecks/${clientId}/kyc`, data);
+  }
+
   getCrbCheckHistory(clientId: string): Observable<any> {
     return this.http.get(`/crbchecks/${clientId}`);
   }
 
-  createCrbConsent(clientId: string, data: any) {
-    return this.http.post(`/crbconsents/${clientId}`, data);
+  createCrbConsent(clientId: string, data: any, file?: File | null) {
+    const formData = new FormData();
+
+    formData.append('command', JSON.stringify(data));
+
+    if (file) {
+      formData.append('file', file, file.name);
+    }
+    return this.http.post(`/crbconsents/${clientId}`, formData);
   }
 
   getCrbConsent(clientId: string): Observable<any> {
@@ -472,5 +483,21 @@ export class ClientsService {
     const params = new HttpParams().set('command', command);
 
     return this.http.put(`/crbconsents/${consentId}`, data, { params });
+  }
+
+  getCrbKycChecks(clientId: string): Observable<any> {
+    const httpParams = new HttpParams().set('type', '100');
+    return this.http.get(`/crbchecks/${clientId}/kyc`, {params: httpParams});
+  }
+
+  getCrbKycReport(clientId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '600');
+    return this.http.get(`/crbchecks/${clientId}/kyc`, {params: httpParams});
+  }
+
+  getCrbConsentDoc(consentId: any, documentId: any): Observable<Blob> {
+    return this.http.get(`/crb_consent/${consentId}/documents/${documentId}/attachment`,
+      { responseType: 'blob' }
+    );
   }
 }

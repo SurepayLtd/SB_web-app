@@ -1,0 +1,98 @@
+<div class="container">
+  <mat-card>
+    <form [formGroup]="creditReportForm" (ngSubmit)="submitReport()">
+      <mat-card-content>
+        <div fxLayout="column">
+
+          <!-- Credit Bureau -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Credit Bureau' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="creditBureauID" required>
+              <mat-option *ngFor="let bureau of creditBureaus" [value]="bureau.creditBureauId">
+                {{ bureau.creditBureauSummary }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditReportForm.controls.creditBureauID.hasError('required')">
+              Credit Bureau is <strong>required</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Report Type -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Report Type' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbReportType" required>
+              <mat-option *ngFor="let type of creditReportTypes" [value]="type.id">
+                {{ type.value }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditReportForm.controls.crbReportType.hasError('required')">
+              Report Type is <strong>required</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Report Format -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Report Format' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbReportFormat" required>
+              <mat-option *ngFor="let format of creditReportFormatTypes" [value]="format.id">
+                {{ format.value | uppercase }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditReportForm.controls.crbReportFormat.hasError('required')">
+              Report Format is <strong>required</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Report Action -->
+          <mat-form-field fxFlex="48%">
+            <mat-label>
+              {{ 'labels.inputs.Report Action' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbReportAction" required>
+              <mat-option *ngFor="let action of creditReportActionTypes" [value]="action.id">
+                {{ action.value | titlecase }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="creditReportForm.controls.crbReportAction.hasError('required')">
+              Report Action is <strong>required</strong>
+            </mat-error>
+          </mat-form-field>
+
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+
+        <button type="button" mat-raised-button (click)="cancel()" [disabled]="isSubmitting">
+          {{ 'labels.buttons.Cancel' | translate }}
+        </button>
+
+        <button type="submit" mat-raised-button color="primary" [disabled]="!creditReportForm.valid || isSubmitting || isLoading">
+
+          <span *ngIf="!isSubmitting">
+            {{ 'labels.buttons.Confirm' | translate }}
+          </span>
+
+          <span *ngIf="isSubmitting">
+            {{ 'labels.buttons.Processing' | translate }}...
+          </span>
+
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card>
+</div>

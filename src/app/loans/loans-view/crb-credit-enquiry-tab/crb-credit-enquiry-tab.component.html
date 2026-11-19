@@ -1,0 +1,369 @@
+<div class="enquiry-page">
+
+  <!-- ===================== Empty ===================== -->
+  <div class="empty-state" *ngIf="!creditEnquiryChecks.length">
+    <mat-icon>search_off</mat-icon>
+    <h3>No Credit Enquiry Attempts</h3>
+    <p>No credit enquiry attempts found for this loan.</p>
+  </div>
+
+  <!-- ===================== Overview ===================== -->
+  <div class="report-overview" *ngIf="creditEnquiryChecks.length">
+    <div class="overview-item">
+      <span class="overview-label">Total Enquiries</span>
+      <strong>{{ creditEnquiryChecks.length }}</strong>
+    </div>
+
+    <div class="overview-item">
+      <span class="overview-label">Total Matches</span>
+      <strong>{{ totalMatches }}</strong>
+    </div>
+
+<!--    <div class="overview-item">-->
+<!--      <span class="overview-label">Total Cost</span>-->
+<!--      <strong>{{ formatNumber(totalCost) }}</strong>-->
+<!--    </div>-->
+
+    <div class="overview-item">
+      <span class="overview-label">Latest Enquiry</span>
+      <strong>
+        {{ latestCheck?.createdAt
+        ? formatDate(latestCheck!.createdAt)
+        : 'N/A' }}
+      </strong>
+    </div>
+  </div>
+
+  <mat-accordion class="enquiry-accordion" multi *ngIf="creditEnquiryChecks.length">
+
+    <mat-expansion-panel
+      *ngFor="let check of creditEnquiryChecks; let i = index; trackBy: trackByCheckId"
+      [expanded]="i === 0"
+      class="attempt-panel">
+
+      <!-- ---------- Header ---------- -->
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <div class="attempt-title">
+            <span class="attempt-icon"><mat-icon>search</mat-icon></span>
+            <div class="attempt-heading">
+              <span class="attempt-number">Credit Enquiry #{{ check.id }}</span>
+              <small class="attempt-ref">
+                {{ check.providerReference || 'No provider reference' }}
+              </small>
+            </div>
+          </div>
+        </mat-panel-title>
+
+        <mat-panel-description>
+          <div class="header-meta">
+            <span class="header-date">
+              <mat-icon inline>event</mat-icon>
+              {{ check.createdAt ? formatDate(check.createdAt) : 'Date unavailable' }}
+            </span>
+            <span class="status-badge" [ngClass]="statusCode(check.status)">
+              {{ statusLabel(check.status) }}
+            </span>
+          </div>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="attempt-content">
+
+        <!-- Actions bar -->
+        <div class="attempt-actions">
+          <div class="attempt-meta">
+            <span>
+              <mat-icon>schedule</mat-icon>
+              {{ check.createdAt ? formatDate(check.createdAt) : 'N/A' }}
+            </span>
+            <span *ngIf="check.completedAt">
+              <mat-icon>check_circle</mat-icon>
+              Completed: {{ formatDate(check.completedAt) }}
+            </span>
+            <span *ngIf="check.requestType?.value">
+              <mat-icon>assignment</mat-icon>
+              {{ check.requestType.value }}
+            </span>
+            <span *ngIf="check.consentStatus?.value">
+              <mat-icon>verified_user</mat-icon>
+              {{ check.consentStatus.value }}
+            </span>
+          </div>
+
+<!--          <span class="cost-pill">{{ formatNumber(check.cost) }}</span>-->
+        </div>
+
+        <!-- Parse error -->
+        <div class="report-error" *ngIf="check.parseError">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <strong>Unable to read the provider response</strong>
+            <p>The stored payload could not be parsed.</p>
+          </div>
+        </div>
+
+        <!-- No payload -->
+        <div class="report-notice"
+             *ngIf="!check.parseError && !check.parsedResponse">
+          <mat-icon>info</mat-icon>
+          <span>No provider response is available for this enquiry attempt.</span>
+        </div>
+
+        <!-- ================= Parsed response ================= -->
+        <ng-container *ngIf="check.parsedResponse as response">
+
+          <!-- Enquiry summary -->
+          <section class="report-section" *ngIf="response.enquiry as enquiry">
+            <div class="section-heading">
+              <mat-icon>receipt_long</mat-icon>
+              <h3>Enquiry Summary</h3>
+            </div>
+
+            <div class="details-grid">
+              <div class="detail-item">
+                <span>Entity</span>
+                <strong>{{ enquiry.entity ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Provider Status</span>
+                <strong class="status-chip"
+                        [ngClass]="providerStatusCode(enquiry.status)">
+                  {{ enquiry.status ?? 'N/A' }}
+                </strong>
+              </div>
+              <div class="detail-item">
+                <span>Provider Timestamp</span>
+                <strong>{{ enquiry.timestamp ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Provider Reference</span>
+                <strong class="break-word">{{ enquiry.reference ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Search Criteria</span>
+                <strong>{{ enquiry.criteria ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Search Value</span>
+                <strong>{{ enquiry.search_value ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Identification Type</span>
+                <strong>{{ enquiry.identification_type ?? 'N/A' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Match Count</span>
+                <strong>{{ response.count ?? 0 }}</strong>
+              </div>
+            </div>
+
+<!--            <div class="metric-grid">-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>payments</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Provider Cost</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.cost) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>receipt</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">VAT</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.vat) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--              <div class="metric-card">-->
+<!--                <span class="metric-icon"><mat-icon>request_quote</mat-icon></span>-->
+<!--                <div>-->
+<!--                  <span class="metric-label">Charge</span>-->
+<!--                  <strong>{{ formatNumber(enquiry.charge) }}</strong>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </div>-->
+          </section>
+
+          <!-- Sectors -->
+          <section
+            *ngFor="let sector of getSectors(response); trackBy: trackByIndex"
+            class="report-section sector-section">
+
+            <div class="section-heading">
+              <mat-icon>{{ sector.icon }}</mat-icon>
+              <h3>{{ sector.name }}</h3>
+              <span class="match-count">{{ sector.data.matches ?? 0 }} Match(es)</span>
+            </div>
+
+            <!-- Individual records -->
+            <ng-container *ngIf="sector.data.individuals?.length">
+              <h4 class="subsection-title">
+                <mat-icon>person</mat-icon>
+                Individual Records
+              </h4>
+
+              <div class="record-grid">
+                <div class="record-card"
+                     *ngFor="let person of sector.data.individuals; trackBy: trackByIndividualId">
+
+                  <div class="profile-container">
+                    <img *ngIf="person.image"
+                         [src]="person.image"
+                         alt="Individual photo"
+                         class="profile-image"
+                         (error)="$any($event.target).style.display='none'">
+
+                    <div class="profile-placeholder" *ngIf="!person.image">
+                      <mat-icon>person</mat-icon>
+                    </div>
+
+                    <span class="record-id">ID: {{ person.individual_id || '—' }}</span>
+                  </div>
+
+                  <div class="record-details">
+                    <div class="record-heading">
+                      <h4>{{ getIndividualFullName(person) || 'Unknown Individual' }}</h4>
+                      <span class="record-type">Individual</span>
+                    </div>
+
+                    <div class="details-grid compact">
+                      <div class="detail-item">
+                        <span>Gender</span>
+                        <strong>{{ person.gender ?? 'N/A' }}</strong>
+                      </div>
+                      <div class="detail-item">
+                        <span>Date of Birth</span>
+                        <strong>{{ person.date_of_birth ?? 'N/A' }}</strong>
+                      </div>
+                      <div class="detail-item">
+                        <span>Nationality</span>
+                        <strong>{{ person.nationality ?? 'N/A' }}</strong>
+                      </div>
+                      <div class="detail-item">
+                        <span>Marital Status</span>
+                        <strong>{{ person.marital_status ?? 'N/A' }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Business records -->
+            <ng-container *ngIf="sector.data.nonindividuals?.length">
+              <h4 class="subsection-title">
+                <mat-icon>apartment</mat-icon>
+                Business Records
+              </h4>
+
+              <div class="record-grid">
+                <div class="record-card"
+                     *ngFor="let business of sector.data.nonindividuals; trackBy: trackByBusinessId">
+
+                  <div class="business-heading">
+                    <div class="business-icon"><mat-icon>business</mat-icon></div>
+                    <div>
+                      <h4>{{ business.business_name ?? 'Unnamed Business' }}</h4>
+                      <p>{{ business.trading_name || 'No trading name' }}</p>
+                    </div>
+                    <span class="record-type">Business</span>
+                  </div>
+
+                  <div class="details-grid compact">
+                    <div class="detail-item">
+                      <span>Business Type</span>
+                      <strong>{{ business.business_type ?? 'N/A' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                      <span>Industry</span>
+                      <strong>{{ business.industry ?? 'N/A' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                      <span>Date Registered</span>
+                      <strong>{{ business.date_registered ?? 'N/A' }}</strong>
+                    </div>
+                    <div class="detail-item full-width">
+                      <span>Activity Description</span>
+                      <strong>{{ business.activity_description ?? 'N/A' }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Empty sector -->
+            <div class="empty-sector"
+                 *ngIf="!sector.data.individuals?.length && !sector.data.nonindividuals?.length">
+              <mat-icon>folder_open</mat-icon>
+              <span>No records found in this sector.</span>
+            </div>
+          </section>
+
+          <!-- No sectors -->
+          <div class="empty-sector"
+               *ngIf="!response.enquiry?.formal && !response.enquiry?.informal">
+            <mat-icon>info</mat-icon>
+            <span>No formal or informal sector information was returned by the provider.</span>
+          </div>
+
+        </ng-container>
+
+        <section class="report-section">
+          <div class="section-heading">
+            <mat-icon>fact_check</mat-icon>
+            <h3>Attempt Information</h3>
+          </div>
+
+          <div class="details-grid">
+            <div class="detail-item">
+              <span>Client</span>
+              <strong>{{ check.clientName ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Client Account</span>
+              <strong>{{ check.clientAccount ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Loan Account</span>
+              <strong>{{ check.loanAccount ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Loan Product</span>
+              <strong>{{ check.loanProductName ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Proposed Principal</span>
+              <strong>{{ formatNumber(check.proposedPrincipal) }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Request Type</span>
+              <strong>{{ check.requestType?.value ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Attempt Status</span>
+              <strong class="status-chip" [ngClass]="statusCode(check.status)">
+                {{ statusLabel(check.status) }}
+              </strong>
+            </div>
+            <div class="detail-item">
+              <span>Consent Status</span>
+              <strong>{{ check.consentStatus?.value ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item full-width">
+              <span>Provider Validation ID</span>
+              <strong class="break-word">{{ check.providerValidationId ?? 'N/A' }}</strong>
+            </div>
+            <div class="detail-item full-width">
+              <span>Provider Reference</span>
+              <strong class="break-word">{{ check.providerReference ?? 'N/A' }}</strong>
+            </div>
+<!--            <div class="detail-item">-->
+<!--              <span>Recorded Cost</span>-->
+<!--              <strong>{{ formatNumber(check.cost) }}</strong>-->
+<!--            </div>-->
+          </div>
+        </section>
+
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

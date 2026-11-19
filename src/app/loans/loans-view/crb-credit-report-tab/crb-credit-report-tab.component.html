@@ -1,0 +1,593 @@
+<div class="crb-report-page">
+
+  <!-- ===================== Overview ===================== -->
+  <div class="report-overview" *ngIf="checks.length">
+    <div class="overview-item">
+      <span class="overview-label">Total Attempts</span>
+      <strong>{{ checks.length }}</strong>
+    </div>
+
+    <div class="overview-item">
+      <span class="overview-label">PDF Reports</span>
+      <strong>{{ checks.length }}</strong>
+    </div>
+
+    <div class="overview-item">
+      <span class="overview-label">JSON Reports Parsed</span>
+      <strong>{{ reportCount }}</strong>
+      <small class="overview-hint" *ngIf="pdfOnlyCount">
+        {{ pdfOnlyCount }} attempt(s) have PDF only
+      </small>
+    </div>
+
+    <div class="overview-item">
+      <span class="overview-label">Latest Attempt</span>
+      <strong>
+        {{ latestCheck?.createdAt
+        ? (toDate(latestCheck!.createdAt) | date: 'medium')
+        : 'N/A' }}
+      </strong>
+    </div>
+  </div>
+
+  <!-- ===================== Empty ===================== -->
+  <div class="empty-state" *ngIf="!checks.length">
+    <mat-icon>description</mat-icon>
+    <h3>No Credit Reports</h3>
+    <p>No credit report attempts are available for this loan.</p>
+  </div>
+
+  <!-- ===================== Attempts ===================== -->
+  <mat-accordion multi="true" *ngIf="checks.length">
+
+    <mat-expansion-panel
+      *ngFor="let check of checks; let i = index; trackBy: trackByCheckId"
+      [expanded]="i === 0"
+      class="attempt-panel">
+
+      <!-- ---------- Header ---------- -->
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <div class="attempt-title">
+            <span class="attempt-number">Attempt {{ checks.length - i }}</span>
+            <span class="status-badge" [ngClass]="statusCode(check.status)">
+              {{ statusLabel(check.status) }}
+            </span>
+          </div>
+        </mat-panel-title>
+
+        <mat-panel-description>
+          <span class="header-meta">
+            <mat-icon inline>event</mat-icon>
+            {{ check.createdAt
+            ? (toDate(check.createdAt) | date: 'medium')
+            : 'Date unavailable' }}
+          </span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <!-- ---------- Body ---------- -->
+      <div class="attempt-content">
+
+        <!-- Actions bar -->
+        <div class="attempt-actions">
+          <div class="attempt-meta">
+            <span>
+              <mat-icon>schedule</mat-icon>
+              {{ check.createdAt ? (toDate(check.createdAt) | date: 'medium') : 'N/A' }}
+            </span>
+            <span *ngIf="check.completedAt">
+              <mat-icon>check_circle</mat-icon>
+              Completed: {{ toDate(check.completedAt) | date: 'medium' }}
+            </span>
+            <span *ngIf="labelOf(check.validationType) !== 'N/A'">
+              <mat-icon>verified_user</mat-icon>
+              {{ labelOf(check.validationType) }}
+            </span>
+            <span *ngIf="labelOf(check.requestType) !== 'N/A'">
+              <mat-icon>assignment</mat-icon>
+              {{ labelOf(check.requestType) }}
+            </span>
+          </div>
+
+          <!-- AFTER -->
+          <div class="pdf-actions" *ngIf="hasPdf(check)">
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="openCreditReportPdf(check)">
+              <mat-icon>visibility</mat-icon>
+              View PDF Report
+            </button>
+
+<!--            <button-->
+<!--              mat-stroked-button-->
+<!--              type="button"-->
+<!--              (click)="downloadCreditReportPdf(check)">-->
+<!--              <mat-icon>download</mat-icon>-->
+<!--              Download-->
+<!--            </button>-->
+          </div>
+        </div>
+
+        <!-- Parse error -->
+        <div class="report-error" *ngIf="check.parseError">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <strong>Unable to display JSON report</strong>
+            <p>The stored response could not be parsed.</p>
+          </div>
+        </div>
+
+        <!-- No payload -->
+        <div class="report-notice"
+             *ngIf="!check.parseError && !check.parsedResponse">
+          <mat-icon>info</mat-icon>
+          <span>No JSON report response is available for this attempt.</span>
+        </div>
+
+        <!-- PDF only -->
+        <div class="report-notice report-notice--pdf"
+             *ngIf="check.parsedResponse && !hasJson(check)">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>
+            This attempt has a <strong>PDF report only</strong>.
+            The CRB returned a request acknowledgement without the
+            structured credit information.
+            Use <em>View PDF Report</em> above to open it.
+          </span>
+        </div>
+
+        <!-- ================= Full JSON report ================= -->
+        <ng-container *ngIf="hasJson(check) && check.parsedResponse!.credit_information as report">
+
+          <!-- Provider meta -->
+          <div class="provider-response"
+               *ngIf="hasValue(check.parsedResponse!.message)
+                    || hasValue(check.parsedResponse!.count)
+                    || hasValue(check.parsedResponse!.status)">
+            <span *ngIf="hasValue(check.parsedResponse!.message)">
+              <strong>Provider message:</strong> {{ check.parsedResponse!.message }}
+            </span>
+            <span *ngIf="hasValue(check.parsedResponse!.count)">
+              <strong>Record count:</strong> {{ check.parsedResponse!.count }}
+            </span>
+            <span *ngIf="hasValue(check.parsedResponse!.status)">
+              <strong>Provider status:</strong> {{ check.parsedResponse!.status }}
+            </span>
+          </div>
+
+          <!-- Customer details -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>person</mat-icon>
+              <h3>Customer Details</h3>
+            </div>
+
+            <div class="customer-profile">
+              <img *ngIf="report.customer_details?.Photo"
+                   [src]="report.customer_details?.Photo!"
+                   alt="Customer photo"
+                   class="customer-photo"
+                   (error)="$any($event.target).style.display='none'" />
+
+              <div class="details-grid">
+                <div class="detail-item">
+                  <span>Name</span>
+                  <strong>{{ report.customer_details?.Name ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Date of Birth</span>
+                  <strong>{{ report.customer_details?.Date_of_Birth ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Gender</span>
+                  <strong>{{ report.customer_details?.Gender ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Marital Status</span>
+                  <strong>{{ report.customer_details?.Marital_Status ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Nationality</span>
+                  <strong>{{ report.customer_details?.Nationality ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Contact</span>
+                  <strong>{{ report.customer_details?.Contact ?? 'N/A' }}</strong>
+                </div>
+                <div class="detail-item full-width">
+                  <span>Address</span>
+                  <strong>{{ report.customer_details?.Address ?? 'N/A' }}</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Scoring -->
+          <section class="report-section" *ngIf="report.scoring_details as scoring">
+            <div class="section-heading">
+              <mat-icon>analytics</mat-icon>
+              <h3>Credit Scoring</h3>
+            </div>
+
+            <div class="score-overview">
+              <div class="score-card">
+                <span>Current Score</span>
+                <strong>{{ scoring.Current_Score ?? 'N/A' }}</strong>
+              </div>
+              <div class="score-card">
+                <span>Score Band</span>
+                <strong>{{ scoring.Current_Score_Band ?? 'N/A' }}</strong>
+              </div>
+              <div class="score-card">
+                <span>Score Rating</span>
+                <strong>{{ scoring.Current_Score_Rating ?? 'N/A' }}</strong>
+              </div>
+              <div class="score-card">
+                <span>Probability of Default</span>
+                <strong>{{ scoring.Probability_of_Default ?? 'N/A' }}</strong>
+              </div>
+              <div class="score-card">
+                <span>Likelihood to Default</span>
+                <strong>{{ scoring.Likelihood_to_Default ?? 'N/A' }}</strong>
+              </div>
+              <div class="score-card">
+                <span>Evaluation Period</span>
+                <strong>{{ scoring.Evaluation_Period ?? 'N/A' }}</strong>
+              </div>
+            </div>
+
+            <div class="score-explanation" *ngIf="scoring.Score_Explanation?.length">
+              <h4>Score Explanation</h4>
+              <ul>
+                <li *ngFor="let item of scoring.Score_Explanation; trackBy: trackByIndex">
+                  {{ item }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="table-wrapper" *ngIf="hasRows(scoring.Score_History)">
+              <h4>Score History</h4>
+              <table>
+                <thead>
+                <tr><th>Month</th><th>Score</th></tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let h of scoring.Score_History; trackBy: trackByIndex">
+                  <td>{{ h.MonthYear ?? 'N/A' }}</td>
+                  <td>{{ h.Score ?? 'N/A' }}</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Identification -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>badge</mat-icon>
+              <h3>Identification Details</h3>
+            </div>
+
+            <ng-container *ngIf="hasRows(report.identification_details); else noIdentification">
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Identifier</th>
+                    <th>Identifier Type</th>
+                    <th>Country of Issue</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr *ngFor="let item of report.identification_details; trackBy: trackByIndex">
+                    <td>{{ item.SNo ?? 'N/A' }}</td>
+                    <td>{{ item.Identifier ?? 'N/A' }}</td>
+                    <td>{{ item.Identifier_Type ?? 'N/A' }}</td>
+                    <td>{{ item.Country_of_Issue ?? 'N/A' }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+            <ng-template #noIdentification>
+              <p class="no-data">No identification details available.</p>
+            </ng-template>
+          </section>
+
+          <!-- Contact history -->
+          <section class="report-section" *ngIf="report.contact_history as contacts">
+            <div class="section-heading">
+              <mat-icon>contacts</mat-icon>
+              <h3>Contact History</h3>
+            </div>
+
+            <div class="two-column">
+              <div>
+                <h4>Phone Numbers</h4>
+                <div class="simple-list" *ngIf="hasRows(contacts.Phone_Numbers); else noPhones">
+                  <div *ngFor="let p of contacts.Phone_Numbers; trackBy: trackByIndex">
+                    {{ p.Phone_Number ?? 'N/A' }}
+                  </div>
+                </div>
+                <ng-template #noPhones>
+                  <p class="no-data">No phone numbers available.</p>
+                </ng-template>
+              </div>
+
+              <div>
+                <h4>Email Addresses</h4>
+                <div class="simple-list" *ngIf="hasRows(contacts.Emails); else noEmails">
+                  <div *ngFor="let e of contacts.Emails; trackBy: trackByIndex">
+                    {{ e.Email ?? 'N/A' }}
+                  </div>
+                </div>
+                <ng-template #noEmails>
+                  <p class="no-data">No email addresses available.</p>
+                </ng-template>
+              </div>
+            </div>
+          </section>
+
+          <!-- Physical addresses -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>home</mat-icon>
+              <h3>Physical Address History</h3>
+            </div>
+
+            <ng-container *ngIf="hasRows(report.physical_address_history); else noPhysical">
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Address</th>
+                    <th>Ownership</th>
+                    <th>Period at Address</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr *ngFor="let a of report.physical_address_history; trackBy: trackByIndex">
+                    <td>{{ a.SNo ?? 'N/A' }}</td>
+                    <td>{{ a.Address ?? 'N/A' }}</td>
+                    <td>{{ a.Ownership ?? 'N/A' }}</td>
+                    <td>{{ a.Period_at_Address ?? 'N/A' }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+            <ng-template #noPhysical>
+              <p class="no-data">No physical address history available.</p>
+            </ng-template>
+          </section>
+
+          <!-- Postal addresses -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>markunread_mailbox</mat-icon>
+              <h3>Postal Address History</h3>
+            </div>
+
+            <div class="simple-list" *ngIf="hasRows(report.postal_address_history); else noPostal">
+              <div *ngFor="let a of report.postal_address_history; trackBy: trackByIndex">
+                {{ a.address ?? 'N/A' }}
+              </div>
+            </div>
+            <ng-template #noPostal>
+              <p class="no-data">No postal address history available.</p>
+            </ng-template>
+          </section>
+
+          <!-- Employment -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>work</mat-icon>
+              <h3>Employment History</h3>
+            </div>
+
+            <ng-container *ngIf="hasRows(report.employment_history); else noEmployment">
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Employer</th>
+                    <th>Occupation</th>
+                    <th>Employment Date</th>
+                    <th>Income Band</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr *ngFor="let e of report.employment_history; trackBy: trackByIndex">
+                    <td>{{ e.SNo ?? 'N/A' }}</td>
+                    <td>{{ e.Employer_Name ?? 'N/A' }}</td>
+                    <td>{{ e.Occupation ?? 'N/A' }}</td>
+                    <td>{{ e.Employment_Date ?? 'N/A' }}</td>
+                    <td>{{ e.Income_Band ?? 'N/A' }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+            <ng-template #noEmployment>
+              <p class="no-data">No employment history available.</p>
+            </ng-template>
+          </section>
+
+          <!-- Shareholders -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>groups</mat-icon>
+              <h3>Shareholder Details</h3>
+            </div>
+
+            <ng-container *ngIf="hasRows(report.shareholder_details); else noShareholders">
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Business Name</th>
+                    <th>Stakeholder Type</th>
+                    <th>Category</th>
+                    <th>Shareholding</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr *ngFor="let s of report.shareholder_details; trackBy: trackByIndex">
+                    <td>{{ s.SNo ?? 'N/A' }}</td>
+                    <td>{{ s.Business_Name ?? 'N/A' }}</td>
+                    <td>{{ s.stakeholderType ?? 'N/A' }}</td>
+                    <td>{{ s.Stakeholder_Category ?? 'N/A' }}</td>
+                    <td>{{ s.Shareholder_Percentage ?? 'N/A' }}</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+            <ng-template #noShareholders>
+              <p class="no-data">No shareholder details available.</p>
+            </ng-template>
+          </section>
+
+          <!-- Summaries (key/value with nested sub-tables) -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>summarize</mat-icon>
+              <h3>Credit Report Summaries</h3>
+            </div>
+
+            <ng-container *ngFor="let section of [
+              { title: 'Credit Applications Summary', rows: report.credit_applications_summary },
+              { title: 'Credit Accounts Summary', rows: report.credit_accounts_summary },
+              { title: 'Credit Accounts Classification Summary', rows: report.credits_accounts_classification_summary },
+              { title: 'Collateral Material Summary', rows: report.collateral_material_summary },
+              { title: 'Collateral Guarantor Summary', rows: report.collateral_guarantor_summary },
+              { title: 'Bounced Cheques Summary', rows: report.bounced_cheques_summary },
+              { title: 'Financial Fraud Summary', rows: report.financial_fraud_summary }
+            ]">
+
+              <div class="report-subsection" *ngIf="hasRows(section.rows)">
+                <h4>{{ section.title }}</h4>
+
+                <div class="table-wrapper">
+                  <table class="kv-table">
+                    <thead>
+                    <tr>
+                      <th class="key-col">Field</th>
+                      <th>Value</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <ng-container *ngFor="let row of $any(section.rows); trackBy: trackByIndex">
+                      <tr *ngFor="let entry of $any(row) | keyvalue; trackBy: trackByIndex">
+                        <td class="key-col">{{ humaniseKey(entry.key) }}</td>
+                        <td>
+                          <ng-container *ngIf="isScalar(entry.value)">
+                            {{ formatValue(entry.value) }}
+                          </ng-container>
+
+                          <div class="nested-table" *ngIf="isNestedTable(entry.value)">
+                            <table>
+                              <thead>
+                              <tr>
+                                <th *ngFor="let subCol of columnsOf(entry.value); trackBy: trackByIndex">
+                                  {{ humaniseKey(subCol) }}
+                                </th>
+                              </tr>
+                              </thead>
+                              <tbody>
+                              <tr *ngFor="let subRow of entry.value; trackBy: trackByIndex">
+                                <td *ngFor="let subCol of columnsOf(entry.value); trackBy: trackByIndex">
+                                  {{ formatValue(cellValue(subRow, subCol)) }}
+                                </td>
+                              </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+          </section>
+
+          <!-- Details (key/value with nested sub-tables) -->
+          <section class="report-section">
+            <div class="section-heading">
+              <mat-icon>table_chart</mat-icon>
+              <h3>Credit Report Details</h3>
+            </div>
+
+            <ng-container *ngFor="let section of [
+              { title: 'Credit Application Details', rows: report.credit_applications_details },
+              { title: 'Credit Account Details', rows: report.credit_account_details },
+              { title: 'Collateral Material Details', rows: report.collateral_material_details },
+              { title: 'Collateral Guarantor Details', rows: report.collateral_guarantor_details },
+              { title: 'Bounced Cheque Details', rows: report.bounced_cheques_details },
+              { title: 'Financial Fraud Details', rows: report.financial_fraud_details },
+              { title: 'Enquiry Details', rows: report.enquiries_details }
+            ]">
+
+              <div class="report-subsection" *ngIf="hasRows(section.rows)">
+                <h4>{{ section.title }}</h4>
+
+                <div class="table-wrapper">
+                  <table class="kv-table">
+                    <thead>
+                    <tr>
+                      <th class="key-col">Field</th>
+                      <th>Value</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <ng-container *ngFor="let row of $any(section.rows); trackBy: trackByIndex">
+                      <tr *ngFor="let entry of $any(row) | keyvalue; trackBy: trackByIndex">
+                        <td class="key-col">{{ humaniseKey(entry.key) }}</td>
+                        <td>
+                          <ng-container *ngIf="isScalar(entry.value)">
+                            {{ formatValue(entry.value) }}
+                          </ng-container>
+
+                          <div class="nested-table" *ngIf="isNestedTable(entry.value)">
+                            <table>
+                              <thead>
+                              <tr>
+                                <th *ngFor="let subCol of columnsOf(entry.value); trackBy: trackByIndex">
+                                  {{ humaniseKey(subCol) }}
+                                </th>
+                              </tr>
+                              </thead>
+                              <tbody>
+                              <tr *ngFor="let subRow of entry.value; trackBy: trackByIndex">
+                                <td *ngFor="let subCol of columnsOf(entry.value); trackBy: trackByIndex">
+                                  {{ formatValue(cellValue(subRow, subCol)) }}
+                                </td>
+                              </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-container>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+          </section>
+
+        </ng-container>
+
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

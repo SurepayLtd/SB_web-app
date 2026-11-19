@@ -1,0 +1,115 @@
+<div class="container">
+
+  <div class="m-b-16">
+    <h3>{{ mode === 'create' ? 'Create Loan Product Mapping' : 'Edit Loan Product Mapping' }}</h3>
+    <p class="text-muted">
+      Configure how the credit bureau integration applies to this loan product.
+    </p>
+  </div>
+
+  <mat-card>
+
+    <form [formGroup]="mappingForm" (ngSubmit)="submit()">
+
+      <mat-card-content>
+
+        <div fxLayout="row wrap" fxLayoutGap="2%" fxLayout.lt-md="column">
+
+          <!-- Loan Product -->
+          <mat-form-field fxFlex="48%" matTooltip="Select the loan product to associate with this credit bureau."
+            matTooltipPosition="right">
+
+            <mat-label>Loan Product</mat-label>
+
+            <mat-select required formControlName="loanProductId">
+
+              <mat-option *ngFor="let loanProduct of loanProducts" [value]="loanProduct.loanProductId">
+                {{ loanProduct.loanProductName }}
+              </mat-option>
+
+            </mat-select>
+
+            <mat-error *ngIf="mappingForm.controls.loanProductId.hasError('required')">
+              Loan Product is required.
+            </mat-error>
+
+            <mat-hint *ngIf="mode === 'create' && !isLoading && loanProducts.length === 0">
+              All available loan products already have credit bureau mappings.
+            </mat-hint>
+
+            <mat-hint *ngIf="mode === 'edit'">
+              The loan product cannot be changed when editing an existing mapping.
+            </mat-hint>
+
+          </mat-form-field>
+
+          <!-- Stale Period -->
+          <mat-form-field fxFlex="48%"
+            matTooltip="Number of days before a previous credit bureau check is considered stale and a new check may be required."
+            matTooltipPosition="right">
+
+            <mat-label>Stale Period (Days)</mat-label>
+
+            <input
+              matInput
+              type="number"
+              min="0"
+              formControlName="stalePeriod" />
+
+            <mat-error *ngIf="mappingForm.controls.stalePeriod.hasError('required')">
+              Stale Period is required.
+            </mat-error>
+
+            <mat-error *ngIf="mappingForm.controls.stalePeriod.hasError('min')">
+              Stale Period cannot be negative.
+            </mat-error>
+          </mat-form-field>
+
+        </div>
+
+        <!-- Boolean Settings -->
+        <div fxLayout="row wrap" fxLayoutAlign="start center" fxLayoutGap="24px" class="m-t-16 m-b-16">
+
+          <!-- Credit Check Mandatory -->
+          <mat-checkbox formControlName="isCreditcheckMandatory"
+            matTooltip="When enabled, a successful credit bureau check is mandatory before the loan can proceed."
+            matTooltipPosition="right">
+            Credit Check Mandatory
+          </mat-checkbox>
+
+          <!-- Skip on Failure -->
+          <mat-checkbox formControlName="skipCreditcheckInFailure"
+            matTooltip="When enabled, the loan process may continue if the credit bureau check fails or the provider is unavailable, subject to other loan approval rules."
+            matTooltipPosition="right">
+            Skip Credit Check on Failure
+          </mat-checkbox>
+
+          <!-- Active -->
+          <mat-checkbox formControlName="isActive"
+            matTooltip="Determines whether this credit bureau mapping is active and available for the selected loan product."
+            matTooltipPosition="right">
+            Active
+          </mat-checkbox>
+
+        </div>
+
+      </mat-card-content>
+
+      <mat-card-actions fxLayout="row" fxLayoutAlign="center" fxLayoutGap="5px">
+
+        <button type="button" mat-raised-button (click)="cancel()">
+          Cancel
+        </button>
+
+        <button type="submit" mat-raised-button color="primary" [disabled]="mappingForm.invalid || isSubmitting ||
+              isLoading || (mode === 'create' && loanProducts.length === 0)">
+          {{ mode === 'create' ? 'Create Mapping' : 'Save Changes' }}
+        </button>
+
+      </mat-card-actions>
+
+    </form>
+
+  </mat-card>
+
+</div>

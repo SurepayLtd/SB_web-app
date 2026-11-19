@@ -206,6 +206,20 @@
               {{ 'labels.text.Two-factor authentication configuration' | translate }}
             </p>
           </mat-list-item>
+
+          <mat-list-item>
+            <mat-icon matListIcon [routerLink]="['credit-bureau']">
+              <fa-icon icon="money-check" size="sm"></fa-icon>
+            </mat-icon>
+            <h4 matLine [routerLink]="['credit-bureau']">
+              {{ 'labels.heading.Credit Bureau' | translate }}
+            </h4>
+            <fa-icon (click)="arrowBooleansToggle(14)" *ngIf="!arrowBooleans[14]" icon="arrow-down" size="md"></fa-icon>
+            <fa-icon (click)="arrowBooleansToggle(14)" *ngIf="arrowBooleans[14]" icon="arrow-up" size="md"></fa-icon>
+            <p matLine *ngIf="arrowBooleans[14]" [routerLink]="['credit-bureau']">
+              {{ 'labels.text.Credit Bureau Configuration' | translate }}
+            </p>
+          </mat-list-item>
         </mat-nav-list>
       </div>
     </div>

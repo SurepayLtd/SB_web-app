@@ -303,11 +303,9 @@
         <button mat-menu-item (click)="doAction('Transfer Client')">
           {{ 'labels.buttons.Transfer Client' | translate }}
         </button>
-        <span *ngIf="clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Not Started'"
-        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBCONSENT'" (click)="doAction('Crb Consent')">
+        <button mat-menu-item *mifosxHasPermission="'CREATE_CRBCONSENT'" (click)="doAction('Crb Consent')">
             {{ 'labels.buttons.CRB Consent' | translate }}
-          </button>
-        </span>
+        </button>
         <span *ngIf="(clientViewData.status.value === 'Crb Pending' && clientViewData.crbVerificationStatus.value === 'Pending') ||
         (clientViewData.status.value === 'Pending' && clientViewData.crbVerificationStatus.value === 'Verified')">
           <button mat-menu-item *mifosxHasPermission="'CREATE_CRBCHECK'" (click)="doAction('Crb Check')">
@@ -317,6 +315,16 @@
         <span *ngIf="clientViewData.status.value === 'Pending'"
           ><button mat-menu-item (click)="doAction('Activate')">
             {{ 'labels.buttons.Activate' | translate }}
+          </button></span
+        >
+        <span *ngIf="clientViewData.status.value === 'Pending' || clientViewData.status.value === 'Active'"
+        ><button mat-menu-item *mifosxHasPermission="'CREATE_CRBKYC'" (click)="doAction('Kyc Enquiry')">
+            {{ 'labels.buttons.Kyc Enquiry' | translate }}
+          </button></span
+        >
+        <span *ngIf="clientViewData.status.value === 'Pending' || clientViewData.status.value === 'Active'"
+        ><button mat-menu-item *mifosxHasPermission="'GET_CREDITREPORT'" (click)="doAction('Kyc Report')">
+            {{ 'labels.buttons.Kyc Report' | translate }}
           </button></span
         >
         <span *ngIf="clientViewData.status.value === 'Pending'"
@@ -436,6 +444,26 @@
         *mifosxHasPermission="'READ_CRBCHECK'"
       >
         {{ 'labels.inputs.Crb Check' | translate }}
+      </a>
+      <a
+        mat-tab-link
+        [routerLink]="['./kyc-enquiry']"
+        routerLinkActive
+        #kyc="routerLinkActive"
+        [active]="kyc.isActive"
+        *mifosxHasPermission="'READ_CRBKYC'"
+      >
+        {{ 'labels.inputs.Kyc Enquiry' | translate }}
+      </a>
+      <a
+        mat-tab-link
+        [routerLink]="['./kyc-report']"
+        routerLinkActive
+        #kycReport="routerLinkActive"
+        [active]="kycReport.isActive"
+        *mifosxHasPermission="'READ_CRBKYC'"
+      >
+        {{ 'labels.inputs.Kyc Report' | translate }}
       </a>
       <a
         mat-tab-link

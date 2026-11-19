@@ -61,6 +61,8 @@ export class ClientActionsResolver implements Resolve<Object> {
         return this.clientsService.getClientData(clientId);
       case 'Crb Consent':
         return this.clientsService.getCrbConsentTemplate();
+      case 'Kyc Enquiry':
+        return this.clientsService.getClientCommandTemplate('kyc');
       default:
         return undefined;
     }

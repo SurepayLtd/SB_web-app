@@ -52,6 +52,9 @@ export class LoanAccountActionsComponent {
     'Interest Payment Waiver': boolean;
     'Add Interest Pause': boolean;
     'Mass Penalty Waiver': boolean;
+    'Credit Enquiry': boolean;
+    'Credit Score': boolean;
+    'Credit Report': boolean;
   } = {
     Close: false,
     'Undo Approval': false,
@@ -88,7 +91,10 @@ export class LoanAccountActionsComponent {
     'Re-Amortize': false,
     'Interest Payment Waiver': false,
     'Add Interest Pause': false,
-    'Mass Penalty Waiver': false
+    'Mass Penalty Waiver': false,
+    'Credit Enquiry': false,
+    'Credit Score': false,
+    'Credit Report': false,
   };
 
   actionButtonData: any;

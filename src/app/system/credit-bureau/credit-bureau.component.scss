@@ -1,0 +1,25 @@
+.credit-bureau-card {
+  height: 100%;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+    border-color: var(--mdc-theme-primary, #1b4965);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mdc-theme-primary, #1b4965);
+    outline-offset: 3px;
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+}
+

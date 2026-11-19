@@ -1,0 +1,146 @@
+<div class="container">
+
+  <!-- Page heading -->
+  <div fxLayout="row" fxLayoutAlign="space-between center" class="m-b-16">
+    <div>
+      <h3>Organisation Credit Bureau</h3>
+      <p class="text-muted">
+        View organisation configuration and manage its loan product mappings.
+      </p>
+    </div>
+
+    <button mat-raised-button color="primary" (click)="addMapping()">
+      <fa-icon icon="plus"></fa-icon>
+      Add Mapping
+    </button>
+  </div>
+
+  <!-- Organisation information -->
+  <mat-card class="organisation-card">
+    <mat-card-content>
+
+      <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+        <div class="provider-icon">
+          <fa-icon icon="money-check" size="2x"></fa-icon>
+        </div>
+
+        <div fxFlex>
+          <h3>{{ organisation.alias || 'Organisation' }}</h3>
+          <span class="text-muted">
+            {{ organisation.creditbureauSummary || 'Credit Bureau Organisation' }}
+          </span>
+        </div>
+
+        <div class="text-muted">
+          Organisation ID: {{ organisationBureauId }}
+        </div>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+  <div class="section-separator">
+    <mat-divider></mat-divider>
+  </div>
+
+  <!-- Loan product mappings -->
+  <mat-card class="mappings-card">
+
+    <mat-card-header>
+      <mat-card-title>Loan Product Mappings</mat-card-title>
+      <mat-card-subtitle>
+        Credit bureau configurations assigned to loan products.
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <div class="table-responsive">
+
+        <table mat-table [dataSource]="mappings" class=" mat-elevation-z1">
+
+          <!-- Loan Product -->
+          <ng-container matColumnDef="loanProductName">
+            <th mat-header-cell *matHeaderCellDef>Loan Product</th>
+            <td mat-cell *matCellDef="let mapping">
+              {{ mapping.loanProductName }}
+            </td>
+          </ng-container>
+
+          <!-- Credit Bureau -->
+          <ng-container matColumnDef="creditbureauSummary">
+            <th mat-header-cell *matHeaderCellDef>Credit Bureau</th>
+            <td mat-cell *matCellDef="let mapping">
+              {{ mapping.creditbureauSummary }}
+            </td>
+          </ng-container>
+
+          <!-- Mandatory -->
+          <ng-container matColumnDef="mandatory">
+            <th mat-header-cell *matHeaderCellDef>Credit Check Mandatory</th>
+            <td mat-cell *matCellDef="let mapping">
+              {{ mapping.isCreditCheckMandatory ? 'Yes' : 'No' }}
+            </td>
+          </ng-container>
+
+          <!-- Skip on Failure -->
+          <ng-container matColumnDef="skipOnFailure">
+            <th mat-header-cell *matHeaderCellDef>Skip on Failure</th>
+            <td mat-cell *matCellDef="let mapping">
+              {{ mapping.skipCrediCheckInFailure ? 'Yes' : 'No' }}
+            </td>
+          </ng-container>
+
+          <!-- Stale Period -->
+          <ng-container matColumnDef="stalePeriod">
+            <th mat-header-cell *matHeaderCellDef>Stale Period</th>
+            <td mat-cell *matCellDef="let mapping">
+              {{ mapping.stalePeriod }} days
+            </td>
+          </ng-container>
+
+          <!-- Status -->
+          <ng-container matColumnDef="active">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let mapping">
+              <span
+                class="status"
+                [ngClass]="mapping.active ? 'active' : 'inactive'">
+                {{ mapping.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let mapping">
+
+              <button mat-icon-button matTooltip="View Mapping" (click)="viewMapping(mapping)">
+                <fa-icon icon="eye"></fa-icon>
+              </button>
+
+              <button mat-icon-button color="primary" matTooltip="Edit Mapping" (click)="editMapping(mapping)">
+                <fa-icon icon="edit"></fa-icon>
+              </button>
+
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center" colspan="7">
+              No loan product mappings configured for this organisation.
+            </td>
+          </tr>
+
+        </table>
+
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
