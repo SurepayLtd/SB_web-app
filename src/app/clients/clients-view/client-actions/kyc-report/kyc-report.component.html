@@ -49,25 +49,36 @@
             </mat-label>
 
             <mat-select formControlName="crbReportFormat" required>
-              <mat-option
-                *ngFor="let format of creditReportFormatTypes"
-                [value]="format.id"
-              >
-                {{ format.value }}
+              <mat-option *ngFor="let format of creditReportFormatTypes" [value]="format.id">
+                {{ format.value | uppercase }}
               </mat-option>
             </mat-select>
 
-            <mat-error
-              *ngIf="kycReportForm.controls.crbReportFormat.hasError('required')"
-            >
-              {{ 'labels.inputs.Report Format' | translate }}
-              {{ 'labels.commons.is' | translate }}
-              <strong>{{ 'labels.commons.required' | translate }}</strong>
+            <mat-error *ngIf="kycReportForm.controls.crbReportFormat.hasError('required')">
+              Report Format is <strong>required</strong>
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Report Action -->
+          <mat-form-field fxFlex="48%" *ngIf="kycReportForm.get('crbReportAction')?.enabled">
+            <mat-label>
+              {{ 'labels.inputs.Report Action' | translate }}
+            </mat-label>
+
+            <mat-select formControlName="crbReportAction" required>
+              <mat-option *ngFor="let action of creditReportActionTypes" [value]="action.id">
+                {{ action.value | titlecase }}
+              </mat-option>
+            </mat-select>
+
+            <mat-error *ngIf="kycReportForm.get('crbReportAction')?.hasError('required')">
+              Report Action is <strong>required</strong>
             </mat-error>
           </mat-form-field>
 
         </div>
       </mat-card-content>
+
 
       <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
         <button type="button" mat-raised-button (click)="cancel()" [disabled]="isSubmitting">

@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClientsService } from '../../../clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -15,11 +15,15 @@ import { finalize } from 'rxjs/operators';
 })
 export class KycReportComponent implements OnInit {
 
+  @Output() reportFormatChangeEvent = new EventEmitter<{ reportFormat: number }>();
+
   clientId: any;
 
   creditBureaus: any[] = [];
   creditReportTypes: any[] = [];
   creditReportFormatTypes: any[] = [];
+  creditReportActionTypes: any[] = [];
+
 
   isLoadingBureau = false;
   isLoadingTemplate = false;
@@ -52,6 +56,7 @@ export class KycReportComponent implements OnInit {
 
   ngOnInit(): void {
     this.createReportForm();
+    this.buildDependencies();
     this.loadCreditBureau();
     this.loadTemplate();
   }
@@ -77,6 +82,30 @@ export class KycReportComponent implements OnInit {
         '',
         Validators.required
       ],
+      crbReportAction: ['']
+    });
+  }
+
+  /**
+   * Adds controls conditionally.
+   */
+  buildDependencies(): void {
+    const reportFormatControl = this.kycReportForm.get('crbReportFormat');
+    const reportActionControl = this.kycReportForm.get('crbReportAction');
+
+    reportFormatControl?.valueChanges.subscribe((reportFormat: number) => {
+      this.reportFormatChangeEvent.emit({ reportFormat });
+
+      if (reportFormat === 1) {
+        reportActionControl?.clearValidators();
+        reportActionControl?.reset(null, { emitEvent: false });
+        reportActionControl?.disable({ emitEvent: false });
+      } else {
+        reportActionControl?.setValidators([Validators.required]);
+        reportActionControl?.enable({ emitEvent: false });
+      }
+
+      reportActionControl?.updateValueAndValidity({ emitEvent: false });
     });
   }
 
@@ -125,7 +154,8 @@ export class KycReportComponent implements OnInit {
           // Only KYC Report (600), excluding Credit Report (500).
           this.creditReportTypes = (template?.creditReportTypes || []).filter((type: any) => type.id === 600);
 
-          this.creditReportFormatTypes = (template?.creditReportFormatTypes || []).filter((type: any) => type.id === 1);
+          this.creditReportFormatTypes = template?.creditReportFormatTypes || [];
+          this.creditReportActionTypes = template?.creditReportActionTypes || [];
 
           this.kycReportForm.patchValue({
             crbReportType: this.creditReportTypes[0]?.id ?? null,

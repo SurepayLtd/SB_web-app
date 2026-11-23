@@ -1,5 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { CrbCreditReportCheck } from '../../../loans/models/loan-account.model';
+import {
+  CrbConsentDocViewerDialogComponent,
+  CrbDocViewerData
+} from '../custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
+import { LoansService } from '../../../loans/loans.service';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 export interface KycReportCheck {
   id: number;
@@ -17,6 +25,9 @@ export interface KycReportCheck {
 
   createdAt: number[];
   completedAt: number[];
+
+  reportToken?: string;
+  reportUrl?: string;
 
   responseDetails: Record<string, unknown>;
 
@@ -124,7 +135,12 @@ export class KycReportTabComponent implements OnInit {
 
   checks: KycReportCheck[] = [];
 
-  constructor(private route: ActivatedRoute) {
+  constructor(
+              private route: ActivatedRoute,
+              private loanService: LoansService,
+              private dialog: MatDialog,
+              private snackBar: MatSnackBar
+  ) {
     this.route.data.subscribe((data: { kycReportData: KycReportCheck[] }) => {
       this.checks = this.parseKycReportChecks(data.kycReportData || []);
     });
@@ -159,6 +175,93 @@ export class KycReportTabComponent implements OnInit {
   /** True when the JSON payload contains a full kyc_information body. */
   hasJson(check: KycReportCheck): boolean {
     return !!check.parsedResponse?.kyc_information;
+  }
+
+  hasPdf(check: KycReportCheck): boolean {
+    return this.hasValue(check.reportUrl);
+  }
+
+  openKycReportPdf(check: KycReportCheck): void {
+    if (!check?.reportUrl) return;
+
+    const blobUrl$ = this.loanService.getCrbCreditReportPdf(check.id);
+
+    blobUrl$.subscribe({
+      next: (response: any) => {
+        const blob = this.toBlob(response);
+        if (!blob) {
+          this.snackBar.open('The kyc report PDF is empty.', 'Close', { duration: 5000 });
+          return;
+        }
+
+        const blobUrl = URL.createObjectURL(blob) + '#view=FitH';
+
+        const data: CrbDocViewerData = {
+          title: 'KYC Report',
+          subtitle: `${check.clientName ?? ''}`  || 'KYC report',
+          blobUrl,
+          fileName: this.reportFileName(check),
+        };
+
+        const ref = this.dialog.open(CrbConsentDocViewerDialogComponent, {
+          width: '95vw',
+          maxWidth: '95vw',
+          height: '95vh',
+          maxHeight: '95vh',
+          panelClass: 'crb-doc-viewer-panel',
+          data,
+        });
+
+        // Free memory as soon as the modal closes
+        ref.afterClosed().subscribe(() => URL.revokeObjectURL(blobUrl));
+      },
+      error: (error) => {
+        this.snackBar.open(
+          error?.error?.defaultUserMessage || 'Failed to load the kyc report PDF.',
+          'Close',
+          { duration: 5000 }
+        );
+      },
+    });
+  }
+
+  /** Normalise a service response into a Blob (handles Blob, ArrayBuffer, string). */
+  private toBlob(response: any): Blob | null {
+    if (response instanceof Blob) return response;
+    if (response instanceof ArrayBuffer) {
+      return new Blob([response], { type: 'application/pdf' });
+    }
+    if (typeof response === 'string' || response instanceof Uint8Array) {
+      return new Blob([response], { type: 'application/pdf' });
+    }
+    return null;
+  }
+
+  /** Friendly download / modal filename. */
+  private reportFileName(check: KycReportCheck): string {
+    const safe = (check.clientName ?? 'client').replace(/[^a-z0-9]+/gi, '_');
+    return `KYC_Report_${safe}_${check.id}.pdf`;
+  }
+
+  downloadKycReportPdf(check: KycReportCheck): void {
+    if (!check?.reportUrl) return;
+
+    this.loanService.getCrbCreditReportPdf(check.id).subscribe({
+      next: (res: any) => {
+        const blob = this.toBlob(res);
+        if (!blob) return;
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = this.reportFileName(check);
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.snackBar.open('Failed to download the KYC report PDF.', 'Close', { duration: 5000 });
+      },
+    });
   }
 
   statusLabel(status: { value?: string; code?: string } | string | null | undefined): string {
