@@ -80,6 +80,16 @@
               {{ labelOf(check.requestType) }}
             </span>
           </div>
+          <div class="pdf-actions" *ngIf="hasPdf(check)">
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="openKycReportPdf(check)">
+              <mat-icon>visibility</mat-icon>
+              View PDF Report
+            </button>
+          </div>
         </div>
 
         <!-- Parse error -->
@@ -99,10 +109,22 @@
         </div>
 
         <!-- Payload exists but no kyc_information -->
+        <!-- PDF only -->
+        <div class="report-notice report-notice--pdf"
+             *ngIf="check.parsedResponse && !hasJson(check) && hasPdf(check)">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>This attempt has a <strong>PDF report only</strong>.
+                The CRB returned a request acknowledgement without the
+                structured KYC information.
+                Use <em>View PDF Report</em> above to open it.
+           </span>
+        </div>
+
+        <!-- No structured data and no PDF -->
         <div class="report-notice report-notice--muted"
-             *ngIf="check.parsedResponse && !hasJson(check)">
+             *ngIf="check.parsedResponse && !hasJson(check) && !hasPdf(check)">
           <mat-icon>info</mat-icon>
-          <span>The provider response does not contain kyc_information.</span>
+          <span>The provider response does not contain kyc_information, and no PDF report is available.</span>
         </div>
 
         <ng-container *ngIf="hasJson(check) && check.parsedResponse!.kyc_information as info">

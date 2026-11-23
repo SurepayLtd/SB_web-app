@@ -39,7 +39,7 @@
           </mat-form-field>
 
           <!-- Report Format -->
-          <mat-form-field fxFlex="48%">
+          <mat-form-field fxFlex="48%" >
             <mat-label>
               {{ 'labels.inputs.Report Format' | translate }}
             </mat-label>
@@ -56,7 +56,7 @@
           </mat-form-field>
 
           <!-- Report Action -->
-          <mat-form-field fxFlex="48%">
+          <mat-form-field fxFlex="48%" *ngIf="creditReportForm.get('crbReportAction')?.enabled">
             <mat-label>
               {{ 'labels.inputs.Report Action' | translate }}
             </mat-label>

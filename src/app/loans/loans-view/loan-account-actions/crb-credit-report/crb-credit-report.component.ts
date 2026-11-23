@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClientsService } from '../../../../clients/clients.service';
@@ -14,6 +14,8 @@ import { SystemService } from '../../../../system/system.service';
   styleUrls: ['./crb-credit-report.component.scss']
 })
 export class CrbCreditReportComponent implements OnInit {
+  @Output() reportFormatChangeEvent = new EventEmitter<{ format: number }>();
+
   loanId: any;
 
   creditBureaus: any[] = [];
@@ -43,6 +45,7 @@ export class CrbCreditReportComponent implements OnInit {
 
   ngOnInit(): void {
     this.createReportForm();
+    this.buildDependencies();
     this.loadCreditBureau();
     this.loadTemplate();
   }
@@ -68,12 +71,32 @@ export class CrbCreditReportComponent implements OnInit {
         '',
         Validators.required
       ],
-      crbReportAction: [
-        '',
-        Validators.required
-      ]
+      crbReportAction: ['']
+    });
+  }  /**
+   * Adds controls conditionally.
+   */
+  buildDependencies(): void {
+    const reportFormControl = this.creditReportForm.get('crbReportFormat');
+    const reportActionControl = this.creditReportForm.get('crbReportAction');
+
+    reportFormControl?.valueChanges.subscribe((format: number) => {
+      this.reportFormatChangeEvent.emit({ format });
+
+      if (format === 1) {
+        reportActionControl?.clearValidators();
+        reportActionControl?.reset(null, { emitEvent: false });
+        reportActionControl?.disable({ emitEvent: false });
+      } else {
+        reportActionControl?.setValidators([Validators.required]);
+        reportActionControl?.enable({ emitEvent: false });
+      }
+
+      reportActionControl?.updateValueAndValidity({ emitEvent: false });
     });
   }
+
+
 
   /**
    * Loads available credit bureaus.
@@ -127,7 +150,6 @@ export class CrbCreditReportComponent implements OnInit {
           this.creditReportForm.patchValue({
             crbReportType: this.creditReportTypes[0]?.id ?? null,
             crbReportFormat: this.creditReportFormatTypes[0]?.id ?? null,
-            crbReportAction: this.creditReportActionTypes[0]?.id ?? null
           });
         },
         error: () => {
