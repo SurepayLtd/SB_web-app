@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   CrbScore,
@@ -6,6 +6,17 @@ import {
   CreditScoreAttempt,
   MnoScore,
 } from '../../models/loan-account.model';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelDescription,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 
 /** A flattened score-history row for the template. */
 interface ScoreHistoryRow {
@@ -23,12 +34,24 @@ interface MnoPhoneRow {
   selector: 'mifosx-crb-credit-score-tab',
   templateUrl: './crb-credit-score-tab.component.html',
   styleUrls: ['./crb-credit-score-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelDescription,
+    MatIcon,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ]
 })
 export class CrbCreditScoreTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
 
   creditScoreAttempts: CreditScoreAttempt[] = [];
 
-  constructor(private route: ActivatedRoute) {
+  constructor() {
     this.route.data.subscribe((data: { creditScoreData: CreditScoreAttempt[] }) => {
       this.creditScoreAttempts = this.parseCreditScoreChecks(data.creditScoreData || []);
     });

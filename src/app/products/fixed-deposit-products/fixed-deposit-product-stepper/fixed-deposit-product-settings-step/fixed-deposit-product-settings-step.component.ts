@@ -1,13 +1,44 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, UntypedFormControl, Validators } from '@angular/forms';
-import { TooltipPosition } from '@angular/material/tooltip';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, OnInit, Input, inject } from '@angular/core';
+import {
+  UntypedFormGroup,
+  UntypedFormBuilder,
+  UntypedFormControl,
+  Validators,
+  ReactiveFormsModule
+} from '@angular/forms';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatDivider } from '@angular/material/divider';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-fixed-deposit-product-settings-step',
   templateUrl: './fixed-deposit-product-settings-step.component.html',
-  styleUrls: ['./fixed-deposit-product-settings-step.component.scss']
+  styleUrls: ['./fixed-deposit-product-settings-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatTooltip,
+    MatDivider,
+    MatCheckbox,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FixedDepositProductSettingsStepComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+
   @Input() fixedDepositProductsTemplate: any;
 
   fixedDepositProductSettingsForm: UntypedFormGroup;
@@ -17,7 +48,7 @@ export class FixedDepositProductSettingsStepComponent implements OnInit {
   preClosurePenalInterestOnTypeData: any;
   taxGroupData: any;
 
-  constructor(private formBuilder: UntypedFormBuilder) {
+  constructor() {
     this.createFixedDepositProductSettingsForm();
     this.setConditionalControls();
   }
@@ -43,11 +74,11 @@ export class FixedDepositProductSettingsStepComponent implements OnInit {
           : '',
         inMultiplesOfDepositTerm: this.fixedDepositProductsTemplate.inMultiplesOfDepositTerm,
         inMultiplesOfDepositTermTypeId: this.fixedDepositProductsTemplate.inMultiplesOfDepositTermType
-          ? this.fixedDepositProductsTemplate.inMultiplesOfDepositTerm.id
+          ? this.fixedDepositProductsTemplate.inMultiplesOfDepositTermType.id
           : '',
         maxDepositTerm: this.fixedDepositProductsTemplate.maxDepositTerm,
         maxDepositTermTypeId: this.fixedDepositProductsTemplate.maxDepositTermType
-          ? this.fixedDepositProductsTemplate.minDepositTermType.id
+          ? this.fixedDepositProductsTemplate.maxDepositTermType.id
           : '',
         preClosurePenalApplicable: this.fixedDepositProductsTemplate.preClosurePenalApplicable,
         preClosurePenalInterest: this.fixedDepositProductsTemplate.preClosurePenalInterest,
@@ -67,22 +98,37 @@ export class FixedDepositProductSettingsStepComponent implements OnInit {
 
   createFixedDepositProductSettingsForm() {
     this.fixedDepositProductSettingsForm = this.formBuilder.group({
-      lockinPeriodFrequency: [''],
+      lockinPeriodFrequency: [
+        '',
+        Validators.min(0)
+      ],
       lockinPeriodFrequencyType: [''],
       minDepositTerm: [
         '',
-        Validators.required
+        [
+          Validators.required,
+          Validators.min(0)
+        ]
       ],
       minDepositTermTypeId: [
         '',
         Validators.required
       ],
-      inMultiplesOfDepositTerm: [''],
+      inMultiplesOfDepositTerm: [
+        '',
+        Validators.min(0)
+      ],
       inMultiplesOfDepositTermTypeId: [''],
-      maxDepositTerm: [''],
+      maxDepositTerm: [
+        '',
+        Validators.min(0)
+      ],
       maxDepositTermTypeId: [''],
       preClosurePenalApplicable: [false],
-      preClosurePenalInterest: [''],
+      preClosurePenalInterest: [
+        '',
+        Validators.min(0)
+      ],
       preClosurePenalInterestOnTypeId: [''],
       withHoldTax: [false]
     });

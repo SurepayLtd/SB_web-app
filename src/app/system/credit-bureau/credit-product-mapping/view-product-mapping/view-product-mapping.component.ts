@@ -1,28 +1,31 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'mifosx-view-product-mapping',
   templateUrl: './view-product-mapping.component.html',
-  styleUrls: ['./view-product-mapping.component.scss']
+  styleUrls: ['./view-product-mapping.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    FaIconComponent,
+  ]
 })
 export class ViewProductMappingComponent implements OnInit {
+
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   /**
    * Credit Bureau Loan Product Mapping details.
    * Contains the mapping configuration retrieved by the route resolver.
    */
   mapping: any;
 
-  /**
-   * Creates an instance of ViewProductMappingComponent.
-   *
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Angular Router.
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
+
+  constructor() {
     this.route.data.subscribe((data: any) => {
       this.mapping = data.mapping;
     });

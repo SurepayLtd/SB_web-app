@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 .password-never-expires-wrapper {
   padding: 17.5px 0;
 }
@@ -10,4 +18,10 @@
   color: #f44336;
   font-size: 80%;
   margin: 0;
+}
+
+.password-policy-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 80%;
+  margin: 0 0 16px;
 }

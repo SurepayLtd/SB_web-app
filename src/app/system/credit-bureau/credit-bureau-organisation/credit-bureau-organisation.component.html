@@ -1,7 +1,7 @@
 <div class="container">
 
   <!-- Page heading -->
-  <div fxLayout="row" fxLayoutAlign="space-between center" class="m-b-16">
+  <div class="layout-row align-center justify-space-between m-b-16 responsive-column gap-16px">
     <div>
       <h3>Organisation Credit Bureau</h3>
       <p class="text-muted">
@@ -19,12 +19,13 @@
   <mat-card class="organisation-card">
     <mat-card-content>
 
-      <div fxLayout="row" fxLayoutAlign="start center" fxLayoutGap="16px">
+      <div class="layout-row align-center gap-16px">
+
         <div class="provider-icon">
           <fa-icon icon="money-check" size="2x"></fa-icon>
         </div>
 
-        <div fxFlex>
+        <div class="flex-fill">
           <h3>{{ organisation.alias || 'Organisation' }}</h3>
           <span class="text-muted">
             {{ organisation.creditbureauSummary || 'Credit Bureau Organisation' }}
@@ -34,6 +35,7 @@
         <div class="text-muted">
           Organisation ID: {{ organisationBureauId }}
         </div>
+
       </div>
 
     </mat-card-content>
@@ -57,7 +59,7 @@
 
       <div class="table-responsive">
 
-        <table mat-table [dataSource]="mappings" class=" mat-elevation-z1">
+        <table mat-table [dataSource]="mappings" class="mat-elevation-z1">
 
           <!-- Loan Product -->
           <ng-container matColumnDef="loanProductName">
@@ -128,6 +130,7 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
           <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
 
           <tr class="mat-row" *matNoDataRow>
@@ -141,6 +144,7 @@
       </div>
 
     </mat-card-content>
+
   </mat-card>
 
 </div>

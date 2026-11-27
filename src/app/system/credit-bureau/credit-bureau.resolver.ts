@@ -1,8 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   Router, Resolve,
-  RouterStateSnapshot,
-  ActivatedRouteSnapshot
 } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { SystemService } from '../system.service';
@@ -11,10 +9,9 @@ import { SystemService } from '../system.service';
   providedIn: 'root'
 })
 export class CreditBureauResolver implements Resolve<Object> {
-  /**
-   * @param {SystemService} systemService System service.
-   */
-  constructor(private systemService: SystemService) {}
+  private systemService = inject(SystemService);
+
+  constructor() {}
 
   /**
    * Returns the Bureau data.

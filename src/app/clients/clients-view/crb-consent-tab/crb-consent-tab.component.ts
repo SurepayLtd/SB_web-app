@@ -1,26 +1,55 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { formatDate } from '@angular/common';
 
 /** Custom Dialogs */
 import { CrbConsentOtpDialogComponent } from '../custom-dialogs/crb-consent-otp-dialog/crb-consent-otp-dialog.component';
-import { CrbConsentRevokeDialogComponent } from '../custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
 import { CrbConsentDocViewerDialogComponent, CrbDocViewerData} from '../custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
-import { ConfirmationDialogComponent } from '../../../shared/confirmation-dialog/confirmation-dialog.component';
 
 /** Custom Services */
 import { ClientsService } from '../../clients.service';
 import { SettingsService } from 'app/settings/settings.service';
+import { formatDate } from '@angular/common';
+import { CrbConsentRevokeDialogComponent } from '../custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ConfirmationDialogComponent } from 'app/shared/confirmation-dialog/confirmation-dialog.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'mifosx-crb-consent-tab',
   templateUrl: './crb-consent-tab.component.html',
   styleUrls: ['./crb-consent-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatIconModule,
+    FontAwesomeModule,
+    MatDividerModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
+  ]
 })
 export class CrbConsentTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private clientsService = inject(ClientsService);
+  private settingsService = inject(SettingsService);
+  private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   /** Component Properties */
   consentData: any;
@@ -44,13 +73,7 @@ export class CrbConsentTabComponent implements OnInit {
   readonly REVOKED = 3;
   readonly REACTIVATED = 4;
 
-  constructor(
-    private route: ActivatedRoute,
-    private clientsService: ClientsService,
-    private settingsService: SettingsService,
-    public dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { consentData: any; clientViewData: any }) => {
       this.consentData = data.consentData;
       this.clientViewData = data.clientViewData;
@@ -215,6 +238,7 @@ export class CrbConsentTabComponent implements OnInit {
       });
   }
 
+
   reactivateConsent(): void {
     if (!this.consentData?.id || this.isProcessing || !this.canReactivateConsent) return;
 
@@ -336,32 +360,30 @@ export class CrbConsentTabComponent implements OnInit {
     this.documentLoading = true;
     this.documentError = '';
 
-    this.clientsService.getCrbConsentDoc(this.consentData.id, this.consentData.documentId)
-      .subscribe({
-        next: (response: any) => {
-          this.documentLoading = false;
+    this.clientsService.getCrbConsentDoc(this.consentData.id, this.consentData.documentId).subscribe({
+      next: (response: any) => {
+        this.documentLoading = false;
 
-          const blob = this.toBlob(response);
-          if (!blob) {
-            this.documentError = 'The consent document is empty.';
-            this.snackBar.open(this.documentError, 'Close', { duration: 5000 });
-            return;
-          }
-
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = this.documentFileName();
-          link.click();
-          URL.revokeObjectURL(url);
-        },
-        error: (error) => {
-          this.documentLoading = false;
-          this.documentError =
-            error?.error?.defaultUserMessage || 'Failed to download the consent document.';
+        const blob = this.toBlob(response);
+        if (!blob) {
+          this.documentError = 'The consent document is empty.';
           this.snackBar.open(this.documentError, 'Close', { duration: 5000 });
-        },
-      });
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = this.documentFileName();
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        this.documentLoading = false;
+        this.documentError = error?.error?.defaultUserMessage || 'Failed to download the consent document.';
+        this.snackBar.open(this.documentError, 'Close', { duration: 5000 });
+      }
+    });
   }
 
   /** Normalise the service response into a Blob. */
@@ -370,8 +392,15 @@ export class CrbConsentTabComponent implements OnInit {
     if (response instanceof ArrayBuffer) {
       return new Blob([response], { type: 'application/pdf' });
     }
-    if (typeof response === 'string' || response instanceof Uint8Array) {
+    if (typeof response === 'string') {
       return new Blob([response], { type: 'application/pdf' });
+    }
+
+    if (response instanceof Uint8Array) {
+      const buffer = new ArrayBuffer(response.byteLength);
+      new Uint8Array(buffer).set(response);
+
+      return new Blob([buffer], { type: 'application/pdf' });
     }
     return null;
   }

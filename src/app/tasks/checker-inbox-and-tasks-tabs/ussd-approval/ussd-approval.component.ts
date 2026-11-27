@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { Dialog } from '@angular/cdk/dialog';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Dates } from '../../../core/utils/dates';
 import * as _ from 'lodash';
@@ -10,13 +18,35 @@ import { TranslateService } from '@ngx-translate/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { SelectionModel } from '@angular/cdk/collections';
 import { ConfirmationDialogComponent } from '../../../shared/confirmation-dialog/confirmation-dialog.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTabsModule } from '@angular/material/tabs';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { MatTableModule } from '@angular/material/table';
+import { FormatNumberPipe } from 'app/pipes/format-number.pipe';
 
 @Component({
   selector: 'mifosx-ussd-approval',
   templateUrl: './ussd-approval.component.html',
-  styleUrls: ['./ussd-approval.component.scss']
+  styleUrls: ['./ussd-approval.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatTabsModule,
+    FontAwesomeModule,
+    MatTableModule,
+    FormatNumberPipe
+  ]
 })
 export class UssdApprovalComponent {
+  private route = inject(ActivatedRoute);
+  private dialog = inject(MatDialog);
+  private dateUtils = inject(Dates);
+  private router = inject(Router);
+  private translateService = inject(TranslateService);
+  private settingsService = inject(SettingsService);
+  private tasksService = inject(TasksService);
+
   /** Offices Data */
   offices: any;
   /** Loans Data */
@@ -28,7 +58,7 @@ export class UssdApprovalComponent {
   /** Row Selection Data */
   selection: SelectionModel<any>;
   /** Map data */
-  idToNodeMap = {};
+  idToNodeMap: { [key: number]: any } = {};
   /** Grouped Office Data */
   officesArray: any[];
   /** List of Requests */
@@ -50,15 +80,7 @@ export class UssdApprovalComponent {
    * @param {SettingsService} settingsService Settings Service.
    * @param {TasksService} tasksService Tasks Service.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private dialog: MatDialog,
-    private dateUtils: Dates,
-    private router: Router,
-    private translateService: TranslateService,
-    private settingsService: SettingsService,
-    private tasksService: TasksService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { officesData: any; ussdLoansData: any }) => {
       this.offices = data.officesData;
       this.loans = data.ussdLoansData.pageItems;
@@ -74,7 +96,7 @@ export class UssdApprovalComponent {
     });
     this.loans.forEach((loanEle: any) => {
       if (loanEle.status.pendingApproval) {
-        let tempOffice = {};
+        let tempOffice: any = {};
         if (loanEle.clientOfficeId) {
           tempOffice = this.idToNodeMap[loanEle.clientOfficeId];
           tempOffice['loans'].push(loanEle);

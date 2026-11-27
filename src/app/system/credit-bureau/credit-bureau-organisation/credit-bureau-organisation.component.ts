@@ -1,13 +1,47 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SystemService } from '../../system.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatDivider } from '@angular/material/list';
+import { MatCardHeader, MatCardSubtitle, MatCardTitle } from '@angular/material/card';
+import { MatCell, MatCellDef, MatColumnDef, MatHeaderCell,
+  MatHeaderCellDef, MatHeaderRow, MatHeaderRowDef, MatNoDataRow, MatRow, MatRowDef, MatTable } from '@angular/material/table';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'mifosx-credit-bureau-organisation',
   templateUrl: './credit-bureau-organisation.component.html',
-  styleUrls: ['./credit-bureau-organisation.component.scss']
+  styleUrls: ['./credit-bureau-organisation.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    FaIconComponent,
+    MatDivider,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatColumnDef,
+    MatHeaderCell,
+    MatCell,
+    MatHeaderRow,
+    MatRow,
+    MatTooltip,
+    MatTable,
+    MatHeaderRowDef,
+    MatRowDef,
+    MatNoDataRow,
+    MatHeaderCellDef,
+    MatCellDef,
+  ]
 })
 export class CreditBureauOrganisationComponent implements OnInit {
+
+
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private systemService = inject(SystemService);
   /**
    * Organisation Credit Bureau Data.
    *
@@ -44,16 +78,8 @@ export class CreditBureauOrganisationComponent implements OnInit {
     'actions'
   ];
 
-  /**
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Angular Router.
-   * @param systemService
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private systemService: SystemService
-  ) {
+
+  constructor() {
 
     this.route.data.subscribe((data: any) => {
       const pageData = data.pageData;

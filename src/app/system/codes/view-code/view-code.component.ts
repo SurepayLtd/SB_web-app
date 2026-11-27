@@ -1,8 +1,22 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormArray, UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import {
+  UntypedFormArray,
+  UntypedFormBuilder,
+  UntypedFormGroup,
+  Validators,
+  ReactiveFormsModule
+} from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { SystemService } from 'app/system/system.service';
@@ -10,6 +24,12 @@ import { SystemService } from 'app/system/system.service';
 /** Custom Components */
 import { TranslateService } from '@ngx-translate/core';
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatCard, MatCardTitle, MatCardContent } from '@angular/material/card';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatTooltip } from '@angular/material/tooltip';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * View Code Component.
@@ -17,9 +37,25 @@ import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.co
 @Component({
   selector: 'mifosx-view-code',
   templateUrl: './view-code.component.html',
-  styleUrls: ['./view-code.component.scss']
+  styleUrls: ['./view-code.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatCardTitle,
+    MatCheckbox,
+    MatIconButton,
+    MatTooltip
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViewCodeComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private systemService = inject(SystemService);
+  private router = inject(Router);
+  private formBuilder = inject(UntypedFormBuilder);
+  private dialog = inject(MatDialog);
+  private translateService = inject(TranslateService);
+
   /** Code Data */
   codeData: any;
   /** Code Values Data */
@@ -38,14 +74,7 @@ export class ViewCodeComponent implements OnInit {
    * @param {MatDialog} dialog Dialog reference.
    * @param {TranslateService} translateService Translate Service.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private systemService: SystemService,
-    private router: Router,
-    private formBuilder: UntypedFormBuilder,
-    private dialog: MatDialog,
-    private translateService: TranslateService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { code: any; codeValues: any }) => {
       this.codeData = data.code;
       this.codeValuesData = data.codeValues;
@@ -108,8 +137,11 @@ export class ViewCodeComponent implements OnInit {
       ],
       description: [{ value: codeValue ? codeValue.description : '', disabled: true }],
       position: [
-        { value: codeValue ? codeValue.position : 0, disabled: true },
-        Validators.required
+        { value: codeValue ? codeValue.position : '', disabled: true },
+        [
+          Validators.required,
+          Validators.min(0)
+        ]
       ],
       isActive: [{ value: codeValue ? codeValue.active : false, disabled: true }]
     });
@@ -161,7 +193,7 @@ export class ViewCodeComponent implements OnInit {
       data: { deleteContext: this.translateService.instant('labels.inputs.Code') + ' ' + this.codeData.name }
     });
     deleteCodeDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
+      if (response?.delete) {
         this.systemService.deleteCode(this.codeData.id).subscribe(() => {
           this.router.navigate(['/system/codes']);
         });

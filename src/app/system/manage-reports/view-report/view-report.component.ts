@@ -1,6 +1,14 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
@@ -8,6 +16,10 @@ import { SystemService } from 'app/system/system.service';
 
 /** Custom Components */
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatCard, MatCardTitle, MatCardContent } from '@angular/material/card';
+import { YesnoPipe } from '../../../pipes/yesno.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * View Report Component.
@@ -15,9 +27,21 @@ import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.co
 @Component({
   selector: 'mifosx-view-report',
   templateUrl: './view-report.component.html',
-  styleUrls: ['./view-report.component.scss']
+  styleUrls: ['./view-report.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatCardTitle,
+    YesnoPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViewReportComponent {
+  private route = inject(ActivatedRoute);
+  private systemService = inject(SystemService);
+  private dialog = inject(MatDialog);
+  private router = inject(Router);
+
   /** Report Data. */
   reportData: any;
 
@@ -28,12 +52,7 @@ export class ViewReportComponent {
    * @param {MatDialog} dialog Dialog Reference.
    * @param {Router} router Router for navigation.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private systemService: SystemService,
-    private dialog: MatDialog,
-    private router: Router
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { report: any }) => {
       this.reportData = data.report;
     });
@@ -47,7 +66,7 @@ export class ViewReportComponent {
       data: { deleteContext: `report ${this.reportData.id}` }
     });
     deleteReportDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
+      if (response?.delete) {
         this.systemService.deleteReport(this.reportData.id).subscribe(() => {
           this.router.navigate(['/system/reports']);
         });

@@ -1,6 +1,15 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { UntypedFormControl } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
@@ -11,6 +20,20 @@ import { ExternalAssetOwner } from 'app/loans/services/external-asset-owner';
 import { ExternalAssetOwnerService } from 'app/loans/services/external-asset-owner.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { CancelDialogComponent } from 'app/shared/cancel-dialog/cancel-dialog.component';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { NgClass } from '@angular/common';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { ExternalIdentifierComponent } from '../../shared/external-identifier/external-identifier.component';
+import { MatDivider } from '@angular/material/divider';
+import { MatTooltip } from '@angular/material/tooltip';
+import { DateFormatPipe } from '../../pipes/date-format.pipe';
+import { FormatNumberPipe } from '../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-investors',
@@ -20,22 +43,45 @@ import { CancelDialogComponent } from 'app/shared/cancel-dialog/cancel-dialog.co
     trigger('detailExpand', [
       state('collapsed', style({ height: '0px', minHeight: '0' })),
       state('expanded', style({ height: '*' })),
-      transition('expanded <=> collapsed', animate('225ms cubic-bezier(0.4, 0.0, 0.2, 1)'))])
-
-  ]
+      transition('expanded <=> collapsed', animate('225ms cubic-bezier(0.4, 0.0, 0.2, 1)'))
+    ])
+  ],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle,
+    NgClass,
+    ExternalIdentifierComponent,
+    MatDivider,
+    MatTooltip,
+    MatPaginator,
+    DateFormatPipe,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InvestorsComponent implements OnInit {
+  private settingsService = inject(SettingsService);
+  private router = inject(Router);
+  private dialog = inject(MatDialog);
+  private externalAssetOwner = inject(ExternalAssetOwner);
+  private externalAssetOwnerService = inject(ExternalAssetOwnerService);
+  private dateUtils = inject(Dates);
+
   /** Minimum transaction date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum transaction date allowed. */
   maxDate = new Date();
 
   searchResults: any[] = [];
-  searchText = new UntypedFormControl('');
-  effectiveFromDate = new UntypedFormControl('');
-  effectiveToDate = new UntypedFormControl('');
-  settlementFromDate = new UntypedFormControl('');
-  settlementToDate = new UntypedFormControl('');
+  searchText = new FormControl('');
+  effectiveFromDate = new FormControl('');
+  effectiveToDate = new FormControl('');
+  settlementFromDate = new FormControl('');
+  settlementToDate = new FormControl('');
 
   dataSource: MatTableDataSource<any> = new MatTableDataSource();
   existsDataToFilter = false;
@@ -55,7 +101,7 @@ export class InvestorsComponent implements OnInit {
   @ViewChild(MatSort) sort: MatSort;
 
   /** Entry type filter form control. */
-  entryTypeFilter = new UntypedFormControl('');
+  entryTypeFilter = new FormControl('');
   /** Entry type filter data. */
   entryTypeFilterData = [
     {
@@ -84,14 +130,6 @@ export class InvestorsComponent implements OnInit {
     'totalAmount',
     'actions'
   ];
-  constructor(
-    private settingsService: SettingsService,
-    private router: Router,
-    private dialog: MatDialog,
-    private externalAssetOwner: ExternalAssetOwner,
-    private externalAssetOwnerService: ExternalAssetOwnerService,
-    private dateUtils: Dates
-  ) {}
 
   ngOnInit(): void {
     this.maxDate = this.settingsService.maxAllowedDate;
@@ -151,13 +189,16 @@ export class InvestorsComponent implements OnInit {
       request['settlementToDate'] = this.dateUtils.formatDate(this.settlementToDate.value, dateFormat);
     }
     payload['request'] = request;
-    this.externalAssetOwnerService.searchExternalAssetOwnerTransfer(payload).subscribe((response: any) => {
-      this.totalRows = response.totalElements;
-      this.existsDataToFilter = response.totalElements > 0;
-      this.dataSource.data = response.content;
-      this.searchResults = response.content;
-      this.isLoading = false;
-    });
+    this.externalAssetOwnerService
+      .searchExternalAssetOwnerTransfer(payload)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.totalRows = response.totalElements;
+        this.existsDataToFilter = response.totalElements > 0;
+        this.dataSource.data = response.content;
+        this.searchResults = response.content;
+        this.isLoading = false;
+      });
   }
 
   transform(data: any): any {
@@ -181,6 +222,7 @@ export class InvestorsComponent implements OnInit {
         };
         this.externalAssetOwnerService
           .executeExternalAssetOwnerTransferCommand(transfer.transferId, payload, 'cancel')
+          .pipe(take(1))
           .subscribe((result: any) => {
             this.reload();
           });

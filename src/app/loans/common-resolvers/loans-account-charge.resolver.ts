@@ -1,22 +1,28 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
-import { Resolve, ActivatedRouteSnapshot } from '@angular/router';
+import { Injectable, inject } from '@angular/core';
+import { ActivatedRouteSnapshot } from '@angular/router';
 
 /** rxjs Imports */
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 /** Custom Services */
 import { LoansService } from '../loans.service';
+import { LoanBaseResolver } from './loan-base.resolver';
 
 /**
  * Loans Account Charge data resolver.
  */
 @Injectable()
-export class LoansAccountChargeResolver implements Resolve<Object> {
-  /**
-   * @param {LoansService} LoansService Loans service.
-   */
-  constructor(private loansService: LoansService) {}
+export class LoansAccountChargeResolver extends LoanBaseResolver {
+  private loansService = inject(LoansService);
 
   /**
    * Returns the Loans Account Charge data.
@@ -24,8 +30,12 @@ export class LoansAccountChargeResolver implements Resolve<Object> {
    * @returns {Observable<any>}
    */
   resolve(route: ActivatedRouteSnapshot): Observable<any> {
+    this.initialize(route);
     const loanId = route.paramMap.get('loanId');
     const chargeId = route.paramMap.get('id');
-    return this.loansService.getLoansAccountCharge(loanId, chargeId);
+    if (!isNaN(+loanId)) {
+      return this.loansService.getLoansAccountCharge(this.loanAccountPath, loanId, chargeId);
+    }
+    return of([]);
   }
 }

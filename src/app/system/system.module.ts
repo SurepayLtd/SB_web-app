@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 
@@ -66,7 +74,6 @@ import { ManageJobsComponent } from './manage-jobs/manage-jobs.component';
 import { ManageSchedulerJobsComponent } from './manage-jobs/scheduler-jobs/manage-scheduler-jobs.component';
 import { WorkflowDiagramComponent } from './manage-jobs/workflow-jobs/workflow-diagram/workflow-diagram.component';
 import { NgxGraphModule } from '@swimlane/ngx-graph';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { WorkflowJobsComponent } from './manage-jobs/workflow-jobs/workflow-jobs.component';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ManageExternalEventsComponent } from './manage-external-events/manage-external-events.component';
@@ -85,6 +92,13 @@ import { CreditBureauComponent } from './credit-bureau/credit-bureau.component';
 import { CreditProductMappingComponent } from './credit-bureau/credit-product-mapping/credit-product-mapping.component';
 import { ViewProductMappingComponent } from './credit-bureau/credit-product-mapping/view-product-mapping/view-product-mapping.component';
 import { CreditBureauOrganisationComponent } from './credit-bureau/credit-bureau-organisation/credit-bureau-organisation.component';
+import { SystemInformationComponent } from './system-information/system-information.component';
+import { AboutUsComponent } from './about-us/about-us.component';
+import { TenantManagementComponent } from './tenant-management/tenant-management.component';
+import { TenantsComponent } from './tenant-management/tenants.component';
+import { CreateTenantComponent } from './tenant-management/create-tenant/create-tenant.component';
+import { EditTenantComponent } from './tenant-management/edit-tenant/edit-tenant.component';
+import { ViewTenantComponent } from './tenant-management/view-tenant/view-tenant.component';
 
 @NgModule({
   imports: [
@@ -92,11 +106,8 @@ import { CreditBureauOrganisationComponent } from './credit-bureau/credit-bureau
     SharedModule,
     PipesModule,
     NgxGraphModule,
-    BrowserAnimationsModule,
     DragDropModule,
-    DirectivesModule
-  ],
-  declarations: [
+    DirectivesModule,
     SystemComponent,
     CodesComponent,
     ViewCodeComponent,
@@ -162,6 +173,13 @@ import { CreditBureauOrganisationComponent } from './credit-bureau/credit-bureau
     ErrorLogPopoverComponent,
     RunSelectedJobsPopoverComponent,
     RunSelectedJobsTableComponent,
+    SystemInformationComponent,
+    AboutUsComponent,
+    TenantManagementComponent,
+    TenantsComponent,
+    ViewTenantComponent,
+    CreateTenantComponent,
+    EditTenantComponent,
     TwoFactorConfigComponent,
     EditTwoFactorEmailComponent,
     EditTwoFactorSmsComponent,

@@ -1,8 +1,22 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Input, OnChanges } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, Input, OnChanges, inject } from '@angular/core';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from 'app/settings/settings.service';
 import { Currency } from 'app/shared/models/general.model';
+import { InputAmountComponent } from '../../../../shared/input-amount/input-amount.component';
+import { MatDivider } from '@angular/material/divider';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { PositiveIntegerDirective } from 'app/directives/positive-integer.directive';
 
 /**
  * Fixed Deposits Terms Step
@@ -10,9 +24,22 @@ import { Currency } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-fixed-deposit-account-terms-step',
   templateUrl: './fixed-deposit-account-terms-step.component.html',
-  styleUrls: ['./fixed-deposit-account-terms-step.component.scss']
+  styleUrls: ['./fixed-deposit-account-terms-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    MatDivider,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext,
+    PositiveIntegerDirective
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FixedDepositAccountTermsStepComponent implements OnInit, OnChanges {
+  private formBuilder = inject(UntypedFormBuilder);
+  private settingsService = inject(SettingsService);
+
   /** Fixed deposits account template */
   @Input() fixedDepositsAccountTemplate: any;
   /** Fixed deposits account and product template */
@@ -23,7 +50,7 @@ export class FixedDepositAccountTermsStepComponent implements OnInit, OnChanges 
   /** Maximum date allowed. */
   maxDate = new Date();
   /** Fixed Deposits Account Terms Form */
-  fixedDepositAccountTermsForm: UntypedFormGroup;
+  fixedDepositAccountTermsForm!: UntypedFormGroup;
   /** Interest Compounding Period Type Data */
   interestCompoundingPeriodTypeData: any;
   /** Interest Posting Period Type Data */
@@ -40,10 +67,7 @@ export class FixedDepositAccountTermsStepComponent implements OnInit, OnChanges 
    * @param {FormBuilder} formBuilder Form Builder
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.createFixedDepositsAccountTermsForm();
   }
 
@@ -68,7 +92,6 @@ export class FixedDepositAccountTermsStepComponent implements OnInit, OnChanges 
         depositPeriod: this.fixedDepositsAccountTemplate.depositPeriod,
         depositPeriodFrequencyId: this.fixedDepositsAccountTemplate.depositPeriodFrequency.id
       });
-      console.log(this.fixedDepositAccountTermsForm.value);
     }
   }
 

@@ -1,6 +1,10 @@
-import { Component, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { Component, inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export interface CrbDocViewerData {
   title: string;
@@ -13,18 +17,24 @@ export interface CrbDocViewerData {
   selector: 'mifosx-crb-consent-doc-viewer-dialog',
   templateUrl: './crb-consent-doc-viewer-dialog.component.html',
   styleUrls: ['./crb-consent-doc-viewer-dialog.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatIconModule,
+    MatTooltipModule
+  ]
 })
 export class CrbConsentDocViewerDialogComponent {
+  dialogRef = inject<MatDialogRef<CrbConsentDocViewerDialogComponent>>(MatDialogRef);
+  private sanitizer = inject(DomSanitizer);
+  data = inject<CrbDocViewerData>(MAT_DIALOG_DATA);
 
   safeUrl: SafeResourceUrl;
 
-  constructor(
-    public dialogRef: MatDialogRef<CrbConsentDocViewerDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: CrbDocViewerData,
-    private sanitizer: DomSanitizer
-  ) {
+  constructor() {
     // Only blob: URLs we created ourselves are trusted
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(data.blobUrl);
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.data.blobUrl);
   }
 
   close(): void {

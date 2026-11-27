@@ -1,71 +1,133 @@
-<!-- The viewport is divided into two parts having max-width 70% and 30% -->
-<div fxLayout="row">
-  <!--
-    Content in 70%: (TODO: Allow customization by organization)
-      Cover Image
-      Organization/Application Name
-      Organization/Application Description
+﻿<!--
+  Copyright since 2025 Mifos Initiative
 
-    This content will be hidden for smaller screens.
-  -->
-
-  <div fxFlex="70%" fxLayout="column" fxLayoutAlign="center center" fxHide.lt-sm class="cover">
-    <div class="cover-content">
-      <h1 class="mat-display-1 cover-title">{{ 'APP_NAME' | translate }}</h1>
-      <p class="mat-headline cover-description">
-        {{ 'labels.text.is designed by the' | translate }} {{ 'labels.text.elimination of poverty' | translate }}
-      </p>
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+<!-- Modern Material Design 3 Login Layout -->
+<div class="login-wrapper">
+  <!-- Left Panel - Hero Section (Hidden on tablet and mobile) -->
+  <div class="hero-panel hide-lt-lg" [class.production-mode]="productionMode">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <!-- Default Mode: Full content -->
+      @if (!productionMode) {
+        <div class="hero-text">
+          <h1 class="hero-title">{{ 'APP_NAME' | translate }}</h1>
+          <p class="hero-subtitle">
+            {{ 'labels.text.is designed by the' | translate }} {{ 'labels.text.elimination of poverty' | translate }}
+          </p>
+        </div>
+      }
+      <!-- Production Mode: Minimal branding at bottom -->
+      @if (productionMode) {
+        <div class="hero-branding-bottom">
+          <h1 class="hero-title-minimal">{{ 'APP_NAME' | translate }}</h1>
+        </div>
+      }
     </div>
   </div>
 
-  <!--
-    Content in 30%: (TODO: Allow customization of Name, Logo and Contact Information by organization)
-      Language Selector
-      Organization/Application Name with Logo
-      Form
-      Contact Information/Resources
-      Footer
-  -->
-
-  <div fxLayout="column" fxFlex.gt-sm="1 0 30%" class="login-container">
-    <!-- Language Selector to the extreme right -->
-    <div fxLayout="row-reverse" fxFlex="1 0 auto">
-      <mifosx-language-selector class="p-r-10 p-t-10"></mifosx-language-selector>
-      <mifosx-theme-toggle class="p-r-10 p-t-10"></mifosx-theme-toggle>
-      <div fxFlex></div>
-      <mifosx-server-selector
-        class="p-l-10 p-t-10"
-        *ngIf="!environment.production && environment.allowServerSwitch"
-      ></mifosx-server-selector>
+  <!-- Right Panel - Login Form -->
+  <div class="login-panel">
+    <!-- Header Controls -->
+    <div class="login-header">
+      @if (allowServerSwitch()) {
+        <mifosx-server-selector
+          class="header-control"
+          appearance="outline"
+          subscriptSizing="dynamic"
+          [showLabel]="false"
+        >
+        </mifosx-server-selector>
+      }
+      <mifosx-theme-toggle class="header-control theme-toggle"></mifosx-theme-toggle>
+      <mifosx-language-selector
+        class="header-control"
+        appearance="outline"
+        subscriptSizing="dynamic"
+        [showLabel]="false"
+      >
+      </mifosx-language-selector>
     </div>
 
-    <!-- Logo with Organization Name -->
-    <div fxLayout="row" fxLayoutAlign="center center" fxFlex="1 0 auto">
-      <img src="assets/images/mifos_lg-logo.png" alt="{{ 'APP_NAME' | translate }} Logo" class="img-container" />
-    </div>
+    <!-- Main Login Card -->
+    <div class="login-card-container">
+      <div class="login-card">
+        <!-- Logo Section -->
+        <div class="logo-section">
+          @if (!themeDarkEnabled) {
+            <img [src]="logoPath" (error)="onLogoError()" alt="{{ 'APP_NAME' | translate }} Logo" class="logo-image" />
+          } @else {
+            <img
+              [src]="logoPathDark"
+              (error)="onLogoErrorDark()"
+              alt="{{ 'APP_NAME' | translate }} Logo"
+              class="logo-image"
+            />
+          }
+        </div>
 
-    <!-- Tenant Identifier Name -->
-    <div fxLayout="row" fxLayoutAlign="center center" fxFlex="1 0 auto" *ngIf="displayTenantSelector()">
-      <mifosx-tenant-selector></mifosx-tenant-selector>
-    </div>
+        <!-- Form Section -->
+        <div class="form-section">
+          <!-- Tenant Selector -->
+          @if (showTenantSelector) {
+            <div class="tenant-section">
+              <mifosx-tenant-selector></mifosx-tenant-selector>
+            </div>
+          }
 
-    <!--
-      Type of Form:
-        Login
-        Reset Password
-        Two Factor Authentication
-        Forgot Password (TODO: Decision to be taken on providing this feature.)
-    -->
-    <div fxLayout="row" fxFlex="3 0 auto" fxLayoutAlign="center start">
-      <mifosx-login-form *ngIf="!resetPassword && !twoFactorAuthenticationRequired"></mifosx-login-form>
-      <mifosx-reset-password *ngIf="resetPassword"></mifosx-reset-password>
-      <mifosx-two-factor-authentication *ngIf="twoFactorAuthenticationRequired"></mifosx-two-factor-authentication>
-    </div>
+          <!-- Login Forms -->
+          @if (!resetPassword && !twoFactorAuthenticationRequired) {
+            <mifosx-login-form></mifosx-login-form>
+          }
 
-    <!-- Footer -->
+          @if (resetPassword) {
+            <mifosx-reset-password></mifosx-reset-password>
+          }
 
-    <div fxLayout="row" fxLayoutAlign="end" class="m-b-20 m-r-10">
-      <a (click)="reloadSettings()"><fa-icon icon="refresh"></fa-icon></a>
+          @if (twoFactorAuthenticationRequired) {
+            <mifosx-two-factor-authentication></mifosx-two-factor-authentication>
+          }
+        </div>
+
+        <!-- Version Info Section -->
+        <div class="login-version-info" *ngIf="displayBackendInfo">
+          <div class="version-info-container">
+            <div class="version-item">
+              <span class="version-label">{{ 'labels.version.Tenant' | translate }}</span>
+              <span class="version-value">{{ tenantDisplayName }}</span>
+            </div>
+            <div class="version-item">
+              <span class="version-label">{{ 'labels.version.Mifos WebApp' | translate }}</span>
+              <span class="version-value">{{ versions?.mifos }}</span>
+            </div>
+            <div class="version-item">
+              <span class="version-label">{{ 'labels.version.Apache Fineract' | translate }}</span>
+              <span class="version-value">{{ versions?.fineract?.version }}</span>
+            </div>
+            <div class="version-item">
+              <span class="version-label">{{ 'labels.version.Server' | translate }}</span>
+              <span class="version-value">{{ server }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <button
+          mat-icon-button
+          (click)="reloadSettings()"
+          class="reload-button"
+          title="Reload Settings"
+          matTooltip="Reload Settings"
+          attr.aria-label="Reload Settings"
+        >
+          <mifosx-m3-icon name="refresh"></mifosx-m3-icon>
+        </button>
+      </div>
     </div>
   </div>
 </div>

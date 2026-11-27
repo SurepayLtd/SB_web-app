@@ -1,13 +1,39 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  OnInit,
+  inject,
+  ViewChild
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { MatStepper, MatStepperModule } from '@angular/material/stepper';
+import { finalize } from 'rxjs';
 
 /** Custom Services */
+import { financialRestrictionError } from '../../shared/financial-restriction-error';
 import { SavingsService } from '../../savings.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
 import { Currency } from 'app/shared/models/general.model';
+import { InputAmountComponent } from '../../../shared/input-amount/input-amount.component';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatCardTitle } from '@angular/material/card';
 
 /**
  * Create savings account transactions component.
@@ -15,15 +41,37 @@ import { Currency } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-savings-transactions',
   templateUrl: './savings-account-transactions.component.html',
-  styleUrls: ['./savings-account-transactions.component.scss']
+  styleUrls: ['./savings-account-transactions.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    MatSlideToggle,
+    CdkTextareaAutosize,
+    MatStepperModule,
+    FaIconComponent,
+    MatCardTitle
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavingsAccountTransactionsComponent implements OnInit {
+  @ViewChild('stepper') stepper: MatStepper;
+
+  private formBuilder = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private savingsService = inject(SavingsService);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+  financialError: string | null = null;
+
   /** Minimum Due Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Due Date allowed. */
   maxDate = new Date();
   /** Savings account transaction form. */
-  savingAccountTransactionForm: UntypedFormGroup;
+  savingAccountTransactionForm: FormGroup;
   /** savings account transaction payment options. */
   paymentTypeOptions: {
     id: number;
@@ -41,6 +89,15 @@ export class SavingsAccountTransactionsComponent implements OnInit {
   /** saving account's Id */
   savingAccountId: string;
   currency: Currency | null = null;
+  /** Transaction response after submission */
+  transactionResponse: any = null;
+  /** Flag to track if transaction is being submitted */
+  isSubmitting: boolean = false;
+
+  get minimumTransactionAmount(): number {
+    const decimalPlaces = Math.min(this.currency?.decimalPlaces ?? 6, 6);
+    return 1 / Math.pow(10, decimalPlaces);
+  }
 
   /**
    * Retrieves the Saving Account transaction template data from `resolve`.
@@ -51,22 +108,15 @@ export class SavingsAccountTransactionsComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private savingsService: SavingsService,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { savingsAccountActionData: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { savingsAccountActionData: any }) => {
       this.paymentTypeOptions = data.savingsAccountActionData.paymentTypeOptions;
       if (data.savingsAccountActionData.currency) {
         this.currency = data.savingsAccountActionData.currency;
       }
     });
     this.transactionCommand = this.route.snapshot.params['name'].toLowerCase();
-    this.transactionType[this.transactionCommand] = true;
+    this.transactionType[this.transactionCommand as 'deposit' | 'withdrawal'] = true;
     this.savingAccountId = this.route.snapshot.params['savingAccountId'];
   }
 
@@ -89,9 +139,15 @@ export class SavingsAccountTransactionsComponent implements OnInit {
       ],
       transactionAmount: [
         0,
+        [
+          Validators.required,
+          Validators.min(this.minimumTransactionAmount)
+        ]
+      ],
+      paymentTypeId: [
+        '',
         Validators.required
       ],
-      paymentTypeId: [''],
       note: ['']
     });
   }
@@ -102,11 +158,11 @@ export class SavingsAccountTransactionsComponent implements OnInit {
   addPaymentDetails() {
     this.addPaymentDetailsFlag = !this.addPaymentDetailsFlag;
     if (this.addPaymentDetailsFlag) {
-      this.savingAccountTransactionForm.addControl('accountNumber', new UntypedFormControl(''));
-      this.savingAccountTransactionForm.addControl('checkNumber', new UntypedFormControl(''));
-      this.savingAccountTransactionForm.addControl('routingCode', new UntypedFormControl(''));
-      this.savingAccountTransactionForm.addControl('receiptNumber', new UntypedFormControl(''));
-      this.savingAccountTransactionForm.addControl('bankNumber', new UntypedFormControl(''));
+      this.savingAccountTransactionForm.addControl('accountNumber', new FormControl(''));
+      this.savingAccountTransactionForm.addControl('checkNumber', new FormControl(''));
+      this.savingAccountTransactionForm.addControl('routingCode', new FormControl(''));
+      this.savingAccountTransactionForm.addControl('receiptNumber', new FormControl(''));
+      this.savingAccountTransactionForm.addControl('bankNumber', new FormControl(''));
     } else {
       this.savingAccountTransactionForm.removeControl('accountNumber');
       this.savingAccountTransactionForm.removeControl('checkNumber');
@@ -117,7 +173,87 @@ export class SavingsAccountTransactionsComponent implements OnInit {
   }
 
   /**
+   * Method to proceed to confirmation step.
+   */
+  proceedToConfirmation() {
+    if (this.savingAccountTransactionForm.valid) {
+      this.stepper.next();
+    }
+  }
+
+  /**
+   * Method to go back to previous step.
+   */
+  goBack() {
+    this.stepper.previous();
+  }
+
+  /**
+   * Method to submit the transaction details after confirmation.
+   */
+  confirmTransaction() {
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+    this.financialError = null;
+    const savingAccountTransactionFormData = this.savingAccountTransactionForm.value;
+    const locale = this.settingsService.language.code;
+    const dateFormat = this.settingsService.dateFormat;
+    const prevTransactionDate: Date = this.savingAccountTransactionForm.value.transactionDate;
+    if (savingAccountTransactionFormData.transactionDate instanceof Date) {
+      savingAccountTransactionFormData.transactionDate = this.dateUtils.formatDate(prevTransactionDate, dateFormat);
+    }
+    const data = {
+      ...savingAccountTransactionFormData,
+      dateFormat,
+      locale
+    };
+    data['transactionAmount'] = data['transactionAmount'] * 1;
+    this.savingsService
+      .executeSavingsAccountTransactionsCommand(this.savingAccountId, this.transactionCommand, data)
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          this.transactionResponse = res;
+          this.stepper.next();
+        },
+        error: (error) => {
+          // The shared interceptor handles unknown failures. Keep known restrictions visible without retrying.
+          this.financialError = financialRestrictionError(error);
+        }
+      });
+  }
+
+  /**
+   * Method to navigate back to transactions list.
+   */
+  done() {
+    this.router.navigate(['../../transactions'], { relativeTo: this.route });
+  }
+
+  /**
+   * Method to get selected payment type name.
+   */
+  getPaymentTypeName(): string {
+    const paymentTypeId = this.savingAccountTransactionForm.value.paymentTypeId;
+    const paymentType = this.paymentTypeOptions.find((pt) => pt.id === paymentTypeId);
+    return paymentType ? paymentType.name : '';
+  }
+
+  /**
+   * Method to print transaction receipt.
+   */
+  printReceipt() {
+    window.print();
+  }
+
+  /**
    * Method to submit the transaction details.
+   * @deprecated
    */
   submit() {
     const savingAccountTransactionFormData = this.savingAccountTransactionForm.value;

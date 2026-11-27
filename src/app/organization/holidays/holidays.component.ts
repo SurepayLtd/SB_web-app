@@ -1,18 +1,52 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject,
+  DestroyRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
-import { ActivatedRoute, Router } from '@angular/router';
-import { UntypedFormControl } from '@angular/forms';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 /** rxjs Imports */
-import { of } from 'rxjs';
+import { of, take } from 'rxjs';
 
 /** Custom Services */
 import { OrganizationService } from '../organization.service';
 import { PopoverService } from '../../configuration-wizard/popover/popover.service';
 import { ConfigurationWizardService } from '../../configuration-wizard/configuration-wizard.service';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { DateFormatPipe } from '../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Holidays component.
@@ -20,11 +54,37 @@ import { ConfigurationWizardService } from '../../configuration-wizard/configura
 @Component({
   selector: 'mifosx-holidays',
   templateUrl: './holidays.component.html',
-  styleUrls: ['./holidays.component.scss']
+  styleUrls: ['./holidays.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HolidaysComponent implements OnInit, AfterViewInit {
+  private organizationService = inject(OrganizationService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  private destroyRef = inject(DestroyRef);
+
   /** Office selector. */
-  officeSelector = new UntypedFormControl();
+  officeSelector = new FormControl();
   /** Holidays data. */
   holidaysData: any;
   /** Offices data. */
@@ -63,14 +123,8 @@ export class HolidaysComponent implements OnInit, AfterViewInit {
    * @param {ConfigurationWizardService} configurationWizardService ConfigurationWizard Service.
    * @param {PopoverService} popoverService PopoverService.
    */
-  constructor(
-    private organizationService: OrganizationService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService
-  ) {
-    this.route.data.subscribe((data: { offices: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { offices: any }) => {
       this.officeData = data.offices;
     });
   }
@@ -95,13 +149,18 @@ export class HolidaysComponent implements OnInit, AfterViewInit {
    * Retrieves the holidays data on changing office and sets the holidays table.
    */
   onChangeOffice() {
-    this.officeSelector.valueChanges.subscribe((officeId = this.officeSelector.value) => {
-      this.holidaysData = [];
-      this.organizationService.getHolidays(officeId).subscribe((holidays: any) => {
-        this.holidaysData = holidays.filter((holiday: any) => holiday.status.value !== 'Deleted');
-        this.setHolidays();
+    this.officeSelector.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((officeId = this.officeSelector.value) => {
+        this.holidaysData = [];
+        this.organizationService
+          .getHolidays(officeId)
+          .pipe(take(1))
+          .subscribe((holidays: any) => {
+            this.holidaysData = holidays.filter((holiday: any) => holiday.status.value !== 'Deleted');
+            this.setHolidays();
+          });
       });
-    });
   }
 
   /**
@@ -133,13 +192,13 @@ export class HolidaysComponent implements OnInit, AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showHolidayPage === true) {
+    if (this.configurationWizardService.showHolidayPage) {
       setTimeout(() => {
         this.showPopover(this.templateButtonCreateHoliday, this.buttonCreateHoliday.nativeElement, 'bottom', true);
       });
     }
 
-    if (this.configurationWizardService.showHolidayFilter === true) {
+    if (this.configurationWizardService.showHolidayFilter) {
       setTimeout(() => {
         this.showPopover(this.templateFilterRef, this.filterRef.nativeElement, 'bottom', true);
       });

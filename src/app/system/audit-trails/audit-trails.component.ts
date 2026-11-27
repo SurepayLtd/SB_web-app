@@ -1,12 +1,23 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { ActivatedRoute } from '@angular/router';
-import { UntypedFormControl } from '@angular/forms';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms';
 
 /** Custom Data Source */
 import { AuditTrailsDataSource } from './audit-trail.datasource';
+
+/** Custom Utils */
+import { sanitizeCsvValue } from 'app/core/utils/csv.utils';
 
 /** Custom Services */
 import { SystemService } from '../system.service';
@@ -16,6 +27,25 @@ import { SettingsService } from 'app/settings/settings.service';
 import { merge } from 'rxjs';
 import { tap, debounceTime, distinctUntilChanged, startWith, map } from 'rxjs/operators';
 import { Dates } from 'app/core/utils/dates';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { AsyncPipe } from '@angular/common';
+import { MatOption, MatAutocompleteTrigger, MatAutocomplete } from '@angular/material/autocomplete';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { DatetimeFormatPipe } from '../../pipes/datetime-format.pipe';
+import { TranslatePipe } from '../../pipes/translate.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Audit Trails Component.
@@ -23,9 +53,37 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-audit-trails',
   templateUrl: './audit-trails.component.html',
-  styleUrls: ['./audit-trails.component.scss']
+  styleUrls: ['./audit-trails.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatAutocompleteTrigger,
+    MatAutocomplete,
+    MatProgressBar,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    AsyncPipe,
+    DatetimeFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditTrailsComponent implements OnInit, AfterViewInit {
+  private route = inject(ActivatedRoute);
+  private systemService = inject(SystemService);
+  private dateUtils = inject(Dates);
+  private settingsService = inject(SettingsService);
+
   /** Minimum date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum date allowed. */
@@ -53,7 +111,8 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
     'officeName',
     'madeOnDate',
     'checker',
-    'checkedOnDate'
+    'checkedOnDate',
+    'clientIp'
   ];
   /** Data source for audit trails table. */
   dataSource: AuditTrailsDataSource;
@@ -112,8 +171,12 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
   user = new UntypedFormControl('');
   /** From date form control. */
   fromDate = new UntypedFormControl();
+  /** From time form control. */
+  fromTime = new UntypedFormControl();
   /** Checked from date form control. */
   checkedFromDate = new UntypedFormControl();
+  /** Checked from time form control. */
+  checkedFromTime = new UntypedFormControl();
   /** Processing result form control. */
   processingResult = new UntypedFormControl();
   /** Action name form control. */
@@ -122,17 +185,23 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
   resourceId = new UntypedFormControl('');
   /** To date form control. */
   toDate = new UntypedFormControl();
+  /** To time form control. */
+  toTime = new UntypedFormControl();
   /** Checked to date form control. */
   checkedToDate = new UntypedFormControl();
+  /** Checked to time form control. */
+  checkedToTime = new UntypedFormControl();
   /** Entity name form control. */
   entityName = new UntypedFormControl();
   /** Checker form control. */
   checker = new UntypedFormControl();
 
+  isLoading = false;
+
   /** Paginator for audit trails table. */
-  @ViewChild(MatPaginator, { static: true }) paginator: MatPaginator;
+  @ViewChild(MatPaginator) paginator: MatPaginator;
   /** Sorter for audit trails table. */
-  @ViewChild(MatSort, { static: true }) sort: MatSort;
+  @ViewChild(MatSort) sort: MatSort;
 
   /**
    * Retrieves the audit trail search template data from `resolve`.
@@ -141,12 +210,7 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
    * @param {Dates} dateUtils Dates utils
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private systemService: SystemService,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { auditTrailSearchTemplate: any }) => {
       this.auditTrailSearchTemplateData = data.auditTrailSearchTemplate;
     });
@@ -161,6 +225,7 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
     this.setFilteredActions();
     this.setFilteredEntities();
     this.setFilteredCheckers();
+    this.dataSource = new AuditTrailsDataSource(this.systemService);
     this.getAuditTrails();
   }
 
@@ -170,23 +235,24 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
    * sort change and page change.
    */
   ngAfterViewInit() {
-    this.user.valueChanges
-      .pipe(
-        map((value) => (value.id ? value.id : '')),
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap((filterValue) => {
-          this.applyFilter(filterValue, 'makerId');
-        })
-      )
-      .subscribe();
+    this.clearFilterWhenEmptied(this.user, 'makerId');
 
     this.fromDate.valueChanges
       .pipe(
         debounceTime(500),
         distinctUntilChanged(),
         tap((filterValue) => {
-          this.applyFilter(this.getDate(filterValue), 'makerDateTimeFrom');
+          this.applyFilter(this.getDateTime(filterValue, this.fromTime.value), 'makerDateTimeFrom');
+        })
+      )
+      .subscribe();
+
+    this.fromTime.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap((timeValue) => {
+          this.applyFilter(this.getDateTime(this.fromDate.value, timeValue), 'makerDateTimeFrom');
         })
       )
       .subscribe();
@@ -196,7 +262,17 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
         debounceTime(500),
         distinctUntilChanged(),
         tap((filterValue) => {
-          this.applyFilter(this.getDate(filterValue), 'makerDateTimeTo');
+          this.applyFilter(this.getDateTime(filterValue, this.toTime.value), 'makerDateTimeTo');
+        })
+      )
+      .subscribe();
+
+    this.toTime.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap((timeValue) => {
+          this.applyFilter(this.getDateTime(this.toDate.value, timeValue), 'makerDateTimeTo');
         })
       )
       .subscribe();
@@ -206,7 +282,17 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
         debounceTime(500),
         distinctUntilChanged(),
         tap((filterValue) => {
-          this.applyFilter(this.getDate(filterValue), 'checkerDateTimeFrom');
+          this.applyFilter(this.getDateTime(filterValue, this.checkedFromTime.value), 'checkerDateTimeFrom');
+        })
+      )
+      .subscribe();
+
+    this.checkedFromTime.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap((timeValue) => {
+          this.applyFilter(this.getDateTime(this.checkedFromDate.value, timeValue), 'checkerDateTimeFrom');
         })
       )
       .subscribe();
@@ -216,7 +302,17 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
         debounceTime(500),
         distinctUntilChanged(),
         tap((filterValue) => {
-          this.applyFilter(this.getDate(filterValue), 'checkerDateTimeTo');
+          this.applyFilter(this.getDateTime(filterValue, this.checkedToTime.value), 'checkerDateTimeTo');
+        })
+      )
+      .subscribe();
+
+    this.checkedToTime.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        tap((timeValue) => {
+          this.applyFilter(this.getDateTime(this.checkedToDate.value, timeValue), 'checkerDateTimeTo');
         })
       )
       .subscribe();
@@ -231,74 +327,41 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
       )
       .subscribe();
 
-    this.actionName.valueChanges
-      .pipe(
-        map((value) => (value ? value : '')),
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap((filterValue) => {
-          this.applyFilter(filterValue, 'actionName');
-        })
-      )
-      .subscribe();
+    this.clearFilterWhenEmptied(this.actionName, 'actionName');
+    this.clearFilterWhenEmptied(this.entityName, 'entityName');
+    this.clearFilterWhenEmptied(this.checker, 'checkerId');
 
-    this.entityName.valueChanges
-      .pipe(
-        map((value) => (value ? value : '')),
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap((filterValue) => {
-          this.applyFilter(filterValue, 'entityName');
-        })
-      )
-      .subscribe();
+    //this.sort.sortChange.subscribe(() => (this.paginator.pageIndex = 0));
 
-    this.checker.valueChanges
-      .pipe(
-        map((value) => (value ? value : '')),
-        debounceTime(500),
-        distinctUntilChanged(),
-        tap((filterValue) => {
-          this.applyFilter(filterValue, 'checkerId');
-        })
-      )
-      .subscribe();
-
-    this.sort.sortChange.subscribe(() => (this.paginator.pageIndex = 0));
-
-    merge(this.sort.sortChange, this.paginator.page)
-      .pipe(tap(() => this.loadAuditTrailsPage()))
-      .subscribe();
+    if (this.sort && this.paginator) {
+      merge(this.sort.sortChange, this.paginator.page)
+        .pipe(tap(() => this.loadAuditTrailsPage()))
+        .subscribe();
+    }
   }
 
   /**
    * Initializes the data source for audit trails table and loads the first page.
    */
   getAuditTrails() {
-    this.dataSource = new AuditTrailsDataSource(this.systemService);
-    this.dataSource.getAuditTrails(
-      this.filterAuditTrailsBy,
-      this.sort.active,
-      this.sort.direction,
-      this.paginator.pageIndex,
-      this.paginator.pageSize
-    );
+    this.isLoading = true;
+    const isActive: string = this.sort ? this.sort.active : '';
+    const direction: string = this.sort ? this.sort.direction : '';
+    const pageIndex: number = this.paginator ? this.paginator.pageIndex : 0;
+    const pageSize: any = this.paginator ? this.paginator.pageSize : 20;
+
+    this.dataSource.getAuditTrails(this.filterAuditTrailsBy, isActive, direction, pageIndex, pageSize);
+    this.isLoading = false;
   }
 
   /**
    * Loads a page of audit trails.
    */
   loadAuditTrailsPage() {
-    if (!this.sort.direction) {
+    if (this.sort && !this.sort.direction) {
       delete this.sort.active;
     }
-    this.dataSource.getAuditTrails(
-      this.filterAuditTrailsBy,
-      this.sort.active,
-      this.sort.direction,
-      this.paginator.pageIndex,
-      this.paginator.pageSize
-    );
+    this.getAuditTrails();
   }
 
   /**
@@ -307,10 +370,30 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
    * @param {string} property Property to filter data by.
    */
   applyFilter(filterValue: string, property: string) {
-    this.paginator.pageIndex = 0;
     const findIndex = this.filterAuditTrailsBy.findIndex((filter) => filter.type === property);
+    if (this.filterAuditTrailsBy[findIndex].value === filterValue) {
+      return;
+    }
+    if (this.paginator) {
+      this.paginator.pageIndex = 0;
+    }
     this.filterAuditTrailsBy[findIndex].value = filterValue;
     this.loadAuditTrailsPage();
+  }
+
+  /**
+   * Clears an autocomplete filter once its input is emptied.
+   * A selection is applied by the autocomplete's `optionSelected` output, so half-typed text never
+   * reaches the server: it is not a valid option and the request would come back with no records.
+   * @param {UntypedFormControl} control Autocomplete form control.
+   * @param {string} property Filter property the control feeds.
+   */
+  private clearFilterWhenEmptied(control: UntypedFormControl, property: string): void {
+    control.valueChanges.pipe(debounceTime(500), distinctUntilChanged()).subscribe((value) => {
+      if (!value) {
+        this.applyFilter('', property);
+      }
+    });
   }
 
   /**
@@ -430,7 +513,6 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
    */
   downloadCSV() {
     const dateFormat = this.settingsService.dateFormat;
-    const replacer = (key: any, value: any) => (value === undefined ? '' : value);
     const header = [
       'ID',
       'Resource ID',
@@ -458,16 +540,27 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
       'clientName'
     ];
     this.systemService
-      .getAuditTrails(this.filterAuditTrailsBy, this.sort.active ? this.sort.active : '', this.sort.direction, 0, -1)
+      .getAuditTrails(this.filterAuditTrailsBy, this.sort?.active ?? '', this.sort?.direction ?? '', 0, -1)
       .subscribe((response: any) => {
         if (response !== undefined) {
           let csv = response.pageItems.map((row: any) =>
-            headerCode.map((fieldName) =>
-              (fieldName === 'madeOnDate' || fieldName === 'checkedOnDate') &&
-              JSON.stringify(row[fieldName], replacer) !== '""'
-                ? this.dateUtils.formatDate(JSON.stringify(row[fieldName], replacer), dateFormat)
-                : JSON.stringify(row[fieldName], replacer)
-            )
+            headerCode.map((fieldName) => {
+              // Resolve the raw string value first, THEN sanitize before JSON.stringify wraps
+              // it in double-quotes for CSV quoting. Sanitizing the JSON.stringify output would
+              // be ineffective because the leading " masks formula-trigger characters from the
+              // sanitizer, and Excel strips those outer quotes when parsing the CSV cell.
+              let rawValue: string;
+              if (
+                (fieldName === 'madeOnDate' || fieldName === 'checkedOnDate') &&
+                row[fieldName] != null &&
+                row[fieldName] !== ''
+              ) {
+                rawValue = this.dateUtils.formatDate(row[fieldName], 'yyyy-MM-ddTHH:mm:ssZ');
+              } else {
+                rawValue = row[fieldName] == null ? '' : String(row[fieldName]);
+              }
+              return JSON.stringify(sanitizeCsvValue(rawValue));
+            })
           );
           csv.unshift(`data:text/csv;charset=utf-8,${header.join()}`);
           csv = csv.join('\r\n');
@@ -491,5 +584,22 @@ export class AuditTrailsComponent implements OnInit, AfterViewInit {
   private getDate(timestamp: any) {
     const dateFormat = this.settingsService.dateFormat;
     return this.dateUtils.formatDate(timestamp, dateFormat);
+  }
+  private getDateTime(date: Date, timeStr: string): string {
+    if (!date) {
+      return '';
+    }
+    const result = new Date(date);
+    if (timeStr) {
+      const [
+        hours,
+        minutes,
+        seconds
+      ] = timeStr.split(':').map(Number);
+      result.setHours(hours || 0);
+      result.setMinutes(minutes || 0);
+      result.setSeconds(seconds || 0);
+    }
+    return this.dateUtils.formatDate(result, 'yyyy-MM-ddTHH:mm:ssZ');
   }
 }

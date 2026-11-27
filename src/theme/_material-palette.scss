@@ -1,9 +1,24 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+/**
+ * The primary hues are CSS custom properties so `ThemeStorageService` can swap
+ * the brand colour at runtime. Sass passes `var()` through into the generated
+ * `--mat-*` / `--mdc-*` tokens, so Material components follow it without a
+ * rebuild; the fallbacks keep the default blue when nothing is set.
+ */
+
 /* ############ Light mode palettes ################ */
 
 $primary-palette: (
-  100: #5ba2ec,
-  500: #2d318e,
-  700: #004989,
+  100: var(--brand-primary-100, #5ba2ec),
+  500: var(--brand-primary-500, #2d318e),
+  700: var(--brand-primary-700, #004989),
   contrast: (
     100: rgb(0 0 0 / 87%),
     500: white,
@@ -25,9 +40,9 @@ $accent-palette: (
 /* ############ Dark mode palettes ################ */
 
 $dark-primary-palette: (
-  100: #5ba2ec,
-  500: #2d318e,
-  700: #004989,
+  100: var(--brand-primary-100, #5ba2ec),
+  500: var(--brand-primary-500, #2d318e),
+  700: var(--brand-primary-700, #004989),
   contrast: (
     100: white,
     500: rgb(255 255 255 / 87%),

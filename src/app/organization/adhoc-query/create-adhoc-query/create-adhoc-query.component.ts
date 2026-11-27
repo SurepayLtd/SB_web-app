@@ -1,10 +1,22 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { OrganizationService } from '../../organization.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create Adhoc Query component.
@@ -12,30 +24,29 @@ import { OrganizationService } from '../../organization.service';
 @Component({
   selector: 'mifosx-create-adhoc-query',
   templateUrl: './create-adhoc-query.component.html',
-  styleUrls: ['./create-adhoc-query.component.scss']
+  styleUrls: ['./create-adhoc-query.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateAdhocQueryComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   /** Adhoc Query form. */
-  adhocQueryForm: UntypedFormGroup;
+  adhocQueryForm: FormGroup;
   /** Adhoc Query template data. */
   adhocQueryTemplateData: any;
   /** Report run frequencies data. */
   reportRunFrequencyData: any;
 
-  /**
-   * Retrieves the adhoc query template data from `resolve`.
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {OrganizationService} organizationService Organization Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
-    this.route.data.subscribe((data: { adhocQueryTemplate: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { adhocQueryTemplate: any }) => {
       this.adhocQueryTemplateData = data.adhocQueryTemplate;
     });
   }
@@ -83,18 +94,22 @@ export class CreateAdhocQueryComponent implements OnInit {
    * Sets the conditional controls of the adhoc query form
    */
   setConditionalControls() {
-    this.adhocQueryForm.get('reportRunFrequency').valueChanges.subscribe((reportRunFrequencyId) => {
-      if (reportRunFrequencyId === 5) {
-        this.adhocQueryForm.addControl(
-          'reportRunEvery',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.min(1)])
-        );
-      } else {
-        this.adhocQueryForm.removeControl('reportRunEvery');
-      }
-    });
+    this.adhocQueryForm
+      .get('reportRunFrequency')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((reportRunFrequencyId) => {
+        if (reportRunFrequencyId === 5) {
+          this.adhocQueryForm.addControl(
+            'reportRunEvery',
+            new FormControl('', [
+              Validators.required,
+              Validators.min(1)
+            ])
+          );
+        } else {
+          this.adhocQueryForm.removeControl('reportRunEvery');
+        }
+      });
   }
 
   /**
@@ -102,14 +117,17 @@ export class CreateAdhocQueryComponent implements OnInit {
    * if successful redirects to view adhoc query.
    */
   submit() {
-    this.organizationService.createAdhocQuery(this.adhocQueryForm.value).subscribe((response: any) => {
-      this.router.navigate(
-        [
-          '../',
-          response.resourceId
-        ],
-        { relativeTo: this.route }
-      );
-    });
+    this.organizationService
+      .createAdhocQuery(this.adhocQueryForm.value)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        this.router.navigate(
+          [
+            '../',
+            response.resourceId
+          ],
+          { relativeTo: this.route }
+        );
+      });
   }
 }

@@ -1,17 +1,34 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClientsService } from '../../../clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../../settings/settings.service';
 import { finalize } from 'rxjs/operators';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import { SettingsService } from 'app/settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'mifosx-kyc-enquiry',
   templateUrl: './kyc-enquiry.component.html',
-  styleUrls: ['./kyc-enquiry.component.scss']
+  styleUrls: ['./kyc-enquiry.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule
+  ]
 })
 export class KycEnquiryComponent implements OnInit {
+
+  private formBuilder = inject(UntypedFormBuilder);
+  private clientsService = inject(ClientsService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private settingsService = inject(SettingsService);
+  private snackBar = inject(MatSnackBar);
 
   clientId: any;
 
@@ -26,22 +43,8 @@ export class KycEnquiryComponent implements OnInit {
   /** Client Data */
   kycData: any;
 
-  /**
-   * @param {FormBuilder} formBuilder Form Builder
-   * @param {ClientsService} clientsService Clients Service
-   * @param snackBar
-   * @param {ActivatedRoute} route Activated Route
-   * @param {Router} router Router
-   * @param {SettingsService} settingsService Setting service
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService,
-    private formBuilder: UntypedFormBuilder,
-  ) {
+
+  constructor() {
     this.route.data.subscribe((data: { clientActionData: any }) => {
       this.kycData = data.clientActionData.narrations;
     });

@@ -1,9 +1,21 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 
 /** rxjs Imports */
 import { Observable } from 'rxjs';
+
+/** Environment Configuration */
+import { environment } from '../../environments/environment';
+import { switchMap } from 'rxjs/operators';
 
 /**
  * Account Transfers Service.
@@ -12,7 +24,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class AccountTransfersService {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
 
   /**
    * @params standingInstructionsId
@@ -72,6 +84,12 @@ export class AccountTransfersService {
     return this.http.post(`/accounttransfers`, data);
   }
 
+  undoAccountTransfer(transferId: any): Observable<any> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    const httpParams = new HttpParams().set('command', 'undo');
+    return this.http.post(`/accounttransfers/${transferId}`, '{}', { params: httpParams, headers });
+  }
+
   /**
    * @param clientId Client Id
    * @param clientName Client Name
@@ -94,7 +112,8 @@ export class AccountTransfersService {
 
   deleteStandingInstrucions(id: any) {
     const httpParams = new HttpParams().set('command', 'delete');
-    return this.http.delete(`/standinginstructions/${id}`, { params: httpParams });
+    // Fineract has no DELETE here: a standing instruction is deleted with PUT ?command=delete.
+    return this.http.put(`/standinginstructions/${id}`, {}, { params: httpParams });
   }
 
   getStandingInstructionsTransactions(standingInstructionsId: any, dateFormat: any, locale: any) {
@@ -109,5 +128,39 @@ export class AccountTransfersService {
 
   getViewAccountTransferDetails(transferId: any): Observable<any> {
     return this.http.get(`/accounttransfers/${transferId}`);
+  }
+
+  getAccountByNumber(accountNumber: string, currency: string): Observable<any> {
+    const payload = {
+      partyId: accountNumber,
+      partyIdType: 'MSISDN',
+      currencyCode: currency
+    };
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http
+      .post(
+        `${environment.mifosInterbankTransfersApiUrl}${environment.mifosInterbankTransfersApiVersion}${environment.mifosInterbankTransfersApiProvider}/participant`,
+        JSON.stringify(payload),
+        { headers }
+      )
+      .pipe(
+        switchMap((participant: any) => {
+          const body = JSON.stringify({ ...payload, ownerFspId: participant.fspId });
+          return this.http.post(
+            `${environment.mifosInterbankTransfersApiUrl}${environment.mifosInterbankTransfersApiVersion}${environment.mifosInterbankTransfersApiProvider}/partyinfo`,
+            body,
+            { headers }
+          );
+        })
+      );
+  }
+
+  sendInterbankTransfer(body: any): Observable<any> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post(
+      `${environment.mifosInterbankTransfersApiUrl}${environment.mifosInterbankTransfersApiVersion}${environment.mifosInterbankTransfersApiProvider}/executetransfer`,
+      body,
+      { headers }
+    );
   }
 }

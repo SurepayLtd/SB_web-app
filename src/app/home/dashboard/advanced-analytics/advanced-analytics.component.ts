@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 
 /** Custom Services */
@@ -7,6 +15,10 @@ import { HomeService } from '../../home.service';
 import { AuthenticationService } from '../../../core/authentication/authentication.service';
 import { SettingsService } from '../../../settings/settings.service';
 import { Dates } from '../../../core/utils/dates';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 /**
  * Advanced Analytics Dashboard Component.
@@ -16,9 +28,21 @@ import { Dates } from '../../../core/utils/dates';
 @Component({
   selector: 'mifosx-advanced-analytics',
   templateUrl: './advanced-analytics.component.html',
-  styleUrls: ['./advanced-analytics.component.scss']
+  styleUrls: ['./advanced-analytics.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule
+  ]
 })
 export class AdvancedAnalyticsComponent implements OnInit {
+  private fb = inject(UntypedFormBuilder);
+  private homeService = inject(HomeService);
+  private authenticationService = inject(AuthenticationService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+
   /** Analytics data from API */
   analyticsData: any = null;
   /** Loading state */
@@ -33,14 +57,6 @@ export class AdvancedAnalyticsComponent implements OnInit {
   maxDate = new Date();
   /** Minimum allowed date for datepicker */
   minDate = new Date(2000, 0, 1);
-
-  constructor(
-    private fb: UntypedFormBuilder,
-    private homeService: HomeService,
-    private authenticationService: AuthenticationService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates
-  ) {}
 
   ngOnInit(): void {
     this.maxDate = this.settingsService.businessDate || new Date();

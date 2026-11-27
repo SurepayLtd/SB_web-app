@@ -1,3 +1,11 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
 <div class="container">
   <mat-card>
     <mat-card-header>
@@ -13,7 +21,7 @@
         <div class="consent-section">
           <h3>{{ 'Consent Information' | translate }}</h3>
 
-          <mat-form-field fxFlex>
+          <mat-form-field class="flex-fill">
             <mat-label>{{ 'Channel Type' | translate }}</mat-label>
 
             <mat-select formControlName="consentChannel" required>
@@ -27,7 +35,7 @@
             </mat-error>
           </mat-form-field>
 
-          <mat-form-field fxFlex class="consent-text-field" *ngIf="!isLoading">
+          <mat-form-field class="flex-fill consent-text-field" *ngIf="!isLoading">
             <mat-label>{{ 'Consent Text' | translate }}</mat-label>
 
             <textarea matInput formControlName="consentText" rows="5" required></textarea>

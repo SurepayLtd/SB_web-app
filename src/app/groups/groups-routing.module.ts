@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
@@ -34,7 +42,7 @@ import { GSIMAccountsResolver } from './common-resolvers/gsim-account-resolver';
 const routes: Routes = [
   Route.withShell([
     {
-      path: 'groups',
+      path: '',
       data: { title: 'Groups', breadcrumb: 'Groups', routeParamBreadcrumb: false },
       children: [
         {
@@ -60,7 +68,6 @@ const routes: Routes = [
               path: '',
               component: GroupsViewComponent,
               resolve: {
-                groupViewData: GroupViewResolver,
                 groupDatatables: GroupDatatablesResolver
               },
               children: [
@@ -113,8 +120,7 @@ const routes: Routes = [
               component: EditGroupComponent,
               data: { title: 'Edit Group', breadcrumb: 'Edit', routeParamBreadcrumb: false },
               resolve: {
-                groupAndTemplateData: GroupDataAndTemplateResolver,
-                groupViewData: GroupViewResolver
+                groupAndTemplateData: GroupDataAndTemplateResolver
               }
             },
             {
@@ -156,7 +162,6 @@ const routes: Routes = [
       ]
     }
   ])
-
 ];
 
 /**

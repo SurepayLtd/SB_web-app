@@ -1,7 +1,15 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
 import { UntypedFormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
@@ -15,6 +23,26 @@ import { SettingsService } from 'app/settings/settings.service';
 /** Custom Data Source */
 import { JournalEntriesDataSource } from './journal-entry.datasource';
 import { Dates } from 'app/core/utils/dates';
+import { MatAutocompleteTrigger, MatAutocomplete } from '@angular/material/autocomplete';
+import { GlAccountSelectorComponent } from '../../shared/accounting/gl-account-selector/gl-account-selector.component';
+import { AsyncPipe } from '@angular/common';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { DateFormatPipe } from '../../pipes/date-format.pipe';
+import { DatetimeFormatPipe } from '../../pipes/datetime-format.pipe';
+import { FormatNumberPipe } from '../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 
 /**
  * Search journal entry component.
@@ -22,9 +50,39 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-search-journal-entry',
   templateUrl: './search-journal-entry.component.html',
-  styleUrls: ['./search-journal-entry.component.scss']
+  styleUrls: ['./search-journal-entry.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatAutocompleteTrigger,
+    GlAccountSelectorComponent,
+    MatAutocomplete,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    AsyncPipe,
+    DateFormatPipe,
+    DatetimeFormatPipe,
+    FormatNumberPipe,
+    FaIconComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SearchJournalEntryComponent implements OnInit, AfterViewInit {
+  private accountingService = inject(AccountingService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private route = inject(ActivatedRoute);
+
   /** Minimum transaction date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum transaction date allowed. */
@@ -46,15 +104,15 @@ export class SearchJournalEntryComponent implements OnInit, AfterViewInit {
   /** Entry type filter data. */
   entryTypeFilterData = [
     {
-      option: 'All',
+      option: 'labels.inputs.All',
       value: ''
     },
     {
-      option: 'Manual Entries',
+      option: 'labels.inputs.Manual Entries',
       value: true
     },
     {
-      option: 'System Entries',
+      option: 'labels.inputs.System Entries',
       value: false // Bug: unable to implement from server side
     }
   ];
@@ -143,12 +201,7 @@ export class SearchJournalEntryComponent implements OnInit, AfterViewInit {
    * @param {ActivatedRoute} route Activated Route.
    * @param {SettingsService} settingsService Settings Service.
    */
-  constructor(
-    private accountingService: AccountingService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates,
-    private route: ActivatedRoute
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { offices: any; glAccounts: any }) => {
       this.officeData = data.offices;
       this.glAccountData = data.glAccounts;
@@ -282,6 +335,93 @@ export class SearchJournalEntryComponent implements OnInit, AfterViewInit {
     const findIndex = this.filterJournalEntriesBy.findIndex((filter) => filter.type === property);
     this.filterJournalEntriesBy[findIndex].value = filterValue;
     this.loadJournalEntriesPage();
+  }
+
+  /**
+   * Returns the visible active filter chips. Each chip references the form control
+   * so a user can clear it from the chips bar without scrolling back to the field.
+   */
+  get activeFilters(): {
+    key: string;
+    labelKey: string;
+    value: string;
+    onClear: () => void;
+  }[] {
+    const chips: { key: string; labelKey: string; value: string; onClear: () => void }[] = [];
+    const office = this.officeName.value;
+    if (office && office.name) {
+      chips.push({
+        key: 'office',
+        labelKey: 'labels.inputs.Office',
+        value: office.name,
+        onClear: () => this.officeName.setValue('')
+      });
+    }
+    const gl = this.glAccount.value;
+    if (gl && gl.name) {
+      chips.push({
+        key: 'gl',
+        labelKey: 'labels.inputs.GL Account',
+        value: `${gl.glCode} · ${gl.name}`,
+        onClear: () => this.glAccount.setValue('')
+      });
+    }
+    const entryType = this.entryTypeFilter.value;
+    if (entryType !== '' && entryType !== null && entryType !== undefined) {
+      const match = this.entryTypeFilterData.find((f) => f.value === entryType);
+      if (match) {
+        chips.push({
+          key: 'entryType',
+          labelKey: 'labels.inputs.Entry Type',
+          value: match.option,
+          onClear: () => this.entryTypeFilter.setValue('')
+        });
+      }
+    }
+    const txId = this.transactionId.value;
+    if (txId) {
+      chips.push({
+        key: 'txId',
+        labelKey: 'labels.inputs.Transaction ID',
+        value: txId,
+        onClear: () => this.transactionId.setValue('')
+      });
+    }
+    return chips;
+  }
+
+  /**
+   * True when at least one filter is non-empty beyond the default date window.
+   */
+  get hasActiveFilters(): boolean {
+    return this.activeFilters.length > 0;
+  }
+
+  /**
+   * Clears all filter form controls. Date ranges revert to last-month / today.
+   */
+  resetFilters(): void {
+    this.officeName.setValue('');
+    this.glAccount.setValue('');
+    this.entryTypeFilter.setValue('');
+    this.transactionId.setValue('');
+    this.transactionDateFrom.setValue(new Date(new Date().setMonth(new Date().getMonth() - 1)));
+    this.transactionDateTo.setValue(new Date());
+    this.submittedOnDateFrom.setValue(null);
+    this.submittedOnDateTo.setValue(null);
+  }
+
+  /**
+   * Maps a GL account type string to a CSS class for the colored pill in the table.
+   */
+  glAccountTypeClass(type?: string): string {
+    if (!type) return 'asset';
+    const normalized = type.toUpperCase();
+    if (normalized.includes('LIAB')) return 'liability';
+    if (normalized.includes('EQUITY')) return 'equity';
+    if (normalized.includes('INCOME') || normalized.includes('REVENUE')) return 'income';
+    if (normalized.includes('EXPENSE')) return 'expense';
+    return 'asset';
   }
 
   /**

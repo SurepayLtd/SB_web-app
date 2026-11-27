@@ -1,7 +1,21 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnChanges, OnInit, Input } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnChanges, OnInit, Input, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from 'app/settings/settings.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDivider } from '@angular/material/divider';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Savings Account Terms Step
@@ -9,9 +23,22 @@ import { SettingsService } from 'app/settings/settings.service';
 @Component({
   selector: 'mifosx-savings-account-terms-step',
   templateUrl: './savings-account-terms-step.component.html',
-  styleUrls: ['./savings-account-terms-step.component.scss']
+  styleUrls: ['./savings-account-terms-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    MatDivider,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
+  private formBuilder = inject(FormBuilder);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+
   /** Savings Account and Product Template */
   @Input() savingsAccountProductTemplate: any;
   /** Savings Account Template */
@@ -22,7 +49,7 @@ export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
   /** Maximum date allowed. */
   maxDate = new Date();
   /** Savings Account Terms Form */
-  savingsAccountTermsForm: UntypedFormGroup;
+  savingsAccountTermsForm: FormGroup;
   /** Lockin Period Frequency Type Data */
   lockinPeriodFrequencyTypeData: any;
   /** Interest Compounding Period Type Data */
@@ -38,10 +65,7 @@ export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
    * @param {FormBuilder} formBuilder Form Builder
    * @param {SettingsService} settingsService Setting service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.createSavingsAccountTermsForm();
     this.buildDependencies();
   }
@@ -101,7 +125,10 @@ export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
       decimal: [{ value: '', disabled: true }],
       nominalAnnualInterestRate: [
         '',
-        Validators.required
+        [
+          Validators.required,
+          Validators.min(0)
+        ]
       ],
       interestCompoundingPeriodType: [
         '',
@@ -119,13 +146,22 @@ export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
         '',
         Validators.required
       ],
-      minRequiredOpeningBalance: [''],
+      minRequiredOpeningBalance: [
+        '',
+        Validators.min(0)
+      ],
       withdrawalFeeForTransfers: [false],
-      lockinPeriodFrequency: [''],
+      lockinPeriodFrequency: [
+        '',
+        Validators.min(0)
+      ],
       lockinPeriodFrequencyType: [''],
       allowOverdraft: [false],
       enforceMinRequiredBalance: [false],
-      minRequiredBalance: [''],
+      minRequiredBalance: [
+        '',
+        Validators.min(0)
+      ],
       minBalanceForInterestCalculation: [{ value: '', disabled: true }]
     });
   }
@@ -146,17 +182,34 @@ export class SavingsAccountTermsStepComponent implements OnChanges, OnInit {
    * Subscribes to value changes and sets new form controls accordingly.
    */
   buildDependencies() {
-    this.savingsAccountTermsForm.get('allowOverdraft').valueChanges.subscribe((allowOverdraft: any) => {
-      if (allowOverdraft) {
-        this.savingsAccountTermsForm.addControl('minOverdraftForInterestCalculation', new UntypedFormControl(''));
-        this.savingsAccountTermsForm.addControl('nominalAnnualInterestRateOverdraft', new UntypedFormControl(''));
-        this.savingsAccountTermsForm.addControl('overdraftLimit', new UntypedFormControl(''));
-      } else {
-        this.savingsAccountTermsForm.removeControl('minOverdraftForInterestCalculation');
-        this.savingsAccountTermsForm.removeControl('nominalAnnualInterestRateOverdraft');
-        this.savingsAccountTermsForm.removeControl('overdraftLimit');
-      }
-    });
+    const nominalInterestControl = this.savingsAccountTermsForm.get('nominalAnnualInterestRate');
+    if (nominalInterestControl) {
+      nominalInterestControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+        if (typeof value === 'number' && value < 0) {
+          nominalInterestControl.setValue(0, { emitEvent: false });
+        }
+      });
+    }
+    this.savingsAccountTermsForm
+      .get('allowOverdraft')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((allowOverdraft: any) => {
+        if (allowOverdraft) {
+          this.savingsAccountTermsForm.addControl(
+            'minOverdraftForInterestCalculation',
+            new FormControl('', Validators.min(0))
+          );
+          this.savingsAccountTermsForm.addControl(
+            'nominalAnnualInterestRateOverdraft',
+            new FormControl('', Validators.min(0))
+          );
+          this.savingsAccountTermsForm.addControl('overdraftLimit', new FormControl('', Validators.min(0)));
+        } else {
+          this.savingsAccountTermsForm.removeControl('minOverdraftForInterestCalculation');
+          this.savingsAccountTermsForm.removeControl('nominalAnnualInterestRateOverdraft');
+          this.savingsAccountTermsForm.removeControl('overdraftLimit');
+        }
+      });
   }
 
   /**

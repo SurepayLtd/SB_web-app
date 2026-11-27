@@ -1,7 +1,24 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject
+} from '@angular/core';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
@@ -12,6 +29,10 @@ import { ConfigurationWizardService } from '../../../configuration-wizard/config
 /** Custom Dialog Component */
 import { ContinueSetupDialogComponent } from '../../../configuration-wizard/continue-setup-dialog/continue-setup-dialog.component';
 import { GLAccount } from 'app/shared/models/general.model';
+import { GlAccountSelectorComponent } from '../../../shared/accounting/gl-account-selector/gl-account-selector.component';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create gl account component.
@@ -19,9 +40,24 @@ import { GLAccount } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-create-gl-account',
   templateUrl: './create-gl-account.component.html',
-  styleUrls: ['./create-gl-account.component.scss']
+  styleUrls: ['./create-gl-account.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    GlAccountSelectorComponent,
+    MatCheckbox,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateGlAccountComponent implements OnInit, AfterViewInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private accountingService = inject(AccountingService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  dialog = inject(MatDialog);
+
   /** GL account form. */
   glAccountForm: UntypedFormGroup;
   /** Chart of accounts data. */
@@ -56,15 +92,7 @@ export class CreateGlAccountComponent implements OnInit, AfterViewInit {
    * @param {PopoverService} popoverService PopoverService.
    * @param {Matdialog} dialog Matdialog.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private accountingService: AccountingService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService,
-    public dialog: MatDialog
-  ) {
+  constructor() {
     this.route.queryParamMap.subscribe((params) => {
       this.accountTypeId = Number(params.get('accountType'));
       this.parentId = Number(params.get('parent'));
@@ -144,8 +172,6 @@ export class CreateGlAccountComponent implements OnInit, AfterViewInit {
           break;
       }
     });
-
-    this.glAccountForm.get('type').setValue(this.accountTypeId);
   }
 
   /**
@@ -153,8 +179,11 @@ export class CreateGlAccountComponent implements OnInit, AfterViewInit {
    * if successful redirects to view created account.
    */
   submit() {
+    if (this.glAccountForm.invalid) {
+      return;
+    }
     this.accountingService.createGlAccount(this.glAccountForm.value).subscribe((response: any) => {
-      if (this.configurationWizardService.showChartofAccounts === true) {
+      if (this.configurationWizardService.showChartofAccounts) {
         this.configurationWizardService.showChartofAccounts = false;
         this.openDialog();
       } else {
@@ -189,7 +218,7 @@ export class CreateGlAccountComponent implements OnInit, AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showChartofAccountsForm === true) {
+    if (this.configurationWizardService.showChartofAccountsForm) {
       setTimeout(() => {
         this.showPopover(this.templateAccountFormRef, this.accountFormRef.nativeElement, 'bottom', true);
       });

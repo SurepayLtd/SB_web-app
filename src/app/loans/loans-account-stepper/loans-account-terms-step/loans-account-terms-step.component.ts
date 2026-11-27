@@ -1,19 +1,99 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Input, OnChanges } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, FormArray, UntypedFormControl } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  OnInit,
+  Input,
+  OnChanges,
+  SimpleChanges,
+  inject
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute } from '@angular/router';
 import { LoansAccountAddCollateralDialogComponent } from 'app/loans/custom-dialog/loans-account-add-collateral-dialog/loans-account-add-collateral-dialog.component';
 import { LoanProducts } from 'app/products/loan-products/loan-products';
-import { LoanProduct } from 'app/products/loan-products/models/loan-product.model';
+import {
+  Breach,
+  DelinquencyBucket,
+  LoanProduct,
+  NearBreach
+} from 'app/products/loan-products/models/loan-product.model';
 import { SettingsService } from 'app/settings/settings.service';
+import { Dates } from 'app/core/utils/dates';
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
 import { FormDialogComponent } from 'app/shared/form-dialog/form-dialog.component';
 import { DatepickerBase } from 'app/shared/form-dialog/formfield/model/datepicker-base';
 import { FormfieldBase } from 'app/shared/form-dialog/formfield/model/formfield-base';
 import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
 import { Currency } from 'app/shared/models/general.model';
-import { CodeName, OptionData } from 'app/shared/models/option-data.model';
+import { CodeName, OptionData, StringEnumOptionData } from 'app/shared/models/option-data.model';
+import { InputAmountComponent } from '../../../shared/input-amount/input-amount.component';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDivider } from '@angular/material/divider';
+import { MatIconButton } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FindPipe } from '../../../pipes/find.pipe';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { YesnoPipe } from '../../../pipes/yesno.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanProductBaseComponent } from 'app/products/loan-products/common/loan-product-base.component';
+import { amountValueValidator } from 'app/shared/validators/amount-value.validator';
+import { positiveIntegerValidator } from 'app/shared/validators/positive-integer.validator';
+import { BreachDisplayComponent } from 'app/shared/loan/breach-display/breach-display.component';
+import {
+  WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY,
+  WorkingCapitalPaymentAmountCalculationStrategy,
+  inactivePricingFields,
+  resolvePaymentAmountCalculationStrategy
+} from 'app/loans/models/working-capital/working-capital-loan-account.model';
+import {
+  annualEirValidators,
+  greaterThanZeroValidator,
+  withinBoundsValidator
+} from 'app/shared/validators/working-capital-pricing.validator';
+import {
+  SEMI_MONTHLY_FREQUENCY_TYPE,
+  SemiMonthlyRepaymentDays,
+  applyRepaymentDaysToPayload,
+  firstRepaymentDayOptions,
+  isSemiMonthly,
+  isValidRepaymentDayPair,
+  secondRepaymentDayOptions,
+  semiMonthlyDueDateValidator
+} from 'app/shared/loan/semi-monthly/semi-monthly';
+import { SemiMonthlyDayPipe, SemiMonthlyDueDaysPipe } from 'app/shared/loan/semi-monthly/semi-monthly-due-days.pipe';
+
+interface DisbursementData {
+  id?: number;
+  principal: number;
+  expectedDisbursementDate: string | Date;
+}
 
 /**
  * Create Loans Account Terms Step
@@ -21,9 +101,45 @@ import { CodeName, OptionData } from 'app/shared/models/option-data.model';
 @Component({
   selector: 'mifosx-loans-account-terms-step',
   templateUrl: './loans-account-terms-step.component.html',
-  styleUrls: ['./loans-account-terms-step.component.scss']
+  styleUrls: ['./loans-account-terms-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    MatTooltip,
+    MatCheckbox,
+    MatDivider,
+    MatIconButton,
+    FaIconComponent,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatStepperPrevious,
+    MatStepperNext,
+    FindPipe,
+    DateFormatPipe,
+    YesnoPipe,
+    BreachDisplayComponent,
+    SemiMonthlyDayPipe,
+    SemiMonthlyDueDaysPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
+export class LoansAccountTermsStepComponent extends LoanProductBaseComponent implements OnInit, OnChanges {
+  private readonly destroyRef = inject(DestroyRef);
+  private formBuilder = inject(UntypedFormBuilder);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
+  dialog = inject(MatDialog);
+
   /** Loans Product Options */
   @Input() loansProductOptions: any;
   /** Loans Account Product Template */
@@ -31,11 +147,15 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
   /** Loans Account Template */
   @Input() loansAccountTemplate: any;
   loansAccountTermsData: any;
+  /** Working Capital: pricing strategy inherited from the product; decides which pricing inputs render and travel. */
+  paymentAmountCalculationStrategy: WorkingCapitalPaymentAmountCalculationStrategy =
+    WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY.TPV;
+  readonly wcStrategy = WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY;
 
   /** Is Multi Disburse Loan  */
   multiDisburseLoan: any;
   // @Input() loansAccountFormValid: LoansAccountFormValid
-  @Input() loansAccountFormValid: boolean;
+  @Input() loansAccountFormValid: boolean = false;
   // @Input collateralOptions: Collateral Options
   @Input() collateralOptions: any;
   // @Input loanPrincipal: Loan Principle
@@ -46,7 +166,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
   /** Maximum date allowed. */
   maxDate = new Date(2100, 0, 1);
   /** Loans Account Terms Form */
-  loansAccountTermsForm: UntypedFormGroup;
+  loansAccountTermsForm: UntypedFormGroup = new UntypedFormGroup({});
   /** Term Frequency Type Data */
   termFrequencyTypeData: any;
   /** Repayment Frequency Nth Day Type Data */
@@ -62,7 +182,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
   /** Client Active Loan Data */
   clientActiveLoanData: any;
   /** Multi Disbursement Data */
-  disbursementDataSource: {}[] = [];
+  disbursementDataSource: DisbursementData[] = [];
   /** Loan repayment strategies */
   transactionProcessingStrategyOptions: any = [];
   repaymentStrategyDisabled = false;
@@ -97,185 +217,479 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
   loanScheduleType: OptionData | null = null;
   loanProduct: LoanProduct | null = null;
   interestRateFrequencyTypeData: any[] = [];
-  currency: Currency;
+  currency: Currency | null = null;
 
   productEnableDownPayment = false;
+  enableIncomeCapitalization = false;
+  enableBuyDownFee = false;
+  isProgressive = false;
 
-  /**
-   * Create Loans Account Terms Form
-   * @param formBuilder FormBuilder
-   * @param {SettingsService} settingsService SettingsService
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService,
-    private route: ActivatedRoute,
-    public dialog: MatDialog
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  allowAttributeOverrides: any | null = null;
+
+  delinquencyStartTypeOptions: StringEnumOptionData[] = [];
+  breachStartTypeOptions: StringEnumOptionData[] = [];
+  delinquencyBucketOptions: DelinquencyBucket[] = [];
+  breachOptions: Breach[] = [];
+  nearBreachOptions: NearBreach[] = [];
+  allowAttributeOverridesBreach: boolean = true;
+  allowAttributeOverridesDelinquencyBucket: boolean = true;
+  /** Whether the product lets the loan override "repaid every" (drives re-enabling after semi-monthly). */
+  private repaymentEveryOverridable = true;
+  /** Semi-monthly first-day options (1–27). */
+  readonly firstRepaymentDayOptions = firstRepaymentDayOptions();
+  /** Due days the loan being edited already has; an unchanged pair is left out of the request. */
+  private savedRepaymentDays: Partial<SemiMonthlyRepaymentDays> | null = null;
+
+  constructor() {
+    super();
     this.createloansAccountTermsForm();
+    this.loanId = this.route.snapshot.params['loanId'];
   }
   /**
    * Executes on change of input values
    */
-  ngOnChanges() {
-    if (this.loansAccountProductTemplate) {
-      this.currency = this.loansAccountProductTemplate.currency;
+  ngOnChanges(changes: SimpleChanges) {
+    // Re-seed the form only when the template the values come from actually changed. Angular
+    // also runs ngOnChanges when an unrelated input flips — `loansAccountFormValid` tracks this
+    // very form's validity — and re-patching then overwrites what the user is still typing. A
+    // half-typed amount such as `800000.` is briefly invalid, which flipped that input and put
+    // the product default back, swallowing the decimal point.
+    if (!changes['loansAccountProductTemplate'] && !changes['loansAccountTemplate']) {
+      return;
+    }
 
-      this.loansAccountTermsData = this.loansAccountProductTemplate;
-      if (this.loanId != null && this.loansAccountTemplate.accountNo) {
-        this.loansAccountTermsData = this.loansAccountTemplate;
-      }
-      this.productEnableDownPayment = this.loansAccountTermsData.product.enableDownPayment;
+    if (this.loanProductService.isLoanProduct) {
+      if (this.loansAccountProductTemplate) {
+        this.loansAccountTermsData = this.loansAccountProductTemplate;
+        if (this.loanId != null && this.loansAccountTemplate?.accountNo) {
+          this.loansAccountTermsData = this.loansAccountTemplate;
+        }
+        // Resolve the currency from the finalized terms data (the account template in edit mode),
+        // matching ngOnInit and the non-loan-product branch, so the amount field reflects the
+        // account currency instead of the product template currency.
+        this.currency = this.resolveCurrency(this.loansAccountTermsData);
+        this.productEnableDownPayment = this.loansAccountTermsData.product.enableDownPayment;
+        this.enableIncomeCapitalization = this.loansAccountTermsData.product.enableIncomeCapitalization;
+        this.enableBuyDownFee = this.loansAccountTermsData.product.enableBuyDownFee;
+        this.isProgressive =
+          this.loansAccountTermsData.loanScheduleType.code == LoanProducts.LOAN_SCHEDULE_TYPE_PROGRESSIVE;
+        if (this.loansAccountTermsData.product) {
+          this.loanProduct = this.loansAccountTermsData.product;
+        }
 
-      if (this.loansAccountTermsData.product) {
-        this.loanProduct = this.loansAccountTermsData.product;
-      }
+        this.interestRateFrequencyTypeData = this.loansAccountTermsData.interestRateFrequencyTypeOptions;
 
-      this.interestRateFrequencyTypeData = this.loansAccountTermsData.interestRateFrequencyTypeOptions;
-
-      this.loansAccountTermsForm.patchValue({
-        principalAmount: this.loansAccountTermsData.principal,
-        loanTermFrequency: this.loansAccountTermsData.termFrequency,
-        loanTermFrequencyType: this.loansAccountTermsData.termPeriodFrequencyType.id,
-        numberOfRepayments: this.loansAccountTermsData.numberOfRepayments,
-        repaymentEvery: this.loansAccountTermsData.repaymentEvery,
-        repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType.id,
-        amortizationType: this.loansAccountTermsData.amortizationType.id,
-        isEqualAmortization: this.loansAccountTermsData.isEqualAmortization,
-        interestType: this.loansAccountTermsData.interestType.id,
-        isFloatingInterestRate: this.loansAccountTermsData.isLoanProductLinkedToFloatingRate ? false : '',
-        interestCalculationPeriodType: this.loansAccountTermsData.interestCalculationPeriodType.id,
-        allowPartialPeriodInterestCalculation: this.loansAccountTermsData.allowPartialPeriodInterestCalculation,
-        inArrearsTolerance: this.loansAccountTermsData.inArrearsTolerance,
-        graceOnPrincipalPayment: this.loansAccountTermsData.graceOnPrincipalPayment,
-        graceOnInterestPayment: this.loansAccountTermsData.graceOnInterestPayment,
-        graceOnArrearsAgeing: this.loansAccountTermsData.graceOnArrearsAgeing,
-        graceOnInterestCharged: this.loansAccountTermsData.graceOnInterestCharged,
-        fixedEmiAmount: this.loansAccountTermsData.fixedEmiAmount,
-        maxOutstandingLoanBalance: this.loansAccountTermsData.maxOutstandingLoanBalance,
-        transactionProcessingStrategyCode: this.loansAccountTermsData.transactionProcessingStrategyCode,
-        interestRateDifferential: this.loansAccountTermsData.interestRateDifferential,
-        multiDisburseLoan: this.loansAccountTermsData.multiDisburseLoan,
-        interestRateFrequencyType: this.loansAccountTermsData.interestRateFrequencyType.id,
-        balloonRepaymentAmount: this.loansAccountTermsData.balloonRepaymentAmount,
-        interestRecognitionOnDisbursementDate: this.loansAccountTermsData.interestRecognitionOnDisbursementDate || false
-      });
-
-      this.setAdvancedPaymentStrategyControls();
-
-      if (this.loansAccountTermsData.isLoanProductLinkedToFloatingRate) {
-        this.loansAccountTermsForm.removeControl('interestRatePerPeriod');
-      }
-
-      this.multiDisburseLoan = this.loansAccountTermsData.multiDisburseLoan;
-      if (this.loansAccountTermsData.disbursementDetails) {
-        this.disbursementDataSource = this.loansAccountTermsData.disbursementDetails;
-        this.totalMultiDisbursed = 0;
-        this.disbursementDataSource.forEach((item: any) => {
-          this.totalMultiDisbursed += item.principal;
+        this.loansAccountTermsForm.patchValue({
+          principalAmount: this.loansAccountTermsData.principal,
+          loanTermFrequency: this.loansAccountTermsData.termFrequency,
+          loanTermFrequencyType: this.loansAccountTermsData.termPeriodFrequencyType.id,
+          numberOfRepayments: this.loansAccountTermsData.numberOfRepayments,
+          repaymentEvery: this.loansAccountTermsData.repaymentEvery,
+          repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType.id,
+          ...this.templateRepaymentDays(),
+          amortizationType: this.loansAccountTermsData.amortizationType.id,
+          isEqualAmortization: this.loansAccountTermsData.isEqualAmortization,
+          interestType: this.loansAccountTermsData.interestType.id,
+          isFloatingInterestRate: this.loansAccountTermsData.isLoanProductLinkedToFloatingRate ? false : null,
+          interestCalculationPeriodType: this.loansAccountTermsData.interestCalculationPeriodType.id,
+          allowPartialPeriodInterestCalculation: this.loansAccountTermsData.allowPartialPeriodInterestCalculation,
+          inArrearsTolerance: this.loansAccountTermsData.inArrearsTolerance,
+          graceOnPrincipalPayment: this.loansAccountTermsData.graceOnPrincipalPayment,
+          graceOnInterestPayment: this.loansAccountTermsData.graceOnInterestPayment,
+          graceOnArrearsAgeing: this.loansAccountTermsData.graceOnArrearsAgeing,
+          graceOnInterestCharged: this.loansAccountTermsData.graceOnInterestCharged,
+          fixedEmiAmount: this.loansAccountTermsData.fixedEmiAmount,
+          maxOutstandingLoanBalance: this.loansAccountTermsData.maxOutstandingLoanBalance,
+          transactionProcessingStrategyCode: this.loansAccountTermsData.transactionProcessingStrategyCode,
+          interestRateDifferential: this.loansAccountTermsData.interestRateDifferential,
+          multiDisburseLoan: this.loansAccountTermsData.multiDisburseLoan,
+          interestRateFrequencyType: this.loansAccountTermsData.interestRateFrequencyType.id,
+          balloonRepaymentAmount: this.loansAccountTermsData.balloonRepaymentAmount,
+          interestRecognitionOnDisbursementDate:
+            this.loansAccountTermsData.interestRecognitionOnDisbursementDate || false
         });
-      }
-      if (this.isDelinquencyEnabled()) {
-        this.loansAccountTermsForm.addControl(
-          'enableInstallmentLevelDelinquency',
-          new UntypedFormControl(
-            this.loansAccountTermsData.enableInstallmentLevelDelinquency ||
-              this.loanProduct.enableInstallmentLevelDelinquency
-          )
-        );
-      }
-      this.collateralDataSource = this.loansAccountTermsData.collateral || [];
-      if (this.productEnableDownPayment) {
-        const enableDownPayment = this.loansAccountTermsData['enableDownPayment'] === false ? false : true;
-        this.loansAccountTermsForm.addControl('enableDownPayment', new UntypedFormControl(enableDownPayment));
-      }
 
-      const allowAttributeOverrides = this.loansAccountTermsData.product.allowAttributeOverrides;
-      if (!allowAttributeOverrides.repaymentEvery) {
-        this.loansAccountTermsForm.controls.repaymentEvery.disable();
-        this.loansAccountTermsForm.controls.repaymentFrequencyType.disable();
+        this.setAdvancedPaymentStrategyControls();
+
+        if (this.loansAccountTermsData.loanScheduleType.code == LoanProducts.LOAN_SCHEDULE_TYPE_CUMULATIVE) {
+          this.loansAccountTermsForm.removeControl('interestRecognitionOnDisbursementDate');
+        }
+
+        if (this.loansAccountTermsData.isLoanProductLinkedToFloatingRate) {
+          this.loansAccountTermsForm.removeControl('interestRatePerPeriod');
+        }
+
+        this.multiDisburseLoan = this.loansAccountTermsData.multiDisburseLoan;
+        if (this.loansAccountTermsData.disbursementDetails) {
+          this.disbursementDataSource = this.loansAccountTermsData.disbursementDetails;
+          this.totalMultiDisbursed = 0;
+          this.disbursementDataSource.forEach((item: any) => {
+            this.totalMultiDisbursed += item.principal;
+          });
+        }
+        if (this.isDelinquencyEnabled()) {
+          this.loansAccountTermsForm.addControl(
+            'enableInstallmentLevelDelinquency',
+            new UntypedFormControl(
+              this.loansAccountTermsData.enableInstallmentLevelDelinquency ||
+                this.loanProduct?.enableInstallmentLevelDelinquency
+            )
+          );
+        }
+        this.collateralDataSource = this.loansAccountTermsData.collateral || [];
+        if (this.productEnableDownPayment) {
+          const enableDownPayment = this.loansAccountTermsData['enableDownPayment'] === false ? false : true;
+          this.loansAccountTermsForm.addControl('enableDownPayment', new UntypedFormControl(enableDownPayment));
+        }
+
+        if (this.isFullTermTrancheEditable()) {
+          const allowFullTermForTranche =
+            this.loansAccountTermsData.allowFullTermForTranche ?? this.loanProduct?.allowFullTermForTranche ?? false;
+          this.loansAccountTermsForm.patchValue({ allowFullTermForTranche });
+        }
+
+        const allowAttributeOverrides = this.loansAccountTermsData.product.allowAttributeOverrides;
+        this.repaymentEveryOverridable = !!allowAttributeOverrides.repaymentEvery;
+        if (!allowAttributeOverrides.repaymentEvery) {
+          this.loansAccountTermsForm.controls.repaymentEvery.disable();
+          this.loansAccountTermsForm.controls.repaymentFrequencyType.disable();
+        }
+        // The frequency listener is registered in ngOnInit, which runs after the first ngOnChanges,
+        // so the semi-monthly rules are applied explicitly here for the seeded frequency.
+        this.applySemiMonthlyRules();
+        if (!allowAttributeOverrides.interestType) {
+          this.loansAccountTermsForm.controls.interestType.disable();
+        }
+        if (!allowAttributeOverrides.amortizationType) {
+          this.loansAccountTermsForm.controls.amortizationType.disable();
+        }
+        if (!allowAttributeOverrides.interestCalculationPeriodType) {
+          this.loansAccountTermsForm.controls.interestCalculationPeriodType.disable();
+          this.loansAccountTermsForm.controls.allowPartialPeriodInterestCalculation.disable();
+        }
+        if (!allowAttributeOverrides.inArrearsTolerance) {
+          this.loansAccountTermsForm.controls.inArrearsTolerance.disable();
+        }
+        if (!allowAttributeOverrides.transactionProcessingStrategyCode) {
+          this.loansAccountTermsForm.controls.transactionProcessingStrategyCode.disable();
+        }
+        if (!allowAttributeOverrides.graceOnPrincipalAndInterestPayment) {
+          this.loansAccountTermsForm.controls.graceOnPrincipalPayment.disable();
+        }
+        if (!allowAttributeOverrides.graceOnPrincipalAndInterestPayment) {
+          this.loansAccountTermsForm.controls.graceOnInterestPayment.disable();
+        }
+        if (!allowAttributeOverrides.graceOnArrearsAgeing) {
+          this.loansAccountTermsForm.controls.graceOnArrearsAgeing.disable();
+        }
+        this.setOptions();
+
+        this.loansAccountTermsForm.removeControl('maxOutstandingLoanBalance');
+        if (this.allowAddDisbursementDetails()) {
+          this.loansAccountTermsForm.addControl(
+            'maxOutstandingLoanBalance',
+            new UntypedFormControl(this.loansAccountTermsData?.maxOutstandingLoanBalance ?? null, [
+              Validators.required,
+              Validators.min(0)
+            ])
+          );
+        } else {
+          this.loansAccountTermsForm.addControl(
+            'maxOutstandingLoanBalance',
+            new UntypedFormControl(this.loansAccountTermsData?.maxOutstandingLoanBalance ?? null, [Validators.min(0)])
+          );
+        }
       }
-      if (!allowAttributeOverrides.interestType) {
-        this.loansAccountTermsForm.controls.interestType.disable();
+    } else if (this.loanProductService.isWorkingCapital && this.loansAccountProductTemplate) {
+      this.loansAccountTermsData = this.loansAccountProductTemplate;
+      this.currency = this.resolveCurrency(this.loansAccountTermsData);
+      this.termFrequencyTypeData = this.loansAccountTermsData.options?.periodFrequencyTypeOptions;
+      this.delinquencyStartTypeOptions = this.loansAccountTermsData.options?.delinquencyStartTypeOptions;
+      this.breachStartTypeOptions = this.loansAccountTermsData.options?.breachStartTypeOptions ?? [];
+      this.delinquencyBucketOptions = this.loansAccountTermsData.options?.delinquencyBucketOptions ?? [];
+      this.breachOptions = this.loansAccountTermsData.options?.breachOptions ?? [];
+      this.nearBreachOptions = this.loansAccountTermsData.options?.nearBreachOptions ?? [];
+      const templateChange = changes['loansAccountProductTemplate'];
+      const productChanged =
+        !!templateChange &&
+        (templateChange.isFirstChange() ||
+          templateChange.previousValue?.product?.id !== templateChange.currentValue?.product?.id);
+      // Edit Loan
+      if (this.loanId != null && 'accountNo' in this.loansAccountTemplate) {
+        this.loansAccountTermsData = this.loansAccountTemplate;
+        this.loansAccountTermsForm.patchValue({
+          discount:
+            this.loansAccountTermsData.proposedDiscountFee ||
+            this.loansAccountTermsData.approvedDiscountFee ||
+            this.loansAccountTermsData.discountFee ||
+            '',
+          principalAmount: this.loansAccountTermsData.proposedPrincipal,
+          periodPaymentRate: this.loansAccountTermsData.paymentRate,
+          totalPaymentVolume: this.loansAccountTermsData.totalPaymentVolume,
+          annualEir: this.loansAccountTermsData.annualEir,
+          paymentAmount: this.loansAccountTermsData.paymentAmount,
+          repaymentEvery: this.loansAccountTermsData.repaymentEvery,
+          repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType?.id,
+          delinquencyGraceDays: this.loansAccountTermsData.delinquencyGraceDays,
+          delinquencyStartType: this.loansAccountTermsData.delinquencyStartType?.code,
+          delinquencyBucketId: this.loansAccountTermsData.delinquencyBucket?.id,
+          breachId: this.loansAccountTermsData.breach?.id,
+          nearBreachId: this.loansAccountTermsData.nearBreach?.id,
+          breachGraceDays: this.loansAccountTermsData.breachGraceDays ?? 0,
+          breachStartType: this.loansAccountTermsData.breachStartType?.code ?? ''
+        });
+        // New Loan — solo inicializar si el producto realmente cambió
+      } else if (productChanged) {
+        this.loansAccountTermsForm.patchValue({
+          discount: this.loansAccountTermsData.product.discount || '',
+          principalAmount: this.loansAccountTermsData.product.principal,
+          annualEir: this.loansAccountTermsData.product.annualEir ?? '',
+          paymentAmount: this.loansAccountTermsData.product.paymentAmount ?? '',
+          delinquencyGraceDays: this.loansAccountTermsData.product.delinquencyGraceDays ?? '',
+          delinquencyStartType: this.loansAccountTermsData.product.delinquencyStartType?.code || '',
+          delinquencyBucketId: this.loansAccountTermsData.product.delinquencyBucket?.id || '',
+          breachId: this.loansAccountTermsData.product.breach?.id || '',
+          nearBreachId: this.loansAccountTermsData.product.nearBreach?.id || '',
+          breachGraceDays: this.loansAccountTermsData.product.breachGraceDays ?? 0,
+          // The template does not copy the product's breachStartType into loanData; the backend inherits it when omitted.
+          breachStartType: this.loansAccountTermsData.product.breachStartType?.code ?? ''
+        });
+        this.cdr.markForCheck();
       }
-      if (!allowAttributeOverrides.amortizationType) {
-        this.loansAccountTermsForm.controls.amortizationType.disable();
+      // On the first change, loansAccountProductTemplate is still the raw account-details response
+      // (no `product`) — the WC template with `product.allowAttributeOverrides` arrives asynchronously
+      // and triggers a second ngOnChanges once loaded.
+      if (this.loansAccountProductTemplate.product) {
+        this.applyPaymentAmountCalculationStrategy(this.loansAccountProductTemplate.product);
+        this.allowAttributeOverrides = this.loansAccountProductTemplate.product.allowAttributeOverrides;
+        if (
+          !this.allowAttributeOverrides.periodPaymentFrequency ||
+          this.allowAttributeOverrides.periodPaymentFrequency === false
+        ) {
+          this.loansAccountTermsForm.controls.repaymentEvery.disable();
+        } else {
+          this.loansAccountTermsForm.controls.repaymentEvery.enable();
+        }
+        if (
+          !this.allowAttributeOverrides.periodPaymentFrequencyType ||
+          this.allowAttributeOverrides.periodPaymentFrequencyType === false
+        ) {
+          this.loansAccountTermsForm.controls.repaymentFrequencyType.disable();
+        } else {
+          this.loansAccountTermsForm.controls.repaymentFrequencyType.enable();
+        }
+        if (!this.allowAttributeOverrides.discountDefault || this.allowAttributeOverrides.discountDefault === false) {
+          this.loansAccountTermsForm.controls.discount.disable();
+        } else {
+          this.loansAccountTermsForm.controls.discount.enable();
+        }
+        if (
+          !this.allowAttributeOverrides.delinquencyBucketClassification ||
+          this.allowAttributeOverrides.delinquencyBucketClassification === false
+        ) {
+          this.allowAttributeOverridesDelinquencyBucket = false;
+          this.loansAccountTermsForm.controls.delinquencyBucketId.disable();
+          // Grace days and start type follow the bucket override switch (FINERACT-2684).
+          this.loansAccountTermsForm.controls.delinquencyGraceDays.disable();
+          this.loansAccountTermsForm.controls.delinquencyStartType.disable();
+        } else {
+          this.allowAttributeOverridesDelinquencyBucket = true;
+          this.loansAccountTermsForm.controls.delinquencyBucketId.enable();
+          this.loansAccountTermsForm.controls.delinquencyGraceDays.enable();
+          this.loansAccountTermsForm.controls.delinquencyStartType.enable();
+        }
+        if (!this.allowAttributeOverrides.breach || this.allowAttributeOverrides.breach === false) {
+          this.allowAttributeOverridesBreach = false;
+          this.loansAccountTermsForm.controls.breachId.disable();
+          this.loansAccountTermsForm.controls.nearBreachId.disable();
+          this.loansAccountTermsForm.controls.breachGraceDays.disable();
+          this.loansAccountTermsForm.controls.breachStartType.disable();
+        } else {
+          this.allowAttributeOverridesBreach = true;
+          this.loansAccountTermsForm.controls.breachId.enable();
+          this.loansAccountTermsForm.controls.nearBreachId.enable();
+          this.loansAccountTermsForm.controls.breachGraceDays.enable();
+          this.loansAccountTermsForm.controls.breachStartType.enable();
+        }
       }
-      if (!allowAttributeOverrides.interestCalculationPeriodType) {
-        this.loansAccountTermsForm.controls.interestCalculationPeriodType.disable();
-        this.loansAccountTermsForm.controls.allowPartialPeriodInterestCalculation.disable();
-      }
-      if (!allowAttributeOverrides.inArrearsTolerance) {
-        this.loansAccountTermsForm.controls.inArrearsTolerance.disable();
-      }
-      if (!allowAttributeOverrides.transactionProcessingStrategyCode) {
-        this.loansAccountTermsForm.controls.transactionProcessingStrategyCode.disable();
-      }
-      if (!allowAttributeOverrides.graceOnPrincipalAndInterestPayment) {
-        this.loansAccountTermsForm.controls.graceOnPrincipalPayment.disable();
-      }
-      if (!allowAttributeOverrides.graceOnPrincipalAndInterestPayment) {
-        this.loansAccountTermsForm.controls.graceOnInterestPayment.disable();
-      }
-      if (!allowAttributeOverrides.graceOnArrearsAgeing) {
-        this.loansAccountTermsForm.controls.graceOnArrearsAgeing.disable();
-      }
-      this.setOptions();
     }
   }
 
   ngOnInit() {
     this.maxDate = this.settingsService.maxFutureDate;
     this.loansAccountTermsData = this.loansAccountProductTemplate;
-    if (this.loanId != null && this.loansAccountTemplate.accountNo) {
-      this.loansAccountTermsData = this.loansAccountTemplate;
-    }
+    this.currency = this.resolveCurrency(this.loansAccountTermsData);
+    if (this.loanProductService.isLoanProduct) {
+      if (this.loanId != null && this.loansAccountTemplate.accountNo) {
+        this.loansAccountTermsData = this.loansAccountTemplate;
+      }
 
-    if (this.loansAccountTermsData) {
-      if (this.loansAccountTermsData.loanProductId) {
+      if (this.loansAccountTermsData) {
+        if (this.loansAccountTermsData.loanProductId) {
+          const expectedFirstRepaymentOnDate = this.loansAccountTermsData.expectedFirstRepaymentOnDate;
+          this.loansAccountTermsForm.patchValue({
+            repaymentsStartingFromDate:
+              expectedFirstRepaymentOnDate && this.dateUtils.parseDate(expectedFirstRepaymentOnDate)
+          });
+        }
+        if (this.isDelinquencyEnabled()) {
+          this.loansAccountTermsForm.addControl(
+            'enableInstallmentLevelDelinquency',
+            new UntypedFormControl(
+              this.loansAccountTermsData.enableInstallmentLevelDelinquency ||
+                this.loanProduct?.enableInstallmentLevelDelinquency
+            )
+          );
+        }
         this.loansAccountTermsForm.patchValue({
-          repaymentsStartingFromDate:
-            this.loansAccountTermsData.expectedFirstRepaymentOnDate &&
-            new Date(this.loansAccountTermsData.expectedFirstRepaymentOnDate)
+          principalAmount: this.loansAccountTermsData.principal,
+          loanTermFrequency: this.loansAccountTermsData.termFrequency,
+          loanTermFrequencyType: this.loansAccountTermsData.termPeriodFrequencyType.id,
+          numberOfRepayments: this.loansAccountTermsData.numberOfRepayments,
+          repaymentEvery: this.loansAccountTermsData.repaymentEvery,
+          repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType.id,
+          ...this.templateRepaymentDays(),
+          amortizationType: this.loansAccountTermsData.amortizationType.id,
+          isEqualAmortization: this.loansAccountTermsData.isEqualAmortization,
+          interestType: this.loansAccountTermsData.interestType.id,
+          isFloatingInterestRate: this.loansAccountTermsData.isLoanProductLinkedToFloatingRate ? false : null,
+          interestCalculationPeriodType: this.loansAccountTermsData.interestCalculationPeriodType.id,
+          allowPartialPeriodInterestCalculation: this.loansAccountTermsData.allowPartialPeriodInterestCalculation,
+          inArrearsTolerance: this.loansAccountTermsData.inArrearsTolerance,
+          graceOnPrincipalPayment: this.loansAccountTermsData.graceOnPrincipalPayment,
+          graceOnInterestPayment: this.loansAccountTermsData.graceOnInterestPayment,
+          graceOnArrearsAgeing: this.loansAccountTermsData.graceOnArrearsAgeing,
+          graceOnInterestCharged: this.loansAccountTermsData.graceOnInterestCharged,
+          fixedEmiAmount: this.loansAccountTermsData.fixedEmiAmount,
+          maxOutstandingLoanBalance: this.loansAccountTermsData.maxOutstandingLoanBalance,
+          transactionProcessingStrategyCode: this.loansAccountTermsData.transactionProcessingStrategyCode,
+          interestRateDifferential: this.loansAccountTermsData.interestRateDifferential,
+          multiDisburseLoan: this.loansAccountTermsData.multiDisburseLoan,
+          interestRateFrequencyType: this.loansAccountTermsData.interestRateFrequencyType.id,
+          balloonRepaymentAmount: this.loansAccountTermsData.balloonRepaymentAmount,
+          interestRecognitionOnDisbursementDate:
+            this.loansAccountTermsData.interestRecognitionOnDisbursementDate || false
+        });
+
+        if (this.loansAccountTermsData.loanScheduleType.code == LoanProducts.LOAN_SCHEDULE_TYPE_CUMULATIVE) {
+          this.loansAccountTermsForm.removeControl('interestRecognitionOnDisbursementDate');
+        }
+      }
+      this.setAdvancedPaymentStrategyControls();
+      this.setCustomValidators();
+      this.setLoanTermListener();
+      this.setNumericFieldListeners();
+      this.applySemiMonthlyRules();
+
+      if (this.allowAddDisbursementDetails()) {
+        this.loansAccountTermsForm.removeControl('maxOutstandingLoanBalance');
+        this.loansAccountTermsForm.addControl(
+          'maxOutstandingLoanBalance',
+          new UntypedFormControl(this.loansAccountTermsData?.maxOutstandingLoanBalance ?? null, [
+            Validators.required,
+            Validators.min(0)
+          ])
+        );
+      } else {
+        this.loansAccountTermsForm.addControl(
+          'maxOutstandingLoanBalance',
+          new UntypedFormControl(this.loansAccountTermsData?.maxOutstandingLoanBalance ?? null, [Validators.min(0)])
+        );
+      }
+    } else if (this.loanProductService.isWorkingCapital) {
+      // Editing an existing account: read from the account-specific input, not the product
+      // template — loansAccountProductTemplate is still the raw account response at this point
+      // only by timing coincidence (the async WC template hasn't loaded yet), and once it does
+      // load its `loanData` is blank product-default data for a new loan, not this account's values.
+      const isEditingAccount = this.loanId != null && this.loansAccountTemplate?.accountNo;
+      if (isEditingAccount) {
+        this.loansAccountTermsData = this.loansAccountTemplate;
+      }
+      if (this.loansAccountTermsData) {
+        // Creating a new account: fall back to the product default for anything not yet set.
+        this.loansAccountTermsForm.patchValue({
+          principalAmount: isEditingAccount
+            ? this.loansAccountTermsData.principal
+            : this.loansAccountTermsData.principal || this.loansAccountTermsData.product?.principal,
+          // The account response names the rate `paymentRate`; `periodPaymentRate`
+          // only exists on the product template, so reading it here would blank
+          // the value ngOnChanges already read from the account.
+          periodPaymentRate: isEditingAccount
+            ? this.loansAccountTermsData.paymentRate
+            : this.loansAccountTermsData.periodPaymentRate,
+          annualEir: isEditingAccount
+            ? this.loansAccountTermsData.annualEir
+            : (this.loansAccountTermsData.annualEir ?? this.loansAccountTermsData.product?.annualEir ?? ''),
+          paymentAmount: isEditingAccount
+            ? this.loansAccountTermsData.paymentAmount
+            : (this.loansAccountTermsData.paymentAmount ?? this.loansAccountTermsData.product?.paymentAmount ?? ''),
+          repaymentEvery: this.loansAccountTermsData.repaymentEvery,
+          repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType?.id,
+          delinquencyGraceDays: isEditingAccount
+            ? this.loansAccountTermsData.delinquencyGraceDays
+            : this.loansAccountTermsData.delinquencyGraceDays ||
+              this.loansAccountTermsData.product?.delinquencyGraceDays,
+          // The backend parses the enum name (code); the numeric id is rejected with invalid.delinquency.start.type.
+          delinquencyStartType: isEditingAccount
+            ? this.loansAccountTermsData.delinquencyStartType?.code
+            : this.loansAccountTermsData.delinquencyStartType?.code ||
+              this.loansAccountTermsData.product?.delinquencyStartType?.code,
+          delinquencyBucketId: isEditingAccount
+            ? this.loansAccountTermsData.delinquencyBucket?.id
+            : this.loansAccountTermsData.delinquencyBucket?.id ||
+              this.loansAccountTermsData.product?.delinquencyBucket?.id,
+          breachId: isEditingAccount
+            ? this.loansAccountTermsData.breach?.id
+            : this.loansAccountTermsData.breach?.id || this.loansAccountTermsData.product?.breach?.id,
+          nearBreachId: isEditingAccount
+            ? this.loansAccountTermsData.nearBreach?.id
+            : this.loansAccountTermsData.nearBreach?.id || this.loansAccountTermsData.product?.nearBreach?.id,
+          breachGraceDays: isEditingAccount
+            ? (this.loansAccountTermsData.breachGraceDays ?? '')
+            : (this.loansAccountTermsData.breachGraceDays ?? this.loansAccountTermsData.product?.breachGraceDays ?? ''),
+          breachStartType: isEditingAccount
+            ? (this.loansAccountTermsData.breachStartType?.code ?? '')
+            : (this.loansAccountTermsData.breachStartType?.code ??
+              this.loansAccountTermsData.product?.breachStartType?.code ??
+              '')
         });
       }
-      this.loansAccountTermsForm.patchValue({
-        principalAmount: this.loansAccountTermsData.principal,
-        loanTermFrequency: this.loansAccountTermsData.termFrequency,
-        loanTermFrequencyType: this.loansAccountTermsData.termPeriodFrequencyType.id,
-        numberOfRepayments: this.loansAccountTermsData.numberOfRepayments,
-        repaymentEvery: this.loansAccountTermsData.repaymentEvery,
-        repaymentFrequencyType: this.loansAccountTermsData.repaymentFrequencyType.id,
-        amortizationType: this.loansAccountTermsData.amortizationType.id,
-        isEqualAmortization: this.loansAccountTermsData.isEqualAmortization,
-        interestType: this.loansAccountTermsData.interestType.id,
-        isFloatingInterestRate: this.loansAccountTermsData.isLoanProductLinkedToFloatingRate ? false : '',
-        interestCalculationPeriodType: this.loansAccountTermsData.interestCalculationPeriodType.id,
-        allowPartialPeriodInterestCalculation: this.loansAccountTermsData.allowPartialPeriodInterestCalculation,
-        inArrearsTolerance: this.loansAccountTermsData.inArrearsTolerance,
-        graceOnPrincipalPayment: this.loansAccountTermsData.graceOnPrincipalPayment,
-        graceOnInterestPayment: this.loansAccountTermsData.graceOnInterestPayment,
-        graceOnArrearsAgeing: this.loansAccountTermsData.graceOnArrearsAgeing,
-        graceOnInterestCharged: this.loansAccountTermsData.graceOnInterestCharged,
-        fixedEmiAmount: this.loansAccountTermsData.fixedEmiAmount,
-        maxOutstandingLoanBalance: this.loansAccountTermsData.maxOutstandingLoanBalance,
-        transactionProcessingStrategyCode: this.loansAccountTermsData.transactionProcessingStrategyCode,
-        interestRateDifferential: this.loansAccountTermsData.interestRateDifferential,
-        multiDisburseLoan: this.loansAccountTermsData.multiDisburseLoan,
-        interestRateFrequencyType: this.loansAccountTermsData.interestRateFrequencyType.id,
-        balloonRepaymentAmount: this.loansAccountTermsData.balloonRepaymentAmount,
-        interestRecognitionOnDisbursementDate: this.loansAccountTermsData.interestRecognitionOnDisbursementDate || false
-      });
     }
-    this.createloansAccountTermsForm();
-    this.setAdvancedPaymentStrategyControls();
-    // this.setCustomValidators();
-    this.setLoanTermListener();
   }
 
   allowAddDisbursementDetails() {
     return this.multiDisburseLoan && !this.loansAccountTermsData.disallowExpectedDisbursements;
+  }
+
+  private resolveCurrency(source: any): Currency | null {
+    const selectedCurrency = source?.currency;
+    if (selectedCurrency?.code) {
+      return {
+        ...selectedCurrency,
+        displaySymbol: selectedCurrency.displaySymbol || selectedCurrency.displayLabel || selectedCurrency.code
+      };
+    }
+
+    const currencyOptionCollections = [
+      source?.currencyOptions,
+      source?.currencies,
+      source?.product?.currencyOptions,
+      source?.product?.currencies,
+      source?.options?.currencyOptions
+    ];
+
+    for (const collection of currencyOptionCollections) {
+      if (Array.isArray(collection) && collection.length > 0) {
+        const firstCurrency = collection[0];
+        if (firstCurrency?.code) {
+          return {
+            ...firstCurrency,
+            displaySymbol: firstCurrency.displaySymbol || firstCurrency.displayLabel || firstCurrency.code
+          };
+        }
+      }
+    }
+    return null;
   }
 
   /** Custom Validators for the form */
@@ -283,43 +697,185 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
     const repaymentFrequencyNthDayType = this.loansAccountTermsForm.get('repaymentFrequencyNthDayType');
     const repaymentFrequencyDayOfWeekType = this.loansAccountTermsForm.get('repaymentFrequencyDayOfWeekType');
 
-    this.loansAccountTermsForm.get('repaymentFrequencyType').valueChanges.subscribe((repaymentFrequencyType) => {
-      if (repaymentFrequencyType === 2) {
-        repaymentFrequencyNthDayType.setValidators([Validators.required]);
-        repaymentFrequencyDayOfWeekType.setValidators([Validators.required]);
-      } else {
-        repaymentFrequencyNthDayType.setValidators(null);
-        repaymentFrequencyDayOfWeekType.setValidators(null);
-      }
+    this.loansAccountTermsForm
+      .get('repaymentFrequencyType')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((repaymentFrequencyType) => {
+        repaymentFrequencyNthDayType?.setValidators(null);
+        repaymentFrequencyDayOfWeekType?.setValidators(null);
 
-      repaymentFrequencyNthDayType.updateValueAndValidity();
-      repaymentFrequencyDayOfWeekType.updateValueAndValidity();
-    });
+        setTimeout(() => {
+          repaymentFrequencyNthDayType?.updateValueAndValidity();
+          repaymentFrequencyDayOfWeekType?.updateValueAndValidity();
+        });
+        this.applySemiMonthlyRules();
+      });
+
+    // A first day on or after the selected second day leaves no valid second day, so it is cleared.
+    this.loansAccountTermsForm
+      .get('firstRepaymentDayOfMonth')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((firstDay) => {
+        const secondDay = this.loansAccountTermsForm.get('secondRepaymentDayOfMonth');
+        if (secondDay?.value != null && firstDay != null && Number(secondDay.value) <= Number(firstDay)) {
+          secondDay.setValue(null);
+        }
+      });
+
+    // The first repayment date is only valid on one of the two configured due days.
+    this.loansAccountTermsForm
+      .get('secondRepaymentDayOfMonth')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loansAccountTermsForm.get('repaymentsStartingFromDate')?.updateValueAndValidity());
+    this.loansAccountTermsForm
+      .get('firstRepaymentDayOfMonth')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loansAccountTermsForm.get('repaymentsStartingFromDate')?.updateValueAndValidity());
+  }
+
+  isSemiMonthly(): boolean {
+    return isSemiMonthly(this.loansAccountTermsForm.get('repaymentFrequencyType')?.value);
+  }
+
+  /** The configured pair of due days when the loan is semi-monthly and both are set, `null` otherwise. */
+  configuredRepaymentDays(): SemiMonthlyRepaymentDays | null {
+    if (!this.isSemiMonthly()) {
+      return null;
+    }
+    const firstRepaymentDayOfMonth = Number(this.loansAccountTermsForm.get('firstRepaymentDayOfMonth')?.value);
+    const secondRepaymentDayOfMonth = Number(this.loansAccountTermsForm.get('secondRepaymentDayOfMonth')?.value);
+    return isValidRepaymentDayPair(firstRepaymentDayOfMonth, secondRepaymentDayOfMonth)
+      ? { firstRepaymentDayOfMonth, secondRepaymentDayOfMonth }
+      : null;
+  }
+
+  /** Second-day options: only the days after the selected first day. */
+  secondRepaymentDayOptions(): number[] {
+    return secondRepaymentDayOptions(this.loansAccountTermsForm.get('firstRepaymentDayOfMonth')?.value);
+  }
+
+  /**
+   * The due days to prefill from the template — the product's on a new loan, the loan's own when
+   * editing. A non semi-monthly product or loan can still carry days left from an earlier
+   * semi-monthly configuration (the backend keeps them), so they are only taken for semi-monthly.
+   */
+  private templateRepaymentDays(): Partial<SemiMonthlyRepaymentDays> {
+    const semiMonthly = isSemiMonthly(this.loansAccountTermsData.repaymentFrequencyType);
+    const days = {
+      firstRepaymentDayOfMonth: semiMonthly ? (this.loansAccountTermsData.firstRepaymentDayOfMonth ?? null) : null,
+      secondRepaymentDayOfMonth: semiMonthly ? (this.loansAccountTermsData.secondRepaymentDayOfMonth ?? null) : null
+    };
+    if (this.isEditingLoan()) {
+      this.savedRepaymentDays = days;
+    }
+    return days;
+  }
+
+  /** True when the form edits an existing loan application rather than creating one. */
+  private isEditingLoan(): boolean {
+    return this.loanId != null && !!this.loansAccountTemplate?.accountNo;
+  }
+
+  /**
+   * Semi-monthly loans: both due days are mandatory, "repaid every" is always 1 and the loan term is
+   * counted in semi-monthly periods, so the term frequency type must match — the backend rejects any
+   * other combination. Any other frequency rejects the days, so they are cleared.
+   */
+  private applySemiMonthlyRules(): void {
+    const firstDay = this.loansAccountTermsForm.get('firstRepaymentDayOfMonth');
+    const secondDay = this.loansAccountTermsForm.get('secondRepaymentDayOfMonth');
+    const repaymentEvery = this.loansAccountTermsForm.get('repaymentEvery');
+    const loanTermFrequencyType = this.loansAccountTermsForm.get('loanTermFrequencyType');
+    if (!firstDay || !secondDay || !repaymentEvery) {
+      return;
+    }
+    if (this.isSemiMonthly()) {
+      firstDay.setValidators(Validators.required);
+      secondDay.setValidators(Validators.required);
+      if (repaymentEvery.value !== 1) {
+        repaymentEvery.setValue(1);
+      }
+      repaymentEvery.disable();
+      if (loanTermFrequencyType && !isSemiMonthly(loanTermFrequencyType.value)) {
+        // emitEvent: false — the term-type listener would echo the value back into the repayment
+        // frequency and re-enter this method.
+        loanTermFrequencyType.setValue(SEMI_MONTHLY_FREQUENCY_TYPE, { emitEvent: false });
+      }
+    } else {
+      firstDay.clearValidators();
+      firstDay.setValue(null, { emitEvent: false });
+      secondDay.clearValidators();
+      secondDay.setValue(null, { emitEvent: false });
+      if (this.repaymentEveryOverridable) {
+        repaymentEvery.enable();
+      }
+    }
+    firstDay.updateValueAndValidity({ emitEvent: false });
+    secondDay.updateValueAndValidity({ emitEvent: false });
+    this.loansAccountTermsForm.get('repaymentsStartingFromDate')?.updateValueAndValidity({ emitEvent: false });
   }
 
   /** Custom Listeners for the form to calculate Loan Term */
   setLoanTermListener() {
-    this.loansAccountTermsForm.get('numberOfRepayments').valueChanges.subscribe((numberOfRepayments) => {
-      const repaymentEvery: number = this.loansAccountTermsForm.value.repaymentEvery;
-      this.calculateLoanTerm(numberOfRepayments, repaymentEvery);
-    });
+    this.loansAccountTermsForm
+      .get('numberOfRepayments')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((numberOfRepayments) => {
+        // Raw value: "repaid every" is a disabled control for semi-monthly loans (and when the product
+        // disallows overriding it), and `form.value` omits disabled controls.
+        const repaymentEvery: number = this.loansAccountTermsForm.getRawValue().repaymentEvery;
+        this.calculateLoanTerm(numberOfRepayments, repaymentEvery);
+      });
 
-    this.loansAccountTermsForm.get('repaymentEvery').valueChanges.subscribe((repaymentEvery) => {
-      const numberOfRepayments: number = this.loansAccountTermsForm.value.numberOfRepayments;
-      this.calculateLoanTerm(numberOfRepayments, repaymentEvery);
-    });
+    this.loansAccountTermsForm
+      .get('repaymentEvery')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((repaymentEvery) => {
+        const numberOfRepayments: number = this.loansAccountTermsForm.getRawValue().numberOfRepayments;
+        this.calculateLoanTerm(numberOfRepayments, repaymentEvery);
+      });
 
-    this.loansAccountTermsForm.get('loanTermFrequencyType').valueChanges.subscribe((loanTermFrequencyType) => {
-      this.loansAccountTermsForm.patchValue({ repaymentFrequencyType: loanTermFrequencyType });
-    });
+    this.loansAccountTermsForm
+      .get('loanTermFrequencyType')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((loanTermFrequencyType) => {
+        this.loansAccountTermsForm.patchValue({ repaymentFrequencyType: loanTermFrequencyType });
+      });
 
-    this.loansAccountTermsForm.get('amortizationType').valueChanges.subscribe((amortizationType) => {
-      if (amortizationType === 0) {
-        // Equal Principal Payments
-        this.loansAccountTermsForm.addControl('fixedPrincipalPercentagePerInstallment', new UntypedFormControl(''));
-      } else {
-        // Equal Installments
-        this.loansAccountTermsForm.removeControl('fixedPrincipalPercentagePerInstallment');
+    this.loansAccountTermsForm
+      .get('amortizationType')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((amortizationType) => {
+        if (amortizationType === 0) {
+          // Equal Principal Payments
+          this.loansAccountTermsForm.addControl('fixedPrincipalPercentagePerInstallment', new UntypedFormControl(''));
+        } else {
+          // Equal Installments
+          this.loansAccountTermsForm.removeControl('fixedPrincipalPercentagePerInstallment');
+        }
+      });
+  }
+
+  /** Prevent negative values in numeric fields */
+  setNumericFieldListeners() {
+    const numericFieldsWithMinZero = [
+      'graceOnPrincipalPayment',
+      'graceOnInterestPayment',
+      'graceOnArrearsAgeing',
+      'inArrearsTolerance',
+      'graceOnInterestCharged',
+      'loanTermFrequency',
+      'numberOfRepayments',
+      'repaymentEvery'
+    ];
+    numericFieldsWithMinZero.forEach((fieldName) => {
+      const control = this.loansAccountTermsForm.get(fieldName);
+      if (control) {
+        control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+          if (typeof value === 'number' && value < 0) {
+            control.setValue(0, { emitEvent: false });
+          }
+        });
       }
     });
   }
@@ -332,7 +888,10 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
       if (this.loansAccountTermsData.product.fixedLength) {
         this.loansAccountTermsForm.addControl(
           'interestRatePerPeriod',
-          new UntypedFormControl({ value: 0, disabled: true }, Validators.required)
+          new UntypedFormControl({ value: 0, disabled: true }, [
+            Validators.required,
+            Validators.min(0)
+          ])
         );
         this.loansAccountTermsForm.addControl(
           'fixedLength',
@@ -341,7 +900,11 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
       } else {
         this.loansAccountTermsForm.addControl(
           'interestRatePerPeriod',
-          new UntypedFormControl(this.loansAccountTermsData.interestRatePerPeriod, Validators.required)
+          new UntypedFormControl(this.loansAccountTermsData.interestRatePerPeriod, [
+            Validators.required,
+            Validators.min(0),
+            Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+          ])
         );
       }
     }
@@ -360,64 +923,161 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
 
   /** Create Loans Account Terms Form */
   createloansAccountTermsForm() {
-    this.loansAccountTermsForm = this.formBuilder.group({
-      principalAmount: [
-        '',
-        Validators.required
-      ],
-      loanTermFrequency: [
-        { value: '', disabled: true },
-        Validators.required
-      ],
-      loanTermFrequencyType: [
-        '',
-        Validators.required
-      ],
-      numberOfRepayments: [
-        '',
-        Validators.required
-      ],
-      repaymentEvery: [
-        '',
-        Validators.required
-      ],
-      repaymentFrequencyType: [
-        { value: '', disabled: true },
-        Validators.required
-      ],
-      repaymentFrequencyNthDayType: [''],
-      repaymentFrequencyDayOfWeekType: [''],
-      repaymentsStartingFromDate: [''],
-      interestChargedFromDate: [''],
-      interestRatePerPeriod: [''],
-      interestType: [''],
-      isFloatingInterestRate: [''],
-      isEqualAmortization: [''],
-      amortizationType: [
-        '',
-        Validators.required
-      ],
-      interestCalculationPeriodType: [''],
-      allowPartialPeriodInterestCalculation: [''],
-      inArrearsTolerance: [''],
-      graceOnInterestCharged: [''],
-      graceOnPrincipalPayment: [''],
-      graceOnInterestPayment: [''],
-      graceOnArrearsAgeing: [''],
-      loanIdToClose: [''],
-      fixedEmiAmount: [''],
-      isTopup: [''],
-      maxOutstandingLoanBalance: [''],
-      interestRateDifferential: [''],
-      transactionProcessingStrategyCode: [
-        '',
-        Validators.required
-      ],
-      multiDisburseLoan: [false],
-      interestRateFrequencyType: [''],
-      balloonRepaymentAmount: [''],
-      interestRecognitionOnDisbursementDate: [false]
-    });
+    if (this.loanProductService.isLoanProduct) {
+      this.loansAccountTermsForm = this.formBuilder.group({
+        principalAmount: [
+          '',
+          Validators.required
+        ],
+        loanTermFrequency: [
+          { value: '', disabled: true },
+          [
+            Validators.required,
+            Validators.min(0)
+          ]
+        ],
+        loanTermFrequencyType: [
+          '',
+          Validators.required
+        ],
+        numberOfRepayments: [
+          '',
+          [
+            Validators.required,
+            Validators.min(0)
+          ]
+        ],
+        repaymentEvery: [
+          '',
+          [
+            Validators.required,
+            Validators.min(0)
+          ]
+        ],
+        repaymentFrequencyType: [
+          { value: '', disabled: true },
+          Validators.required
+        ],
+        repaymentFrequencyNthDayType: [''],
+        repaymentFrequencyDayOfWeekType: [''],
+        // Only meaningful for the semi-monthly frequency; validators are managed by `applySemiMonthlyRules`.
+        firstRepaymentDayOfMonth: [null],
+        secondRepaymentDayOfMonth: [null],
+        repaymentsStartingFromDate: [
+          '',
+          semiMonthlyDueDateValidator(() => this.configuredRepaymentDays())
+        ],
+        interestChargedFromDate: [''],
+        interestRatePerPeriod: [
+          '',
+          [
+            Validators.min(0),
+            Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+          ]
+        ],
+        interestType: [''],
+        isFloatingInterestRate: [null],
+        isEqualAmortization: [''],
+        amortizationType: [
+          '',
+          Validators.required
+        ],
+        interestCalculationPeriodType: [''],
+        allowPartialPeriodInterestCalculation: [''],
+        inArrearsTolerance: [
+          '',
+          Validators.min(0)
+        ],
+        graceOnInterestCharged: [
+          '',
+          Validators.min(0)
+        ],
+        graceOnPrincipalPayment: [
+          '',
+          Validators.min(0)
+        ],
+        graceOnInterestPayment: [
+          '',
+          Validators.min(0)
+        ],
+        graceOnArrearsAgeing: [
+          '',
+          Validators.min(0)
+        ],
+        loanIdToClose: [''],
+        fixedEmiAmount: [''],
+        isTopup: [''],
+        maxOutstandingLoanBalance: [''],
+        interestRateDifferential: [''],
+        transactionProcessingStrategyCode: [
+          '',
+          Validators.required
+        ],
+        multiDisburseLoan: [false],
+        interestRateFrequencyType: [''],
+        balloonRepaymentAmount: [''],
+        interestRecognitionOnDisbursementDate: [false],
+        allowFullTermForTranche: [false]
+      });
+    } else if (this.loanProductService.isWorkingCapital) {
+      this.loansAccountTermsForm = this.formBuilder.group({
+        principalAmount: [
+          '',
+          [
+            Validators.required,
+            amountValueValidator()
+          ]
+        ],
+        totalPaymentVolume: [
+          '',
+          [
+            Validators.required,
+            amountValueValidator()
+          ]
+        ],
+        discount: [''],
+        periodPaymentRate: [
+          '',
+          [
+            Validators.required,
+            Validators.min(0),
+            Validators.max(1000)
+          ]
+        ],
+        annualEir: [''],
+        paymentAmount: [''],
+        repaymentEvery: [
+          '',
+          [
+            Validators.required,
+            Validators.min(1),
+            amountValueValidator()
+          ]
+        ],
+        repaymentFrequencyType: [
+          '',
+          Validators.required
+        ],
+        // The backend validates both grace days with integerZeroOrGreater.
+        delinquencyGraceDays: [
+          '',
+          [
+            positiveIntegerValidator()
+          ]
+        ],
+        delinquencyStartType: [''],
+        delinquencyBucketId: [''],
+        breachId: [''],
+        nearBreachId: [''],
+        breachGraceDays: [
+          '',
+          [
+            positiveIntegerValidator()
+          ]
+        ],
+        breachStartType: ['']
+      });
+    }
   }
 
   calculateLoanTerm(numberOfRepayments: number, repaymentEvery: number): void {
@@ -439,7 +1099,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
    * Adds the Disbursement Data entry form to given Disbursement Data entry.
    */
   addDisbursementDataEntry() {
-    const currentPrincipalAmount = this.loansAccountTermsForm.get('principalAmount').value;
+    const currentPrincipalAmount = this.loansAccountTermsForm.get('principalAmount')?.value;
     const formfields: FormfieldBase[] = [
       new DatepickerBase({
         controlName: 'expectedDisbursementDate',
@@ -456,10 +1116,10 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
         label: `Principal(It should be less than equal to the ${currentPrincipalAmount})`,
         value: '',
         type: 'number',
+        step: 'any',
         required: true,
         order: 2
       })
-
     ];
     const data = {
       title: 'Add Disbursement Details',
@@ -468,7 +1128,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
     };
     const disbursementDialogRef = this.dialog.open(FormDialogComponent, { data });
     disbursementDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const principal = response.data.value.principal * 1;
         if (this.totalMultiDisbursed + principal <= currentPrincipalAmount) {
           this.disbursementDataSource = this.disbursementDataSource.concat(response.data.value);
@@ -485,12 +1145,12 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
    * @param {number} index Array index from where Disbursement Data entry form needs to be removed.
    */
   removeDisbursementDataEntry(index: number) {
-    const currentPrincipalAmount = this.loansAccountTermsForm.get('principalAmount').value;
+    const currentPrincipalAmount = this.loansAccountTermsForm.get('principalAmount')?.value;
     const dialogRef = this.dialog.open(DeleteDialogComponent, {
       data: { deleteContext: `this` }
     });
     dialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
+      if (response?.delete) {
         const principal = this.disbursementDataSource[index]['principal'] * 1;
         this.disbursementDataSource.splice(index, 1);
         this.disbursementDataSource = this.disbursementDataSource.concat([]);
@@ -508,7 +1168,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
       data: { collateralOptions: this.collateralOptions }
     });
     addCollateralDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const collateralData = {
           type: response.data.value.collateral,
           value: response.data.value.quantity
@@ -536,7 +1196,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
       data: { deleteContext: `collateral` }
     });
     deleteCollateralDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
+      if (response?.delete) {
         const removed: any = this.collateralDataSource.splice(id, 1);
         this.collateralOptions = this.collateralOptions.concat(removed[0].type);
         this.totalCollateralValue -= (removed[0].type.pctToBase * removed[0].type.basePrice * removed[0].value) / 100;
@@ -565,7 +1225,7 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
     this.clientActiveLoanData = this.loansAccountProductTemplate.clientActiveLoanOptions;
     this.loanScheduleType = this.loansAccountProductTemplate.loanScheduleType;
     this.transactionProcessingStrategyOptions = [];
-    if (this.loanScheduleType.code === LoanProducts.LOAN_SCHEDULE_TYPE_CUMULATIVE) {
+    if (this.loanScheduleType?.code === LoanProducts.LOAN_SCHEDULE_TYPE_CUMULATIVE) {
       // Filter Advanced Payment Allocation Strategy
       this.transactionProcessingStrategyOptions =
         this.loansAccountProductTemplate.transactionProcessingStrategyOptions.filter(
@@ -584,30 +1244,161 @@ export class LoansAccountTermsStepComponent implements OnInit, OnChanges {
   }
 
   isDelinquencyEnabled(): boolean {
-    if (!this.loanProduct || !this.loanProduct.delinquencyBucket) {
-      return false;
-    }
-    return true;
-  }
-
-  isDownPaymentEnabled(): boolean {
-    console.log(this.loanProduct);
-    if (!this.loanProduct || !this.loanProduct.delinquencyBucket) {
-      return false;
-    }
-    return true;
+    return !!this.loanProduct?.delinquencyBucket?.name;
   }
 
   /**
    * Returns loans account terms form value.
    */
   get loansAccountTerms() {
-    return this.loansAccountTermsForm.getRawValue();
+    const terms = this.loansAccountTermsForm.getRawValue();
+    if (this.loanProductService.isWorkingCapital) {
+      // The backend answers `not.allowed.for.<strategy>.strategy` to any pricing input of
+      // another strategy, so only the active group may reach the request.
+      inactivePricingFields(this.paymentAmountCalculationStrategy).forEach((name) => delete terms[name]);
+      // Same idea as loan-product-settings-step: cleared form values must be null, not ''.
+      // Omitting them inherits the product on create and keeps the previous loan value on update.
+      ([
+          'delinquencyBucketId',
+          'breachId',
+          'nearBreachId',
+          'delinquencyGraceDays',
+          'delinquencyStartType',
+          'breachGraceDays',
+          'breachStartType'
+        ] as const).forEach((key) => {
+        if (terms[key] === '') {
+          terms[key] = null;
+        }
+      });
+      if (terms.breachId == null) {
+        terms.nearBreachId = null;
+      }
+    }
+    // Both days or neither; an edited loan whose days did not change sends neither and keeps them.
+    applyRepaymentDaysToPayload(terms, terms.repaymentFrequencyType, this.savedRepaymentDays);
+    return terms;
+  }
+
+  /**
+   * Working Capital: shapes the pricing inputs after the product's strategy. TPV keeps the
+   * historical totalPaymentVolume + periodPaymentRate pair; ANNUAL_EIR asks for a positive annual
+   * EIR inside the product window and a positive discount; PAYMENT_AMOUNT asks for a positive daily
+   * payment amount and a positive discount. Inputs of the other strategies are blanked so they never
+   * leak into the payload.
+   */
+  private applyPaymentAmountCalculationStrategy(product: any): void {
+    this.paymentAmountCalculationStrategy = resolvePaymentAmountCalculationStrategy(
+      product?.paymentAmountCalculationStrategy
+    );
+    const form = this.loansAccountTermsForm;
+    const validatorsByStrategy: Record<WorkingCapitalPaymentAmountCalculationStrategy, Record<string, any[]>> = {
+      TPV: {
+        totalPaymentVolume: [
+          Validators.required,
+          amountValueValidator()
+        ],
+        periodPaymentRate: [
+          Validators.required,
+          Validators.min(0),
+          Validators.max(1000)
+        ]
+      },
+      ANNUAL_EIR: {
+        annualEir: [
+          Validators.required,
+          ...annualEirValidators(),
+          withinBoundsValidator(
+            () => product?.minAnnualEir,
+            () => product?.maxAnnualEir
+          )
+        ]
+      },
+      PAYMENT_AMOUNT: {
+        paymentAmount: [
+          Validators.required,
+          greaterThanZeroValidator()
+        ]
+      }
+    };
+    inactivePricingFields(this.paymentAmountCalculationStrategy).forEach((name) => {
+      const control = form.get(name);
+      if (control) {
+        control.clearValidators();
+        control.setValue('', { emitEvent: false });
+        control.updateValueAndValidity({ emitEvent: false });
+      }
+    });
+    Object.entries(validatorsByStrategy[this.paymentAmountCalculationStrategy]).forEach(
+      ([
+        name,
+        validators
+      ]) => {
+        const control = form.get(name)!;
+        control.setValidators(validators);
+        control.updateValueAndValidity({ emitEvent: false });
+      }
+    );
+    const discount = form.get('discount')!;
+    discount.setValidators(
+      this.paymentAmountCalculationStrategy === WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY.TPV ? [] : [
+            Validators.required,
+            greaterThanZeroValidator()
+          ]
+    );
+    discount.updateValueAndValidity({ emitEvent: false });
+  }
+
+  /** Product window shown next to the annual EIR input; null bounds are simply not displayed. */
+  get annualEirBounds(): { min: number | null; max: number | null } {
+    const product = this.loansAccountProductTemplate?.product;
+    return { min: product?.minAnnualEir ?? null, max: product?.maxAnnualEir ?? null };
   }
 
   get loanCollateral() {
     return {
       collateral: this.collateralDataSource
     };
+  }
+
+  /**
+   * Check if full term tranche option should be visible at loan level.
+   * Available when PROGRESSIVE schedule type and multi-disbursement is enabled.
+   */
+  isFullTermTrancheEditable(): boolean {
+    return this.isProgressive && !!this.multiDisburseLoan;
+  }
+
+  get selectedBreach(): Breach | undefined {
+    const id = this.loansAccountTermsForm.get('breachId')?.value;
+    return this.breachOptions ? this.breachOptions.find((b) => b.id === id) : undefined;
+  }
+
+  get selectedNearBreach(): NearBreach | undefined {
+    const id = this.loansAccountTermsForm.get('nearBreachId')?.value;
+    return this.nearBreachOptions ? this.nearBreachOptions.find((b) => b.id === id) : undefined;
+  }
+
+  clearProperty($event: Event, propertyName: string): void {
+    if (propertyName === 'delinquencyBucketId') {
+      this.loansAccountTermsForm.patchValue({
+        delinquencyBucketId: '',
+        delinquencyGraceDays: '',
+        delinquencyStartType: ''
+      });
+    } else if (propertyName === 'breachId') {
+      this.loansAccountTermsForm.patchValue({
+        breachId: '',
+        nearBreachId: '',
+        breachGraceDays: '',
+        breachStartType: ''
+      });
+    } else if (propertyName === 'nearBreachId') {
+      this.loansAccountTermsForm.patchValue({
+        nearBreachId: ''
+      });
+    }
+    this.loansAccountTermsForm.markAsDirty();
+    $event.stopPropagation();
   }
 }

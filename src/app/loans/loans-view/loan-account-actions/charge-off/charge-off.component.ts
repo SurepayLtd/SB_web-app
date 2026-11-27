@@ -1,20 +1,32 @@
-import { Component, Input, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
-import { LoansService } from 'app/loans/loans.service';
-import { SettingsService } from 'app/settings/settings.service';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 
 @Component({
   selector: 'mifosx-charge-off',
   templateUrl: './charge-off.component.html',
-  styleUrls: ['./charge-off.component.scss']
+  styleUrls: ['./charge-off.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ChargeOffComponent implements OnInit {
-  @Input() dataObject: any;
+export class ChargeOffComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private dateUtils = inject(Dates);
 
-  /** Loan Id */
-  loanId: string;
   /** Payment Type Options */
   paymentTypes: any;
   /** Show payment details */
@@ -30,20 +42,9 @@ export class ChargeOffComponent implements OnInit {
 
   /**
    * @param {FormBuilder} formBuilder Form Builder.
-   * @param {LoansService} loanService Loan Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  constructor() {
+    super();
   }
 
   /**
@@ -84,9 +85,13 @@ export class ChargeOffComponent implements OnInit {
       dateFormat,
       locale
     };
+    // The reason is optional, but Fineract looks up any chargeOffReasonId it receives, so an empty one fails with 404.
+    if (!data.chargeOffReasonId) {
+      delete data.chargeOffReasonId;
+    }
     const command = 'charge-off';
     this.loanService.submitLoanActionButton(this.loanId, data, command).subscribe((response: any) => {
-      this.router.navigate(['../../transactions'], { relativeTo: this.route });
+      this.gotoLoanDefaultView();
     });
   }
 }

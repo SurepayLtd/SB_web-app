@@ -1,16 +1,34 @@
 
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { SystemService } from '../../system.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { SettingsService } from '../../../settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatDivider } from '@angular/material/list';
+import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'mifosx-credit-product-mapping',
   templateUrl: './credit-product-mapping.component.html',
-  styleUrls: ['./credit-product-mapping.component.scss']
+  styleUrls: ['./credit-product-mapping.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatTooltip,
+  ]
 })
 export class CreditProductMappingComponent implements OnInit {
+
+  private route = inject(ActivatedRoute);
+  private systemService = inject(SystemService);
+  private formBuilder = inject(UntypedFormBuilder);
+  private settingsService =  inject(SettingsService);
+  private router = inject(Router);
 
   /**
    * Loan Product Mapping Form.
@@ -58,20 +76,8 @@ export class CreditProductMappingComponent implements OnInit {
   /** Existing loan product mappings for the organisation credit bureau. */
   mappings: any[] = [];
 
-  /**
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {SystemService} systemService System Service.
-   * @param {UntypedFormBuilder} formBuilder Form Builder.
-   * @param {SettingsService} settingsService Settings Service.
-   * @param {Router} router Angular Router.
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private systemService: SystemService,
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService,
-    private router: Router
-  ) {
+
+  constructor() {
     const parentRoute = this.route.parent;
 
     this.mode = this.route.snapshot.data['mode'] || 'create';

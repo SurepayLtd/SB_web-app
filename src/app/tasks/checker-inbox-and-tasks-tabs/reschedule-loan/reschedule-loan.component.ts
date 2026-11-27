@@ -1,9 +1,30 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SelectionModel } from '@angular/cdk/collections';
 import * as _ from 'lodash';
-import { MatTableDataSource } from '@angular/material/table';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
 
 /** Dialog Imports */
@@ -14,13 +35,50 @@ import { TasksService } from '../../tasks.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
 import { TranslateService } from '@ngx-translate/core';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+
+interface RescheduleFormData {
+  dateFormat: string;
+  locale: string;
+  approvedOnDate?: string;
+  rejectedOnDate?: string;
+}
 
 @Component({
   selector: 'mifosx-reschedule-loan',
   templateUrl: './reschedule-loan.component.html',
-  styleUrls: ['./reschedule-loan.component.scss']
+  styleUrls: ['./reschedule-loan.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCheckbox,
+    MatCellDef,
+    MatCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RescheduleLoanComponent {
+  private route = inject(ActivatedRoute);
+  private dialog = inject(MatDialog);
+  private dateUtils = inject(Dates);
+  private router = inject(Router);
+  private settingsService = inject(SettingsService);
+  private translateService = inject(TranslateService);
+  private tasksService = inject(TasksService);
+  private destroyRef = inject(DestroyRef);
+
   /** Loans Data */
   loans: any;
   /** Datasource */
@@ -48,17 +106,9 @@ export class RescheduleLoanComponent {
    * @param {SettingsService} settingsService Settings Service.
    * @param {TasksService} tasksService Tasks Service.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private dialog: MatDialog,
-    private dateUtils: Dates,
-    private router: Router,
-    private settingsService: SettingsService,
-    private translateService: TranslateService,
-    private tasksService: TasksService
-  ) {
-    this.route.data.subscribe((data: { recheduleLoansData: any }) => {
-      this.loans = data.recheduleLoansData;
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { rescheduleLoansData: any }) => {
+      this.loans = data.rescheduleLoansData;
       this.dataSource = new MatTableDataSource(this.loans);
       this.selection = new SelectionModel(true, []);
     });
@@ -107,14 +157,14 @@ export class RescheduleLoanComponent {
     const dateFormat = this.settingsService.dateFormat;
     const transactionDate = this.dateUtils.formatDate(this.settingsService.businessDate, dateFormat);
     const locale = this.settingsService.language.code;
-    const formData = {
+    const formData: RescheduleFormData = {
       dateFormat,
       locale
     };
     if (command === 'approve') {
-      formData['approvedOnDate'] = transactionDate;
+      formData.approvedOnDate = transactionDate;
     } else {
-      formData['rejectedOnDate'] = transactionDate;
+      formData.rejectedOnDate = transactionDate;
     }
     const listSelectedAccounts = this.selection.selected;
     this.batchRequests = [];

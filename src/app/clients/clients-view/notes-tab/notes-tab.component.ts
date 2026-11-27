@@ -1,5 +1,14 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 
 /** Custom Components */
@@ -7,6 +16,8 @@ import { ActivatedRoute } from '@angular/router';
 /** Custom Services */
 import { ClientsService } from '../../clients.service';
 import { AuthenticationService } from 'app/core/authentication/authentication.service';
+import { EntityNotesTabComponent } from '../../../shared/tabs/entity-notes-tab/entity-notes-tab.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Notes Tab Component
@@ -14,9 +25,20 @@ import { AuthenticationService } from 'app/core/authentication/authentication.se
 @Component({
   selector: 'mifosx-notes-tab',
   templateUrl: './notes-tab.component.html',
-  styleUrls: ['./notes-tab.component.scss']
+  styleUrls: ['./notes-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    EntityNotesTabComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NotesTabComponent {
+export class NotesTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private clientsService = inject(ClientsService);
+  private authenticationService = inject(AuthenticationService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+
   /** Client ID */
   entityId: string;
   /** Username */
@@ -29,15 +51,17 @@ export class NotesTabComponent {
    * @param {ClientsService} clientsService Clients Service
    * @param {AuthenticationService} authenticationService Authentication Service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private clientsService: ClientsService,
-    private authenticationService: AuthenticationService
-  ) {
+  constructor() {
+    this.entityId = this.route.parent.snapshot.params['clientId'];
+    this.addNote = this.addNote.bind(this);
+    this.editNote = this.editNote.bind(this);
+    this.deleteNote = this.deleteNote.bind(this);
+  }
+
+  ngOnInit(): void {
     const credentials = this.authenticationService.getCredentials();
     this.username = credentials.username;
-    this.entityId = this.route.parent.snapshot.params['clientId'];
-    this.route.data.subscribe((data: { clientNotes: any }) => {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { clientNotes: any }) => {
       this.entityNotes = data.clientNotes;
     });
   }
@@ -49,9 +73,15 @@ export class NotesTabComponent {
    * @param {number} index Index
    */
   editNote(noteId: string, noteContent: any, index: number) {
-    this.clientsService.editClientNote(this.entityId, noteId, noteContent).subscribe(() => {
-      this.entityNotes[index].note = noteContent.note;
-    });
+    this.clientsService
+      .editClientNote(this.entityId, noteId, noteContent)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.entityNotes = this.entityNotes.map((entityNote: any) =>
+          entityNote.id === noteId ? { ...entityNote, note: noteContent.note } : entityNote
+        );
+        this.cdr.markForCheck();
+      });
   }
 
   /**
@@ -60,22 +90,33 @@ export class NotesTabComponent {
    * @param {number} index Index
    */
   deleteNote(noteId: string, index: number) {
-    this.clientsService.deleteClientNote(this.entityId, noteId).subscribe(() => {
-      this.entityNotes.splice(index, 1);
-    });
+    this.clientsService
+      .deleteClientNote(this.entityId, noteId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.entityNotes = this.entityNotes.filter((entityNote: any) => entityNote.id !== noteId);
+        this.cdr.markForCheck();
+      });
   }
 
   /**
    * Creates a client note.
    */
   addNote(noteContent: any) {
-    this.clientsService.createClientNote(this.entityId, noteContent).subscribe((response: any) => {
-      this.entityNotes.push({
-        id: response.resourceId,
-        createdByUsername: this.username,
-        createdOn: new Date(),
-        note: noteContent.note
+    this.clientsService
+      .createClientNote(this.entityId, noteContent)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((response: any) => {
+        this.entityNotes = [
+          ...this.entityNotes,
+          {
+            id: response.resourceId,
+            createdByUsername: this.username,
+            createdOn: new Date(),
+            note: noteContent.note
+          }
+        ];
+        this.cdr.markForCheck();
       });
-    });
   }
 }

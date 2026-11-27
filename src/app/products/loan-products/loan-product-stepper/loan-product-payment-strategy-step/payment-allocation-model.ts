@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import { Injectable } from '@angular/core';
 
 export interface PaymentAllocationTransactionType {
@@ -37,13 +45,46 @@ export interface CreditAllocationOrder {
   order: number;
 }
 
+export interface CreditAllocationStrategyOption {
+  id: number;
+  value: string;
+  code: string;
+}
+
 export interface CreditAllocation {
   transactionType: string;
-  creditAllocationOrder: CreditAllocationOrder[];
+  /** RULE_BASED (default when absent) requires creditAllocationOrder, PRINCIPAL_ONLY must not send it. */
+  creditAllocationStrategy?: string;
+  creditAllocationOrder?: CreditAllocationOrder[];
+}
+
+export interface CapitalizedIncome {
+  enableIncomeCapitalization: boolean;
+  capitalizedIncomeCalculationType?: string;
+  capitalizedIncomeStrategy?: string;
+  capitalizedIncomeType?: string;
+}
+
+export interface BuyDownFee {
+  enableBuyDownFee: boolean;
+  buyDownFeeCalculationType?: string;
+  buyDownFeeStrategy?: string;
+  buyDownFeeIncomeType?: string;
+  merchantBuyDownFee?: boolean;
+}
+
+export interface DeferredIncomeRecognition {
+  capitalizedIncome?: CapitalizedIncome;
+  buyDownFee?: BuyDownFee;
 }
 
 export class PaymentAllocationTransactionTypes {
   public static DEFAULT_TRANSACTION: PaymentAllocationTransactionType = { id: 1, value: 'Default', code: 'DEFAULT' };
+}
+
+export class CreditAllocationStrategies {
+  public static RULE_BASED = 'RULE_BASED';
+  public static PRINCIPAL_ONLY = 'PRINCIPAL_ONLY';
 }
 
 export class AdvancedPaymentAllocation {
@@ -56,12 +97,15 @@ export class AdvancedPaymentAllocation {
 export class AdvancedCreditAllocation {
   transaction: PaymentAllocationTransactionType;
   creditAllocationOrder?: CreditAllocationOrder[];
+  creditAllocationStrategy?: string;
+  creditAllocationStrategyOptions?: CreditAllocationStrategyOption[];
 }
 
 export class AdvancePaymentAllocationData {
   transactionTypes: PaymentAllocationTransactionType[];
   allocationTypes: PaymentAllocationType[];
   futureInstallmentAllocationRules: FutureInstallmentAllocationRule[];
+  creditAllocationStrategies?: CreditAllocationStrategyOption[];
 }
 
 @Injectable({
@@ -73,45 +117,58 @@ export class AdvancedPaymentStrategy {
     const advancedCreditAllocationTransactionTypes: PaymentAllocationTransactionType[] =
       loanProduct.creditAllocationTransactionTypes;
     const advancedPaymentAllocationTypes: CreditAllocationOrder[] = loanProduct.creditAllocationAllocationTypes;
+    const creditAllocationStrategyOptions: CreditAllocationStrategyOption[] =
+      loanProduct.creditAllocationStrategyOptions || [];
     if (loanProduct.creditAllocation) {
       loanProduct.creditAllocation.forEach((item: CreditAllocation) => {
+        // A PRINCIPAL_ONLY rule comes back without an order; seed the default one so switching back to
+        // RULE_BASED shows the full rule list.
+        const creditAllocationOrder =
+          item.creditAllocationOrder?.length > 0
+            ? this.buildCurrentCreditAllocationOrder(item.creditAllocationOrder, advancedPaymentAllocationTypes)
+            : advancedPaymentAllocationTypes;
         advancedCreditAllocation.push({
           transaction: this.getItemByCode(item.transactionType, advancedCreditAllocationTransactionTypes),
-          creditAllocationOrder: this.buildCurrentCreditAllocationOrder(
-            item.creditAllocationOrder,
-            advancedPaymentAllocationTypes
-          )
+          creditAllocationOrder: creditAllocationOrder,
+          creditAllocationStrategy: item.creditAllocationStrategy || CreditAllocationStrategies.RULE_BASED,
+          creditAllocationStrategyOptions: creditAllocationStrategyOptions
         });
       });
     }
     return advancedCreditAllocation;
   }
 
-  public buildAdvancedPaymentAllocationList(loanProduct: any): AdvancedPaymentAllocation[] {
+  public buildAdvancedPaymentAllocationList(loanProduct: any, isLoanProduct: boolean): AdvancedPaymentAllocation[] {
     const advancedPaymentAllocation: AdvancedPaymentAllocation[] = [];
     const advancedPaymentAllocationTransactionTypes: PaymentAllocationTransactionType[] =
       loanProduct.advancedPaymentAllocationTransactionTypes;
     const advancedPaymentAllocationTypes: PaymentAllocationOrder[] = loanProduct.advancedPaymentAllocationTypes;
     const advancedPaymentAllocationFutureInstallmentAllocationRules: FutureInstallmentAllocationRule[] =
-      loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules;
+      loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules || [];
     if (loanProduct.paymentAllocation) {
       loanProduct.paymentAllocation.forEach((item: PaymentAllocation) => {
+        const futureInstallmentAllocationRule = isLoanProduct
+          ? this.getItemByCode(
+              item.futureInstallmentAllocationRule,
+              advancedPaymentAllocationFutureInstallmentAllocationRules
+            )
+          : null;
         advancedPaymentAllocation.push({
           transaction: this.getItemByCode(item.transactionType, advancedPaymentAllocationTransactionTypes),
           paymentAllocationOrder: this.buildCurrentPaymentAllocationOrder(
             item.paymentAllocationOrder,
             advancedPaymentAllocationTypes
           ),
-          futureInstallmentAllocationRule: this.getItemByCode(
-            item.futureInstallmentAllocationRule,
-            advancedPaymentAllocationFutureInstallmentAllocationRules
-          ),
+          futureInstallmentAllocationRule: futureInstallmentAllocationRule,
           futureInstallmentAllocationRules: advancedPaymentAllocationFutureInstallmentAllocationRules
         });
       });
     }
     // If this is Empty, add the Default
     if (advancedPaymentAllocation.length === 0) {
+      const futureInstallmentAllocationRule = loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules
+        ? loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules[0]
+        : null;
       advancedPaymentAllocation.push({
         transaction: PaymentAllocationTransactionTypes.DEFAULT_TRANSACTION,
         paymentAllocationOrder: this.buildPaymentAllocationTransactionOrder(
@@ -119,8 +176,8 @@ export class AdvancedPaymentStrategy {
           [],
           loanProduct.advancedPaymentAllocationTypes
         ),
-        futureInstallmentAllocationRule: loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules[0],
-        futureInstallmentAllocationRules: loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules
+        futureInstallmentAllocationRule: futureInstallmentAllocationRule,
+        futureInstallmentAllocationRules: loanProduct.advancedPaymentAllocationFutureInstallmentAllocationRules || []
       });
     }
     return advancedPaymentAllocation;
@@ -142,11 +199,14 @@ export class AdvancedPaymentStrategy {
 
   public buildAdvancedCreditAllocation(
     transaction: PaymentAllocationTransactionType,
-    currentItems: CreditAllocationOrder[]
+    currentItems: CreditAllocationOrder[],
+    creditAllocationStrategyOptions: CreditAllocationStrategyOption[] = []
   ): AdvancedCreditAllocation {
     return {
       transaction: transaction,
-      creditAllocationOrder: this.buildCreditAllocationTransactionOrder(true, currentItems, currentItems)
+      creditAllocationOrder: this.buildCreditAllocationTransactionOrder(true, currentItems, currentItems),
+      creditAllocationStrategy: CreditAllocationStrategies.RULE_BASED,
+      creditAllocationStrategyOptions: creditAllocationStrategyOptions
     };
   }
 
@@ -197,7 +257,7 @@ export class AdvancedPaymentStrategy {
         paymentAllocations.push({
           transactionType: paymentAllocation.transaction.code,
           paymentAllocationOrder: this.buildPaymentAllocationOrder(paymentAllocation.paymentAllocationOrder),
-          futureInstallmentAllocationRule: paymentAllocation.futureInstallmentAllocationRule.code
+          futureInstallmentAllocationRule: paymentAllocation.futureInstallmentAllocationRule?.code
         });
       }
     });
@@ -208,10 +268,18 @@ export class AdvancedPaymentStrategy {
   public buildCreditAllocations(advancedCreditAllocations: AdvancedCreditAllocation[]): CreditAllocation[] {
     const creditAllocations: CreditAllocation[] = [];
     advancedCreditAllocations.forEach((creditAllocation: AdvancedCreditAllocation) => {
-      creditAllocations.push({
-        transactionType: creditAllocation.transaction.code,
-        creditAllocationOrder: this.buildCreditAllocationOrder(creditAllocation.creditAllocationOrder)
-      });
+      if (this.isPrincipalOnly(creditAllocation)) {
+        creditAllocations.push({
+          transactionType: creditAllocation.transaction.code,
+          creditAllocationStrategy: CreditAllocationStrategies.PRINCIPAL_ONLY
+        });
+      } else {
+        creditAllocations.push({
+          transactionType: creditAllocation.transaction.code,
+          creditAllocationStrategy: CreditAllocationStrategies.RULE_BASED,
+          creditAllocationOrder: this.buildCreditAllocationOrder(creditAllocation.creditAllocationOrder)
+        });
+      }
     });
 
     return creditAllocations;
@@ -275,5 +343,9 @@ export class AdvancedPaymentStrategy {
 
   public isDefault(transaction: PaymentAllocationTransactionType): boolean {
     return transaction.code === PaymentAllocationTransactionTypes.DEFAULT_TRANSACTION.code;
+  }
+
+  public isPrincipalOnly(creditAllocation: { creditAllocationStrategy?: string }): boolean {
+    return creditAllocation?.creditAllocationStrategy === CreditAllocationStrategies.PRINCIPAL_ONLY;
   }
 }

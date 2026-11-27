@@ -1,19 +1,28 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+/* eslint-disable @angular-eslint/prefer-inject */
 /** Angular Imports */
-import { Component, OnInit, HostListener, HostBinding } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, HostListener, HostBinding, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 
 /** rxjs Imports */
-import { merge } from 'rxjs';
-import { filter, map, mergeMap } from 'rxjs/operators';
+import { merge, Subscription, Subject } from 'rxjs';
+import { filter, map, mergeMap, takeUntil, take } from 'rxjs/operators';
 
 /** Translation Imports */
 import { TranslateService } from '@ngx-translate/core';
 
 /** Environment Configuration */
-import { environment } from 'environments/environment';
+import { environment } from '../environments/environment';
 
 /** Custom Services */
 import { Logger } from './core/logger/logger.service';
@@ -21,8 +30,10 @@ import { ThemeStorageService } from './shared/theme-picker/theme-storage.service
 import { AlertService } from './core/alert/alert.service';
 import { AuthenticationService } from './core/authentication/authentication.service';
 import { SettingsService } from './settings/settings.service';
+import { DocumentationLinksService } from 'app/shared/services/documentation-links.service';
 import { IdleTimeoutService } from './home/timeout-dialog/idle-timeout.service';
 import { SessionTimeoutDialogComponent } from './home/timeout-dialog/session-timeout-dialog.component';
+import { LogoutDialogComponent } from './shared/logout-dialog/logout-dialog.component';
 
 /** Custom Items */
 import { Alert } from './core/alert/alert.model';
@@ -36,6 +47,7 @@ import { ThemingService } from './shared/theme-toggle/theming.service';
 const log = new Logger('MifosX');
 
 import { registerLocaleData } from '@angular/common';
+import localeAZ from '@angular/common/locales/az';
 import localeCS from '@angular/common/locales/cs';
 import localeEN from '@angular/common/locales/en';
 import localeES from '@angular/common/locales/es';
@@ -48,6 +60,9 @@ import localeLV from '@angular/common/locales/lv';
 import localeNE from '@angular/common/locales/ne';
 import localePT from '@angular/common/locales/pt';
 import localeSW from '@angular/common/locales/sw';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+
+registerLocaleData(localeAZ);
 registerLocaleData(localeCS);
 registerLocaleData(localeEN);
 registerLocaleData(localeES);
@@ -72,19 +87,26 @@ registerLocaleData(localeSW);
     trigger('opacityScale', [
       transition(':enter', [
         style({ opacity: 0, transform: 'scale(.95)' }),
-        animate('100ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))]),
+        animate('100ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
+      ]),
       transition(':leave', [
         style({ opacity: 1, transform: 'scale(1)' }),
-        animate('75ms ease-in', style({ opacity: 0, transform: 'scale(.95)' }))])
-
+        animate('75ms ease-in', style({ opacity: 0, transform: 'scale(.95)' }))
+      ])
     ])
+  ],
 
-  ]
+  // eslint-disable-next-line @angular-eslint/prefer-standalone
+  standalone: false,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WebAppComponent implements OnInit {
+export class WebAppComponent implements OnInit, OnDestroy {
   buttonConfig: KeyboardShortcutsConfiguration;
 
   i18nService: I18nService;
+
+  private authSubscription: Subscription;
+  private destroy$ = new Subject<void>();
 
   /**
    * @param {Router} router Router for navigation.
@@ -113,7 +135,8 @@ export class WebAppComponent implements OnInit {
     private themingService: ThemingService,
     private dateUtils: Dates,
     private idle: IdleTimeoutService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private documentationLinks: DocumentationLinksService
   ) {}
 
   @HostBinding('class') public cssClass: string;
@@ -129,12 +152,13 @@ export class WebAppComponent implements OnInit {
    *
    * 4) Alerts
    */
+
   ngOnInit() {
     this.themingService.theme.subscribe((value: string) => {
       this.cssClass = value;
     });
     this.themingService.setInitialDarkMode();
-    this.themingService.setDarkMode(this.settingsService.themeDarkEnabled === 'true');
+    this.themingService.setDarkMode(!!this.settingsService.themeDarkEnabled);
 
     // Setup logger
     if (environment.production) {
@@ -164,16 +188,27 @@ export class WebAppComponent implements OnInit {
           return route;
         }),
         filter((route) => route.outlet === 'primary'),
-        mergeMap((route) => route.data)
+        mergeMap((route) => route.data),
+        takeUntil(this.destroy$)
       )
       .subscribe((event) => {
-        let title = event['title'];
-        if (!title) {
-          title = 'APP_NAME';
+        const rawTitle = event['title'];
+        if (!rawTitle) {
+          this.i18nService
+            .translate('APP_NAME')
+            .pipe(take(1))
+            .subscribe((t: any) => this.titleService.setTitle(t));
+          return;
         }
-        this.i18nService.translate(title).subscribe((titleTranslated: any) => {
-          this.titleService.setTitle(titleTranslated);
-        });
+        const translationKey = rawTitle.includes('.') ? rawTitle : `labels.text.${rawTitle}`;
+        this.i18nService
+          .translate(translationKey)
+          .pipe(take(1))
+          .subscribe((translated: any) => {
+            // If the translation key was not found, ngx-translate returns the key itself
+            const finalTitle = translated === translationKey ? rawTitle : translated;
+            this.titleService.setTitle(finalTitle);
+          });
       });
 
     // Stores top 100 user activites as local storage object.
@@ -184,50 +219,127 @@ export class WebAppComponent implements OnInit {
       activities = length > 100 ? activitiesArray.slice(length - 100) : activitiesArray;
     }
     // Store route URLs array in local storage on navigation end.
-    onNavigationEnd.subscribe(() => {
+    onNavigationEnd.pipe(takeUntil(this.destroy$)).subscribe(() => {
       activities.push(this.router.url);
       localStorage.setItem('mifosXLocation', JSON.stringify(activities));
     });
 
-    // Setup alerts
+    // Setup alerts with hover behavior
     this.alertService.alertEvent.subscribe((alertEvent: Alert) => {
-      this.snackBar.open(`${alertEvent.message}`, 'Close', {
-        duration: 2000,
-        horizontalPosition: 'right',
-        verticalPosition: 'top'
-      });
+      const snackBarRef = this.snackBar.open(
+        `${alertEvent.message}`,
+        this.translateService.instant('labels.buttons.Close'),
+        {
+          duration: 0, // Set to 0 - no auto-dismiss initially
+          horizontalPosition: 'right',
+          verticalPosition: 'top'
+        }
+      );
+      // Handle hover behavior
+      this.handleSnackbarHover(snackBarRef, 2000);
     });
+
     this.buttonConfig = new KeyboardShortcutsConfiguration();
 
     // initialize language and date format if they are null.
     if (!localStorage.getItem('mifosXLanguage')) {
       this.settingsService.setDefaultLanguage();
     }
-    if (!localStorage.getItem('mifosXDateFormat')) {
-      this.settingsService.setDateFormat('dd MMMM yyyy');
-    }
     // Set default max date picker as Today
     this.settingsService.setBusinessDate(this.dateUtils.formatDate(new Date(), SettingsService.businessDateFormat));
-    // Set the server list from the env var FINERACT_API_URLS
-    this.settingsService.setServers(environment.baseApiUrls.split(','));
+    // Set the server list from the env var FINERACT_API_URLS, but avoid overwriting "Add new server" user choice
+    if (!this.settingsService.servers) {
+      this.settingsService.setServers(environment.baseApiUrls.split(','));
+    }
     // Set the Tenant Identifier(s) list from the env var
     if (!localStorage.getItem('mifosXTenantIdentifier')) {
       this.settingsService.setTenantIdentifier(environment.fineractPlatformTenantId || 'default');
     }
     this.settingsService.setTenantIdentifiers(environment.fineractPlatformTenantIds.split(','));
 
+    // Apply the tenant's brand colour: the cached value is painted first so
+    // there is no flash, then refreshed from the server. Read anonymously, so
+    // it does not wait for authentication and the login screen is branded too.
+    //
+    // Deliberately after the server and tenant are settled above: the read
+    // carries no credentials, so the tenant header is the only thing saying
+    // whose branding to return. Re-run when the session changes, since signing
+    // in can switch tenant; it is a no-op for a tenant already read.
+    this.authenticationService.isAuthenticated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.themeStorageService.loadTenantTheme());
+
     // Subscribe to session timeout If IdleTimeout is higher than 0 (zero)
     if (environment.session.timeout.idleTimeout > 0) {
-      this.idle.$onSessionTimeout.subscribe(() => {
-        if (this.authenticationService.getUserLoggedIn()) {
-          this.alertService.alert({
-            type: 'Session timeout',
-            message: this.translateService.instant('labels.text.Session timed out')
-          });
-          this.dialog.open(SessionTimeoutDialogComponent);
-          this.logout();
+      this.authSubscription = this.authenticationService.isAuthenticated$.subscribe((loggedIn) => {
+        if (loggedIn) {
+          this.idle.start();
+        } else {
+          this.idle.stop();
         }
       });
+
+      this.idle.$onSessionTimeout.subscribe(() => {
+        this.alertService.alert({
+          type: 'Session timeout',
+          message: this.translateService.instant('labels.text.Session timed out')
+        });
+        this.dialog.open(SessionTimeoutDialogComponent);
+        setTimeout(() => {
+          this.logout();
+        }, 1000);
+      });
+    }
+  }
+
+  /**
+   * Handle snackbar hover behavior - pause dismiss on hover, resume on leave
+   * @param snackBarRef Reference to the snackbar
+   * @param defaultDuration Default duration in milliseconds before auto-dismiss
+   */
+  private handleSnackbarHover(snackBarRef: MatSnackBarRef<any>, defaultDuration: number): void {
+    snackBarRef
+      .afterOpened()
+      .pipe(take(1))
+      .subscribe(() => {
+        const snackbarContainer = document.querySelector('.mat-mdc-snack-bar-container');
+        if (!snackbarContainer) {
+          snackBarRef.dismiss();
+          return;
+        }
+
+        let dismissTimer: any;
+
+        // Start the auto-dismiss timer
+        const startDismissTimer = () => {
+          dismissTimer = setTimeout(() => {
+            snackBarRef.dismiss();
+          }, defaultDuration);
+        };
+
+        // Pause auto-dismiss on hover (mouseenter)
+        snackbarContainer.addEventListener('mouseenter', () => {
+          if (dismissTimer) {
+            clearTimeout(dismissTimer);
+            dismissTimer = null;
+          }
+        });
+
+        // Resume auto-dismiss when cursor leaves (mouseleave)
+        snackbarContainer.addEventListener('mouseleave', () => {
+          startDismissTimer();
+        });
+
+        // Start initial timer
+        startDismissTimer();
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
     }
   }
 
@@ -235,8 +347,27 @@ export class WebAppComponent implements OnInit {
     this.authenticationService.logout().subscribe(() => this.router.navigate(['/login'], { replaceUrl: true }));
   }
 
+  /**
+   * Opens the logout confirmation dialog and only runs the existing logout flow
+   * once the operator confirms. Cancelling or dismissing the dialog preserves
+   * the authenticated session. Automatic flows (such as the session idle
+   * timeout) keep calling {@link logout} directly and are never interrupted by
+   * this dialog.
+   */
+  confirmLogout() {
+    this.dialog
+      .open(LogoutDialogComponent)
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((confirmed: boolean) => {
+        if (confirmed) {
+          this.logout();
+        }
+      });
+  }
+
   help() {
-    window.open('https://mifosforge.jira.com/wiki/spaces/docs/pages/52035622/User+Manual', '_blank');
+    this.documentationLinks.open('userManual');
   }
 
   // Monitor all keyboard events and excute keyboard shortcuts
@@ -249,7 +380,7 @@ export class WebAppComponent implements OnInit {
     if (!(routeD === undefined)) {
       switch (routeD.id) {
         case 'logout':
-          this.logout();
+          this.confirmLogout();
           break;
         case 'help':
           this.help();

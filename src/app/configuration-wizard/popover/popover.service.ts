@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /* Angular Imports */
 import {
   ComponentType,
@@ -6,13 +14,15 @@ import {
   OverlayConnectionPosition,
   ConnectionPositionPair
 } from '@angular/cdk/overlay';
+import { coerceElement } from '@angular/cdk/coercion';
 import { ComponentPortal, TemplatePortal } from '@angular/cdk/portal';
-import { Injectable, InjectionToken, Injector, TemplateRef, ElementRef } from '@angular/core';
+import { Injectable, InjectionToken, Injector, TemplateRef, ElementRef, inject } from '@angular/core';
 
 /* Custom Imports */
 import { PopoverConfig } from './popover-config';
 import { PopoverRef } from './popover-ref';
 import { PopoverComponent } from './popover.component';
+import { PopoverSpotlightService } from './popover-spotlight.service';
 
 /**
  * Injection token that can be used to access the data that was passed in to a popover.
@@ -21,7 +31,6 @@ import { PopoverComponent } from './popover.component';
 export const POPOVER_DATA = new InjectionToken('popover.data');
 
 const defaultConfig: PopoverConfig = {
-  backdropClass: '',
   disableClose: false,
   panelClass: '',
   arrowOffset: 30,
@@ -35,14 +44,9 @@ const defaultConfig: PopoverConfig = {
   providedIn: 'root'
 })
 export class PopoverService {
-  /**
-   * @param {Injector} injector Injector.
-   * @param {overlay} overlay Overlay.
-   */
-  constructor(
-    private overlay: Overlay,
-    private injector: Injector
-  ) {}
+  private overlay = inject(Overlay);
+  private injector = inject(Injector);
+  private spotlight = inject(PopoverSpotlightService);
 
   /**
    * Opens the popover at target element
@@ -63,7 +67,6 @@ export class PopoverService {
     const arrowSize = popoverConfig.arrowSize;
     const arrowOffset = popoverConfig.arrowOffset;
     const panelOffset = arrowSize / 2;
-    let showbackdrop: boolean;
     let positions: ConnectionPositionPair[];
     // preferred positions, in order of priority
     if (position === 'bottom') {
@@ -181,10 +184,8 @@ export class PopoverService {
         }
       ];
     }
-    if (backdrop === true) {
-      showbackdrop = true;
-    } else {
-      showbackdrop = false;
+    if (backdrop) {
+      this.spotlight.show(coerceElement(target));
     }
     const positionStrategy = this.overlay
       .position()
@@ -194,14 +195,15 @@ export class PopoverService {
       .withPositions(positions);
 
     const overlayRef = this.overlay.create({
-      hasBackdrop: showbackdrop,
-      backdropClass: config.backdropClass,
       panelClass: config.panelClass,
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.reposition()
     });
 
     const popoverRef = new PopoverRef(overlayRef, positionStrategy, popoverConfig);
+    if (backdrop) {
+      popoverRef.afterClosed().subscribe(() => this.spotlight.release());
+    }
 
     const popover = overlayRef.attach(
       new ComponentPortal(
@@ -210,7 +212,8 @@ export class PopoverService {
         Injector.create({
           parent: this.injector,
           providers: [
-            { provide: PopoverRef, useValue: popoverRef }]
+            { provide: PopoverRef, useValue: popoverRef }
+          ]
         })
         // new PortalInjector(
         //   this.injector,

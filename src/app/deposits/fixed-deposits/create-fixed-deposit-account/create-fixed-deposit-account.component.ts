@@ -1,5 +1,13 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 /** Custom Services */
@@ -12,6 +20,11 @@ import { FixedDepositAccountTermsStepComponent } from '../fixed-deposit-account-
 import { FixedDepositAccountSettingsStepComponent } from '../fixed-deposit-account-stepper/fixed-deposit-account-settings-step/fixed-deposit-account-settings-step.component';
 import { FixedDepositAccountChargesStepComponent } from '../fixed-deposit-account-stepper/fixed-deposit-account-charges-step/fixed-deposit-account-charges-step.component';
 import { Dates } from 'app/core/utils/dates';
+import { MatStepper, MatStepperIcon, MatStep, MatStepLabel } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { FixedDepositAccountInterestRateChartStepComponent } from '../fixed-deposit-account-stepper/fixed-deposit-account-interest-rate-chart-step/fixed-deposit-account-interest-rate-chart-step.component';
+import { FixedDepositAccountPreviewStepComponent } from '../fixed-deposit-account-stepper/fixed-deposit-account-preview-step/fixed-deposit-account-preview-step.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create Fixed Deposit Account Component
@@ -19,9 +32,30 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-create-fixed-deposit-account',
   templateUrl: './create-fixed-deposit-account.component.html',
-  styleUrls: ['./create-fixed-deposit-account.component.scss']
+  styleUrls: ['./create-fixed-deposit-account.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatStepper,
+    MatStepperIcon,
+    FaIconComponent,
+    MatStep,
+    MatStepLabel,
+    FixedDepositAccountDetailsStepComponent,
+    FixedDepositAccountTermsStepComponent,
+    FixedDepositAccountSettingsStepComponent,
+    FixedDepositAccountInterestRateChartStepComponent,
+    FixedDepositAccountChargesStepComponent,
+    FixedDepositAccountPreviewStepComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateFixedDepositAccountComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private fixedDepositsService = inject(FixedDepositsService);
+  private settingsService = inject(SettingsService);
+
   /** Fixed Deposits Account Details Step */
   @ViewChild(FixedDepositAccountDetailsStepComponent, { static: true })
   fixedDepositsAccountDetailsStep: FixedDepositAccountDetailsStepComponent;
@@ -31,6 +65,9 @@ export class CreateFixedDepositAccountComponent {
   /** Fixed Deposits Account Settings Step */
   @ViewChild(FixedDepositAccountSettingsStepComponent, { static: true })
   fixedDepositAccountSettingsStep: FixedDepositAccountSettingsStepComponent;
+  /** Fixed Deposits Account Interest Rate Chart Step */
+  @ViewChild(FixedDepositAccountInterestRateChartStepComponent, { static: true })
+  fixedDepositAccountInterestRateChartStep: FixedDepositAccountInterestRateChartStepComponent;
   /** Fixed Deposits Account Charges Step */
   @ViewChild(FixedDepositAccountChargesStepComponent, { static: true })
   fixedDepositAccountChargesStep: FixedDepositAccountChargesStepComponent;
@@ -48,13 +85,7 @@ export class CreateFixedDepositAccountComponent {
    * @param {FixedDepositsService} fixedDepositsService Fixed Deposits Service
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private fixedDepositsService: FixedDepositsService,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { fixedDepositsAccountTemplate: any }) => {
       this.fixedDepositsAccountTemplate = data.fixedDepositsAccountTemplate;
     });
@@ -90,13 +121,21 @@ export class CreateFixedDepositAccountComponent {
   }
 
   /**
+   * Retrieves Fixed Deposit Account Interest Rate Chart Form Data
+   */
+  get fixedDepositAccountInterestRateChartForm() {
+    return this.fixedDepositAccountInterestRateChartStep?.interestRateChartForm;
+  }
+
+  /**
    * Checks stepper validity.
    */
   get fixedDepositAccountFormValid() {
     return (
       this.fixedDepositAccountDetailsForm.valid &&
       this.fixedDepositAccountTermsForm.valid &&
-      this.fixedDepositAccountSettingsForm.valid
+      this.fixedDepositAccountSettingsForm.valid &&
+      (!this.fixedDepositAccountInterestRateChartForm || this.fixedDepositAccountInterestRateChartForm.valid)
     );
   }
 
@@ -108,6 +147,7 @@ export class CreateFixedDepositAccountComponent {
       ...this.fixedDepositsAccountDetailsStep.fixedDepositAccountDetails,
       ...this.fixedDepositAccountTermsStep.fixedDepositAccountTerms,
       ...this.fixedDepositAccountSettingsStep.fixedDepositAccountSettings,
+      ...this.fixedDepositAccountInterestRateChartStep?.interestRateChart,
       ...this.fixedDepositAccountChargesStep.fixedDepositAccountCharges
     };
   }
@@ -122,6 +162,9 @@ export class CreateFixedDepositAccountComponent {
     const fixedDepositAccount = {
       ...this.fixedDepositAccount,
       clientId: this.fixedDepositsAccountTemplate.clientId,
+      ...(this.fixedDepositsAccountProductTemplate.accountChart?.id && {
+        chartId: this.fixedDepositsAccountProductTemplate.accountChart.id
+      }),
       charges: this.fixedDepositAccount.charges.map((charge: any) => ({
         chargeId: charge.id,
         amount: charge.amount,
@@ -131,7 +174,6 @@ export class CreateFixedDepositAccountComponent {
         feeInterval: charge.feeInterval
       })),
       submittedOnDate: this.dateUtils.formatDate(this.fixedDepositAccount.submittedOnDate, dateFormat),
-      charts: [{ chartSlabs: this.fixedDepositsAccountProductTemplate.accountChart.chartSlabs }],
       dateFormat,
       monthDayFormat,
       locale

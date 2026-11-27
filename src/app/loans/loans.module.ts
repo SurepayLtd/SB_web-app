@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 import { DirectivesModule } from '../directives/directives.module';
@@ -33,6 +41,7 @@ import { LoanTrancheDetailsComponent } from './loans-view/loan-tranche-details/l
 import { CloseAsRescheduledComponent } from './loans-view/loan-account-actions/close-as-rescheduled/close-as-rescheduled.component';
 import { LoanRescheduleComponent } from './loans-view/loan-account-actions/loan-reschedule/loan-reschedule.component';
 import { LoanCollateralTabComponent } from './loans-view/loan-collateral-tab/loan-collateral-tab.component';
+import { LoanGuarantorsTabComponent } from './loans-view/loan-guarantors-tab/loan-guarantors-tab.component';
 import { CreateLoansAccountComponent } from './create-loans-account/create-loans-account.component';
 import { LoansAccountDetailsStepComponent } from './loans-account-stepper/loans-account-details-step/loans-account-details-step.component';
 import { LoansAccountTermsStepComponent } from './loans-account-stepper/loans-account-terms-step/loans-account-terms-step.component';
@@ -58,16 +67,13 @@ import { ViewTransactionComponent } from './loans-view/transactions/view-transac
 import { EditTransactionComponent } from './loans-view/transactions/edit-transaction/edit-transaction.component';
 import { GlimAccountComponent } from './glim-account/glim-account.component';
 import { CreateGlimAccountComponent } from './glim-account/create-glim-account/create-glim-account.component';
-import { GlimDetailsStepComponent } from './glim-account/create-glim-account/glim-account-stepper/glim-details-step/glim-details-step.component';
-import { GlimChargesStepComponent } from './glim-account/create-glim-account/glim-account-stepper/glim-charges-step/glim-charges-step.component';
-import { GlimTermsStepComponent } from './glim-account/create-glim-account/glim-account-stepper/glim-terms-step/glim-terms-step.component';
-import { GlimPreviewStepComponent } from './glim-account/create-glim-account/glim-account-stepper/glim-preview-step/glim-preview-step.component';
 
 /** Dialog Components */
 import { LoansAccountViewGuarantorDetailsDialogComponent } from './custom-dialog/loans-account-view-guarantor-details-dialog/loans-account-view-guarantor-details-dialog.component';
 import { LoansAccountAddCollateralDialogComponent } from './custom-dialog/loans-account-add-collateral-dialog/loans-account-add-collateral-dialog.component';
 import { LoanCreditBalanceRefundComponent } from './loans-view/loan-account-actions/loan-credit-balance-refund/loan-credit-balance-refund.component';
 import { LoanDelinquencyTagsTabComponent } from './loans-view/loan-delinquency-tags-tab/loan-delinquency-tags-tab.component';
+import { LoanBreachActionsTabComponent } from './loans-view/working-capital/loan-breach-actions-tab/loan-breach-actions-tab.component';
 import { LoansAccountScheduleStepComponent } from './loans-account-stepper/loans-account-schedule-step/loans-account-schedule-step.component';
 import { EditRepaymentScheduleComponent } from './loans-view/loan-account-actions/edit-repayment-schedule/edit-repayment-schedule.component';
 import { DisburseToSavingsAccountComponent } from './loans-view/loan-account-actions/disburse-to-savings-account/disburse-to-savings-account.component';
@@ -85,6 +91,7 @@ import { LoanReamortizeComponent } from './loans-view/loan-account-actions/loan-
 import { LoanTermVariationsTabComponent } from './loans-view/loan-term-variations-tab/loan-term-variations-tab.component';
 import { AddInterestPauseComponent } from './loans-view/loan-account-actions/add-interest-pause/add-interest-pause.component';
 import { MassWaiverComponent } from './loans-view/loan-account-actions/mass-waiver/mass-waiver.component';
+import { LoansActiveClientMembersComponent } from './loans-account-stepper/loans-active-client-members/loans-active-client-members.component';
 import { CreditEnquiryComponent } from './loans-view/loan-account-actions/credit-enquiry/credit-enquiry.component';
 import { CreditScoreComponent } from './loans-view/loan-account-actions/credit-score/credit-score.component';
 import { CrbCreditEnquiryTabComponent } from './loans-view/crb-credit-enquiry-tab/crb-credit-enquiry-tab.component';
@@ -103,9 +110,7 @@ import { CrbCreditReportComponent } from './loans-view/loan-account-actions/crb-
     DirectivesModule,
     LoansRoutingModule,
     PipesModule,
-    TranslateModule
-  ],
-  declarations: [
+    TranslateModule,
     AddLoanChargeComponent,
     LoansViewComponent,
     GeneralTabComponent,
@@ -131,6 +136,7 @@ import { CrbCreditReportComponent } from './loans-view/loan-account-actions/crb-
     CloseAsRescheduledComponent,
     LoanRescheduleComponent,
     LoanCollateralTabComponent,
+    LoanGuarantorsTabComponent,
     CreateLoansAccountComponent,
     LoansAccountDetailsStepComponent,
     LoansAccountTermsStepComponent,
@@ -159,11 +165,8 @@ import { CrbCreditReportComponent } from './loans-view/loan-account-actions/crb-
     LoanCreditBalanceRefundComponent,
     GlimAccountComponent,
     CreateGlimAccountComponent,
-    GlimDetailsStepComponent,
-    GlimChargesStepComponent,
-    GlimTermsStepComponent,
-    GlimPreviewStepComponent,
     LoanDelinquencyTagsTabComponent,
+    LoanBreachActionsTabComponent,
     LoansAccountScheduleStepComponent,
     EditRepaymentScheduleComponent,
     DisburseToSavingsAccountComponent,
@@ -179,6 +182,7 @@ import { CrbCreditReportComponent } from './loans-view/loan-account-actions/crb-
     LoanReamortizeComponent,
     LoanTermVariationsTabComponent,
     AddInterestPauseComponent,
+    LoansActiveClientMembersComponent,
     MassWaiverComponent,
     CreditEnquiryComponent,
     CreditScoreComponent,

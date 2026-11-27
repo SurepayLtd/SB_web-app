@@ -1,4 +1,12 @@
-import { Component, Input, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { FormBuilder, UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,13 +14,32 @@ import { Dates } from 'app/core/utils/dates';
 import { LoansService } from 'app/loans/loans.service';
 import { SettingsService } from 'app/settings/settings.service';
 import { Currency } from 'app/shared/models/general.model';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { FormatNumberPipe } from 'app/pipes/format-number.pipe';
+import { InputAmountComponent } from 'app/shared/input-amount/input-amount.component';
 
 @Component({
   selector: 'mifosx-mass-waiver',
   templateUrl: './mass-waiver.component.html',
-  styleUrls: ['./mass-waiver.component.scss']
+  styleUrls: ['./mass-waiver.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    FormatNumberPipe,
+    InputAmountComponent
+  ]
 })
 export class MassWaiverComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private loanService = inject(LoansService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  private settingsService = inject(SettingsService);
+
   @Input() dataObject: any;
   /** Loan Id */
   loanId: string;
@@ -33,14 +60,7 @@ export class MassWaiverComponent implements OnInit {
    * @param {SettingsService} settingsService Settings Service
    */
 
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.loanId = this.route.snapshot.params['loanId'];
   }
 
@@ -63,7 +83,8 @@ export class MassWaiverComponent implements OnInit {
         '',
         [
           Validators.required,
-          Validators.max(500000)]
+          Validators.max(500000)
+        ]
       ]
     });
   }
@@ -72,7 +93,6 @@ export class MassWaiverComponent implements OnInit {
     if (!this.dataObject) {
       return;
     }
-
   }
 
   /** Submits the repayment form */

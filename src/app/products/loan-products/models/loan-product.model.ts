@@ -1,8 +1,19 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import {
   AccountingMapping,
   ChargeOffReasonToExpenseAccountMapping,
   ChargeToIncomeAccountMapping,
+  ClassificationToIncomeAccountMapping,
+  CodeValue,
   Currency,
+  GLAccount,
   PaymentChannelToFundSourceMapping
 } from 'app/shared/models/general.model';
 import { OptionData, StringEnumOptionData } from 'app/shared/models/option-data.model';
@@ -10,6 +21,24 @@ import {
   CreditAllocation,
   PaymentAllocation
 } from '../loan-product-stepper/loan-product-payment-strategy-step/payment-allocation-model';
+
+export const LOAN_PRODUCT_TYPE = {
+  LOAN: 'loan',
+  WORKING_CAPITAL: 'working-capital'
+} as const;
+
+export type LoanProductType = (typeof LOAN_PRODUCT_TYPE)[keyof typeof LOAN_PRODUCT_TYPE];
+
+export const PRODUCT_TYPES = [
+  {
+    type: LOAN_PRODUCT_TYPE.LOAN,
+    label: 'Loan'
+  },
+  {
+    type: LOAN_PRODUCT_TYPE.WORKING_CAPITAL,
+    label: 'Working Capital'
+  }
+] as const;
 
 export interface LoanProduct {
   id: number;
@@ -34,6 +63,10 @@ export interface LoanProduct {
   maxNumberOfRepayments?: number;
   repaymentEvery: number;
   repaymentFrequencyType: OptionData;
+  /** First due day (1–27) of a semi-monthly product. */
+  firstRepaymentDayOfMonth?: number;
+  /** Second due day (2–31, after the first) of a semi-monthly product; 31 means the last day of the month. */
+  secondRepaymentDayOfMonth?: number;
   minimumDaysBetweenDisbursalAndFirstRepayment?: number;
   interestRatePerPeriod: number;
   interestRateFrequencyType: OptionData;
@@ -52,6 +85,7 @@ export interface LoanProduct {
   paymentAllocation?: PaymentAllocation[];
   creditAllocation?: CreditAllocation[];
   daysInMonthType: OptionData;
+  daysInYearCustomStrategy?: OptionData;
   daysInYearType: OptionData;
   isInterestRecalculationEnabled: boolean;
   interestRecalculationData?: InterestRecalculationData;
@@ -65,6 +99,15 @@ export interface LoanProduct {
   isArrearsBasedOnOriginalSchedule?: boolean;
   isCompoundingToBePostedAsTransaction?: boolean;
   recalculationRestFrequencyInterval?: number;
+  enableIncomeCapitalization?: boolean;
+  capitalizedIncomeCalculationType?: OptionData;
+  capitalizedIncomeStrategy?: OptionData;
+  capitalizedIncomeType?: OptionData;
+
+  enableBuyDownFee?: boolean;
+  buyDownFeeCalculationType?: OptionData;
+  buyDownFeeStrategy?: OptionData;
+  buyDownFeeIncomeType?: OptionData;
 
   canDefineInstallmentAmount: boolean;
   graceOnArrearsAgeing?: number;
@@ -82,9 +125,11 @@ export interface LoanProduct {
   advancedPaymentAllocationTypes: OptionData[];
   creditAllocationTransactionTypes: OptionData[];
   creditAllocationAllocationTypes: OptionData[];
+  creditAllocationStrategyOptions?: OptionData[];
   multiDisburseLoan: boolean;
   maxTrancheCount: number;
-  disallowExpectedDisbursements: boolean;
+  allowFullTermForTranche: boolean;
+  disallowExpectedDisbursements?: boolean;
   allowApprovedDisbursedAmountsOverApplied: boolean;
   overAppliedNumber: number;
   principalThresholdForLastInstallment: number;
@@ -111,8 +156,11 @@ export interface LoanProduct {
   // Accounting
   accountingRule: any;
   accountingMappings?: { [key: string]: AccountingMapping };
+  buyDownExpenseAccountId?: number;
   fundSourceAccountId?: number;
   goodwillCreditAccountId?: number;
+  incomeFromBuyDownAccountId?: number;
+  incomeFromCapitalizationAccountId?: number;
   incomeFromChargeOffFeesAccountId?: number;
   incomeFromChargeOffInterestAccountId?: number;
   incomeFromChargeOffPenaltyAccountId?: number;
@@ -129,7 +177,11 @@ export interface LoanProduct {
   receivableFeeAccountId?: number;
   receivablePenaltyAccountId?: number;
   transfersInSuspenseAccountId?: number;
+  incomeFromDiscountFeeAccountId?: number;
   writeOffAccountId?: number;
+  deferredIncomeLiabilityAccountId?: number;
+  chargeOffExpenseAccountId?: number;
+  chargeOffFraudExpenseAccountId?: number;
   // Advanced Accounting
   paymentChannelToFundSourceMappings?: PaymentChannelToFundSourceMapping[];
   feeToIncomeAccountMappings?: ChargeToIncomeAccountMapping[];
@@ -138,6 +190,34 @@ export interface LoanProduct {
   enableAccrualActivityPosting?: boolean;
   supportedInterestRefundTypes?: StringEnumOptionData[];
   chargeOffBehaviour?: StringEnumOptionData;
+  buydownfeeClassificationToIncomeAccountMappings?: ClassificationToIncomeAccountMapping[];
+  buydownFeeClassificationToIncomeAccountMappings?: ClassificationToIncomeAccountMapping[];
+  capitalizedIncomeClassificationToIncomeAccountMappings?: ClassificationToIncomeAccountMapping[];
+  writeOffReasonsToExpenseMappings?: ChargeOffReasonToExpenseAccountMapping[];
+
+  // Working Capital attributes
+  delinquencyStartType?: StringEnumOptionData | null;
+  delinquencyStartTypeOptions?: StringEnumOptionData[];
+  breachStartType?: StringEnumOptionData | null;
+  breachStartTypeOptions?: StringEnumOptionData[];
+  breach?: Breach;
+  breachId?: number;
+  nearBreach?: NearBreach;
+  nearBreachId?: number;
+  /** TPV (default) | ANNUAL_EIR | PAYMENT_AMOUNT. Option object on GET, enum name on POST/PUT. */
+  paymentAmountCalculationStrategy?: StringEnumOptionData | string | null;
+  paymentAmountCalculationStrategyOptions?: StringEnumOptionData[];
+  periodPaymentRate?: number | null;
+  minPeriodPaymentRate?: number | null;
+  maxPeriodPaymentRate?: number | null;
+  /** Contractual annual EIR (%), up to 6 decimals. Only under ANNUAL_EIR. */
+  annualEir?: number | null;
+  minAnnualEir?: number | null;
+  maxAnnualEir?: number | null;
+  paymentAmount?: number | null;
+  minPaymentAmount?: number | null;
+  maxPaymentAmount?: number | null;
+  discount?: number | null;
 }
 
 export interface AllowAttributeOverrides {
@@ -178,4 +258,31 @@ export interface InterestRecalculationData {
   preClosureInterestCalculationStrategy: OptionData;
   allowCompoundingOnEod: boolean;
   disallowInterestCalculationOnPastDue: boolean;
+}
+
+export interface AdvancedMappingDTO {
+  formType: string;
+  values: AccountingMappingDTO[];
+}
+
+export interface AccountingMappingDTO {
+  value: CodeValue;
+  glAccount: GLAccount | null;
+}
+
+export interface Breach {
+  id: number;
+  name: string;
+  breachFrequency: number;
+  breachFrequencyType: StringEnumOptionData;
+  breachAmountCalculationType: StringEnumOptionData;
+  breachAmount: number;
+}
+
+export interface NearBreach {
+  id: number;
+  name: string;
+  frequency: number;
+  frequencyType: StringEnumOptionData;
+  threshold: number;
 }

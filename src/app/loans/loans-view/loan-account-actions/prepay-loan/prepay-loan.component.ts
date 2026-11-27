@@ -1,13 +1,26 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { distinctUntilChanged, filter, map, switchMap } from 'rxjs/operators';
 
 /** Custom Services */
-import { LoansService } from 'app/loans/loans.service';
-import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
 import { Currency } from 'app/shared/models/general.model';
+import { InputAmountComponent } from '../../../../shared/input-amount/input-amount.component';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { FormatNumberPipe } from '../../../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 
 /**
  * Loan Prepay Loan Option
@@ -15,12 +28,22 @@ import { Currency } from 'app/shared/models/general.model';
 @Component({
   selector: 'mifosx-prepay-loan',
   templateUrl: './prepay-loan.component.html',
-  styleUrls: ['./prepay-loan.component.scss']
+  styleUrls: ['./prepay-loan.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    InputAmountComponent,
+    MatSlideToggle,
+    CdkTextareaAutosize,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PrepayLoanComponent implements OnInit {
-  @Input() dataObject: any;
-  /** Loan Id */
-  loanId: string;
+export class PrepayLoanComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private formBuilder = inject(UntypedFormBuilder);
+  private dateUtils = inject(Dates);
+  private cdr = inject(ChangeDetectorRef);
+
   /** Payment Types */
   paymentTypes: any;
   /** Principal Portion */
@@ -38,6 +61,8 @@ export class PrepayLoanComponent implements OnInit {
 
   prepayData: any;
   currency: Currency | null = null;
+  contractTermination: boolean;
+  maturityDate: Date | null = null;
 
   /**
    * @param {FormBuilder} formBuilder Form Builder.
@@ -46,15 +71,8 @@ export class PrepayLoanComponent implements OnInit {
    * @param {Router} router Router for navigation.
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  constructor() {
+    super();
   }
 
   /**
@@ -62,10 +80,15 @@ export class PrepayLoanComponent implements OnInit {
    * and initialize with the required values
    */
   ngOnInit() {
+    this.prepayData = this.dataObject;
+    this.contractTermination = this.dataObject['actionName'] == 'Contract Termination';
     this.maxDate = this.settingsService.businessDate;
     this.createprepayLoanForm();
-    this.setPrepayLoanDetails();
-    this.prepayData = this.dataObject;
+    if (this.contractTermination) {
+      this.setContractTerminationDetails();
+    } else {
+      this.setPrepayLoanDetails();
+    }
     if (this.dataObject.currency) {
       this.currency = this.dataObject.currency;
     }
@@ -75,19 +98,30 @@ export class PrepayLoanComponent implements OnInit {
    * Creates the prepay loan form.
    */
   createprepayLoanForm() {
-    this.prepayLoanForm = this.formBuilder.group({
-      transactionDate: [
-        new Date(),
-        Validators.required
-      ],
-      transactionAmount: [
-        '',
-        Validators.required
-      ],
-      externalId: [''],
-      paymentTypeId: [''],
-      note: ['']
-    });
+    if (this.contractTermination) {
+      this.prepayLoanForm = this.formBuilder.group({
+        transactionDate: [
+          this.settingsService.businessDate,
+          Validators.required
+        ],
+        externalId: [''],
+        note: ['']
+      });
+    } else {
+      this.prepayLoanForm = this.formBuilder.group({
+        transactionDate: [
+          new Date(),
+          Validators.required
+        ],
+        transactionAmount: [
+          '',
+          Validators.required
+        ],
+        externalId: [''],
+        paymentTypeId: [''],
+        note: ['']
+      });
+    }
   }
 
   /**
@@ -98,16 +132,60 @@ export class PrepayLoanComponent implements OnInit {
     this.prepayLoanForm.patchValue({
       transactionAmount: this.dataObject.amount
     });
-    this.prepayLoanForm.get('transactionDate').valueChanges.subscribe((transactionDate: string) => {
-      const prepayDate = this.dateUtils.formatDate(transactionDate, this.settingsService.dateFormat);
+    this.prepayLoanForm
+      .get('transactionDate')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((transactionDate: string) => {
+        const prepayDate = this.dateUtils.formatDate(transactionDate, this.settingsService.dateFormat);
 
-      this.loanService.getLoanPrepayLoanActionTemplate(this.loanId, prepayDate).subscribe((response: any) => {
-        this.prepayData = response;
-        this.prepayLoanForm.patchValue({
-          transactionAmount: this.prepayData.amount
+        this.loanService.getLoanPrepayLoanActionTemplate(this.loanId, prepayDate).subscribe((response: any) => {
+          this.prepayData = response;
+          this.prepayLoanForm.patchValue({
+            transactionAmount: this.prepayData.amount
+          });
         });
       });
+  }
+
+  /**
+   * Bounds the contract termination date and keeps the payoff preview in step with it.
+   */
+  setContractTerminationDetails() {
+    this.minDate = this.settingsService.businessDate;
+    this.maxDate = this.settingsService.maxFutureDate;
+
+    this.loanService.getLoanAccountDetails(this.loanId).subscribe((loanDetails: any) => {
+      const actualMaturityDate = loanDetails?.timeline?.actualMaturityDate;
+      if (actualMaturityDate) {
+        this.maturityDate = this.dateUtils.parseDate(actualMaturityDate);
+        const lastAllowedDate = new Date(
+          this.maturityDate.getFullYear(),
+          this.maturityDate.getMonth(),
+          this.maturityDate.getDate() - 1
+        );
+        // terminating on the business date stays allowed even after maturity: the backend applies the
+        // maturity bound to future dates only
+        this.maxDate = this.dateUtils.isBefore(lastAllowedDate, this.minDate) ? this.minDate : lastAllowedDate;
+        this.cdr.markForCheck();
+      }
     });
+
+    this.prepayLoanForm
+      .get('transactionDate')
+      .valueChanges.pipe(
+        // an unreadable typed date arrives as null, and quoting that would silently fall back to the business date
+        filter((date): date is Date => date instanceof Date && !isNaN(date.getTime())),
+        map((date) => this.dateUtils.formatDate(date, this.settingsService.dateFormat)),
+        distinctUntilChanged(),
+        switchMap((terminationDate) =>
+          this.loanService.getLoanContractTerminationTemplate(this.loanId, terminationDate)
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((response: any) => {
+        this.prepayData = response;
+        this.cdr.markForCheck();
+      });
   }
 
   /**
@@ -133,7 +211,7 @@ export class PrepayLoanComponent implements OnInit {
   /**
    * Submits the prepay loan form
    */
-  submit() {
+  submitRepayment() {
     const prepayLoanFormData = this.prepayLoanForm.value;
     const locale = this.settingsService.language.code;
     const dateFormat = this.settingsService.dateFormat;
@@ -148,7 +226,38 @@ export class PrepayLoanComponent implements OnInit {
     };
     data['transactionAmount'] = data['transactionAmount'] * 1;
     this.loanService.submitLoanActionButton(this.loanId, data, 'repayment').subscribe((response: any) => {
-      this.router.navigate(['../../general'], { relativeTo: this.route });
+      this.router.navigate(['../../general'], {
+        queryParams: {
+          productType: this.loanProductService.productType.value
+        },
+        relativeTo: this.route
+      });
     });
+  }
+
+  submitContractTermination() {
+    const contractTerminationFormData = this.prepayLoanForm.value;
+    const locale = this.settingsService.language.code;
+    const dateFormat = this.settingsService.dateFormat;
+    const prevTransactionDate: Date = this.prepayLoanForm.value.transactionDate;
+    if (contractTerminationFormData.transactionDate instanceof Date) {
+      contractTerminationFormData.transactionDate = this.dateUtils.formatDate(prevTransactionDate, dateFormat);
+    }
+    const data = {
+      ...contractTerminationFormData,
+      dateFormat,
+      locale
+    };
+    this.loanService.loanActionButtons(this.loanId, 'contractTermination', data).subscribe((response: any) => {
+      this.gotoLoanDefaultView();
+    });
+  }
+
+  submit() {
+    if (this.contractTermination) {
+      this.submitContractTermination();
+    } else {
+      this.submitRepayment();
+    }
   }
 }

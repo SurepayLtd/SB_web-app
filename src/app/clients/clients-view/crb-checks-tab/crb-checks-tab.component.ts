@@ -1,7 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { Component, OnInit, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
 import { ClientsService } from '../../clients.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type ValidationGroup = 'details' | 'nin' | 'phone';
 
@@ -53,8 +68,20 @@ interface ExtraField {
   selector: 'mifosx-crb-checks-tab',
   templateUrl: './crb-checks-tab.component.html',
   styleUrls: ['./crb-checks-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    MatExpansionModule,
+    MatTabsModule,
+    MatProgressSpinnerModule
+  ]
 })
 export class CrbChecksTabComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private clientService = inject(ClientsService);
+  private snackBar = inject(MatSnackBar);
 
   clientId: string;
   checks: any[] = [];
@@ -75,11 +102,7 @@ export class CrbChecksTabComponent implements OnInit {
     'phonenumber', 'firstname', 'middlename', 'phone_status',
   ]);
 
-  constructor(
-    private route: ActivatedRoute,
-    private clientService: ClientsService,
-    private snackBar: MatSnackBar
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { checks: any }) => {
       this.checks = this.sortChecks(data.checks ?? []);
       this.clientId = this.route.parent.snapshot.paramMap.get('clientId');

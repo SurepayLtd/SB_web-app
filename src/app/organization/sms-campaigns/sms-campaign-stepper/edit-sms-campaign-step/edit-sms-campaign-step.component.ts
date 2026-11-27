@@ -1,6 +1,15 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Output, Input, EventEmitter } from '@angular/core';
-import { UntypedFormGroup, Validators, UntypedFormBuilder, UntypedFormControl } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnInit, Output, Input, EventEmitter, inject } from '@angular/core';
+import { FormGroup, Validators, FormBuilder, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
 
 /** Custom Services */
 import { ReportsService } from 'app/reports/reports.service';
@@ -8,23 +17,38 @@ import { ReportsService } from 'app/reports/reports.service';
 /** Custom Models */
 import { ReportParameter } from 'app/reports/common-models/report-parameter.model';
 import { SettingsService } from 'app/settings/settings.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { EditBusinessRuleParametersComponent } from './edit-business-rule-parameters/edit-business-rule-parameters.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
+import { Dates } from 'app/core/utils/dates';
 /**
  * Edit SMS Campaign step.
  */
 @Component({
   selector: 'mifosx-edit-sms-campaign-step',
   templateUrl: './edit-sms-campaign-step.component.html',
-  styleUrls: ['./edit-sms-campaign-step.component.scss']
+  styleUrls: ['./edit-sms-campaign-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    EditBusinessRuleParametersComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditSmsCampaignStepComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private reportService = inject(ReportsService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+
   /** SMS Campaign Template */
   @Input() smsCampaignTemplate: any;
   /** SMS Campaign */
   @Input() smsCampaign: any;
 
   /** SMS Campaign Form */
-  smsCampaignDetailsForm: UntypedFormGroup;
+  smsCampaignDetailsForm: FormGroup;
   /** Data to be passed to sub component */
   paramData: any;
   /** Trigger types options */
@@ -48,11 +72,7 @@ export class EditSmsCampaignStepComponent implements OnInit {
    * @param {ReportsService} reportService Reports Service
    * @param {SettingsService} settingsService Settings Service.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private reportService: ReportsService,
-    private settingsService: SettingsService
-  ) {
+  constructor() {
     this.createSMSCampaignDetailsForm();
   }
 
@@ -99,9 +119,12 @@ export class EditSmsCampaignStepComponent implements OnInit {
    * Gets Template parameters and disables the SMS form.
    */
   getParameters() {
-    this.reportService.getReportParams(this.smsCampaign.reportName).subscribe((response: ReportParameter[]) => {
-      this.paramData = response;
-    });
+    this.reportService
+      .getReportParams(this.smsCampaign.reportName)
+      .pipe(take(1))
+      .subscribe((response: ReportParameter[]) => {
+        this.paramData = response;
+      });
     this.smsCampaignDetailsForm.disable();
   }
 
@@ -119,7 +142,7 @@ export class EditSmsCampaignStepComponent implements OnInit {
     if (this.smsCampaign.triggerType.value === 'Schedule') {
       this.smsCampaignDetailsForm.addControl(
         'recurrenceStartDate',
-        new UntypedFormControl(new Date(this.smsCampaign.recurrenceStartDate))
+        new FormControl(this.dateUtils.parseDate(this.smsCampaign.recurrenceStartDate))
       );
     }
   }

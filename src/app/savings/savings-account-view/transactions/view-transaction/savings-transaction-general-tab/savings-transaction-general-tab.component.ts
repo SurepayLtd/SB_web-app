@@ -1,31 +1,55 @@
-import { Component } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dates } from 'app/core/utils/dates';
 import { ReleaseAmountDialogComponent } from 'app/savings/savings-account-view/custom-dialogs/release-amount-dialog/release-amount-dialog.component';
 import { UndoTransactionDialogComponent } from 'app/savings/savings-account-view/custom-dialogs/undo-transaction-dialog/undo-transaction-dialog.component';
 import { SavingsService } from 'app/savings/savings.service';
 import { SettingsService } from 'app/settings/settings.service';
+import { NgClass, CurrencyPipe } from '@angular/common';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { TransactionPaymentDetailComponent } from '../../../../../shared/transaction-payment-detail/transaction-payment-detail.component';
+import { DateFormatPipe } from '../../../../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 @Component({
   selector: 'mifosx-savings-transaction-general-tab',
   templateUrl: './savings-transaction-general-tab.component.html',
-  styleUrls: ['./savings-transaction-general-tab.component.scss']
+  styleUrls: ['./savings-transaction-general-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    NgClass,
+    TransactionPaymentDetailComponent,
+    CurrencyPipe,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SavingsTransactionGeneralTabComponent {
+  private savingsService = inject(SavingsService);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private router = inject(Router);
+  dialog = inject(MatDialog);
+  private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
+
   accountId: string;
   transactionId: string;
   transactionData: any;
 
-  constructor(
-    private savingsService: SavingsService,
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    private router: Router,
-    public dialog: MatDialog,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { savingsAccountTransaction: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { savingsAccountTransaction: any }) => {
       this.accountId = this.route.parent.snapshot.params['savingAccountId'];
       this.transactionData = data.savingsAccountTransaction;
     });
@@ -41,7 +65,7 @@ export class SavingsTransactionGeneralTabComponent {
   releaseAmount(): void {
     const releaseAmountDialogRef = this.dialog.open(ReleaseAmountDialogComponent);
     releaseAmountDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.confirm) {
+      if (response?.confirm) {
         const data = {};
         this.savingsService
           .executeSavingsAccountTransactionsCommand(this.accountId, 'releaseAmount', data, this.transactionData.id)
@@ -55,12 +79,12 @@ export class SavingsTransactionGeneralTabComponent {
   undoTransaction(): void {
     const undoTransactionAccountDialogRef = this.dialog.open(UndoTransactionDialogComponent);
     undoTransactionAccountDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.confirm) {
+      if (response?.confirm) {
         const locale = this.settingsService.language.code;
         const dateFormat = this.settingsService.dateFormat;
         const data = {
           transactionDate: this.dateUtils.formatDate(
-            this.transactionData.date && new Date(this.transactionData.date),
+            this.transactionData.date && this.dateUtils.parseDate(this.transactionData.date),
             dateFormat
           ),
           transactionAmount: 0,
@@ -68,13 +92,18 @@ export class SavingsTransactionGeneralTabComponent {
           locale
         };
         if (this.transactionData.transfer) {
-
-          this.savingsService.executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, undefined, this.transactionData.transfer.id)
+          this.savingsService
+            .executeSavingsAccountTransactionsCommand(
+              this.accountId,
+              'undo',
+              data,
+              undefined,
+              this.transactionData.transfer.id
+            )
             .subscribe(() => {
               this.router.navigate(['../..'], { relativeTo: this.route });
             });
-
-        }else{
+        } else {
           this.savingsService
             .executeSavingsAccountTransactionsCommand(this.accountId, 'undo', data, this.transactionData.id)
             .subscribe(() => {

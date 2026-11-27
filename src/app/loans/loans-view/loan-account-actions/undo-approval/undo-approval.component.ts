@@ -1,33 +1,39 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports. */
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { UntypedFormControl, UntypedFormBuilder } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 
 /** Custom Services. */
-import { LoansService } from 'app/loans/loans.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 /**
  * Undo Loan component.
  */
 @Component({
   selector: 'mifosx-undo-approval',
   templateUrl: './undo-approval.component.html',
-  styleUrls: ['./undo-approval.component.scss']
+  styleUrls: ['./undo-approval.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UndoApprovalComponent implements OnInit {
+export class UndoApprovalComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+
   /** Form Controller. */
   note: UntypedFormControl;
 
-  /**
-   * @param loanService Loan Service.
-   * @param route Activated Route.
-   * @param router Router.
-   */
-  constructor(
-    private loanService: LoansService,
-    private formBuilder: UntypedFormBuilder,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  constructor() {
+    super();
+  }
 
   ngOnInit() {
     this.note = this.formBuilder.control('');
@@ -37,9 +43,19 @@ export class UndoApprovalComponent implements OnInit {
    * Submits undo approval form.
    */
   submit() {
-    const loanId = this.route.snapshot.params['loanId'];
-    this.loanService.loanActionButtons(loanId, 'undoapproval', { note: this.note.value }).subscribe((response: any) => {
-      this.router.navigate(['../../general'], { relativeTo: this.route });
-    });
+    const loanCommand: string = 'undoapproval';
+    if (this.isLoanProduct) {
+      this.loanService
+        .loanActionButtons(this.loanId, loanCommand, { note: this.note.value })
+        .subscribe((response: any) => {
+          this.gotoLoanDefaultView();
+        });
+    } else if (this.isWorkingCapital) {
+      this.loanService
+        .applyWorkingCapitalLoanAccountCommand(this.loanId, loanCommand, { note: this.note.value })
+        .subscribe((response: any) => {
+          this.gotoLoanDefaultView();
+        });
+    }
   }
 }

@@ -1,18 +1,32 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ClientsService } from '../../../../clients/clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../../settings/settings.service';
 import { finalize } from 'rxjs/operators';
 import { LoansService } from '../../../loans.service';
+import { SettingsService } from 'app/settings/settings.service';
+import { ClientsService } from 'app/clients/clients.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'mifosx-credit-enquiry',
   templateUrl: './credit-enquiry.component.html',
-  styleUrls: ['./credit-enquiry.component.scss']
+  styleUrls: ['./credit-enquiry.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+  ]
 })
 export class CreditEnquiryComponent implements OnInit {
+
+  private route = inject(ActivatedRoute);
+  private router =  inject(Router);
+  private clientsService = inject(ClientsService);
+  private snackBar = inject(MatSnackBar);
+  private settingsService= inject(SettingsService);
+  private formBuilder = inject(UntypedFormBuilder);
+  private loansService = inject(LoansService);
 
   loanId: any;
 
@@ -27,24 +41,8 @@ export class CreditEnquiryComponent implements OnInit {
   /** Client Data */
   creditData: any;
 
-  /**
-   * @param {FormBuilder} formBuilder Form Builder
-   * @param {ClientsService} clientsService Clients Service
-   * @param snackBar
-   * @param {ActivatedRoute} route Activated Route
-   * @param {Router} router Router
-   * @param {SettingsService} settingsService Setting service
-   * @param loansService
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService,
-    private formBuilder: UntypedFormBuilder,
-    private loansService: LoansService
-  ) {
+
+  constructor() {
     this.route.data.subscribe((data: { actionButtonData: any }) => {
       this.creditData = data.actionButtonData.narrations;
     });

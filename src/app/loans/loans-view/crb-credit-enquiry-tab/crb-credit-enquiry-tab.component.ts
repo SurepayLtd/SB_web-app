@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   CrbIndividualData,
@@ -6,6 +6,17 @@ import {
   CreditEnquiryCheck,
   CreditEnquiryResponse,
 } from '../../models/loan-account.model';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelDescription,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 
 /** A sector row used by the template, with stable identification. */
 interface SectorView {
@@ -19,12 +30,25 @@ interface SectorView {
   selector: 'mifosx-crb-credit-enquiry-tab',
   templateUrl: './crb-credit-enquiry-tab.component.html',
   styleUrls: ['./crb-credit-enquiry-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelDescription,
+    MatIcon,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ]
 })
 export class CrbCreditEnquiryTabComponent implements OnInit {
 
+  private route = inject(ActivatedRoute);
+
   creditEnquiryChecks: CreditEnquiryCheck[] = [];
 
-  constructor(private route: ActivatedRoute) {
+  constructor() {
     this.route.data.subscribe((data: { creditEnquiryData: CreditEnquiryCheck[] }) => {
       this.creditEnquiryChecks = this.parseCreditEnquiryChecks(data.creditEnquiryData || []);
     });

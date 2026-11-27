@@ -1,17 +1,56 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { AfterViewInit, Component, ElementRef, TemplateRef, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  AfterViewInit,
+  Component,
+  ElementRef,
+  TemplateRef,
+  ViewChild,
+  inject
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { ConfigurationWizardService } from '../configuration-wizard/configuration-wizard.service';
 import { PopoverService } from '../configuration-wizard/popover/popover.service';
+import { MatNavList, MatListItem } from '@angular/material/list';
+import { MatIcon } from '@angular/material/icon';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { MatLine } from '@angular/material/grid-list';
+import { NgClass } from '@angular/common';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+
+/** Environment Configuration */
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'mifosx-system',
   templateUrl: './system.component.html',
-  styleUrls: ['./system.component.scss']
+  styleUrls: ['./system.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatNavList,
+    MatListItem,
+    MatIcon,
+    FaIconComponent,
+    MatLine,
+    NgClass
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SystemComponent implements AfterViewInit {
+  private router = inject(Router);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+
   /* Reference of manage datatables */
   @ViewChild('datatables') datatables: ElementRef<any>;
   /* Template for popover on manage datables */
@@ -40,19 +79,12 @@ export class SystemComponent implements AfterViewInit {
   @ViewChild('manageReports') manageReports: ElementRef<any>;
   /* Template for popover on manage reports */
   @ViewChild('templateManageReports') templateManageReports: TemplateRef<any>;
-  // Initialize an array of 15 boolean values, all set to false
-  arrowBooleans: boolean[] = new Array(15).fill(false);
+  /** Whether this deployment has the Fineract tenant management plugin. */
+  readonly tenantManagementEnabled = environment.enableTenantManagement;
 
-  /**
-   * @param {Router} router Router.
-   * @param {ConfigurationWizardService} configurationWizardService ConfigurationWizard Service.
-   * @param {PopoverService} popoverService PopoverService.
-   */
-  constructor(
-    private router: Router,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService
-  ) {}
+  // Initialize an array of 18 boolean values, all set to false
+  isDisabled: boolean = true;
+  arrowBooleans: boolean[] = new Array(19).fill(false);
 
   /**
    * Popover function
@@ -75,37 +107,37 @@ export class SystemComponent implements AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showDatatables === true) {
+    if (this.configurationWizardService.showDatatables) {
       setTimeout(() => {
         this.showPopover(this.templateDatatables, this.datatables.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showSystemCodes === true) {
+    if (this.configurationWizardService.showSystemCodes) {
       setTimeout(() => {
         this.showPopover(this.templateCodes, this.codes.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showRolesandPermission === true) {
+    if (this.configurationWizardService.showRolesandPermission) {
       setTimeout(() => {
         this.showPopover(this.templateRolesandPermission, this.rolesandpermission.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showMakerCheckerTable === true) {
+    if (this.configurationWizardService.showMakerCheckerTable) {
       setTimeout(() => {
         this.showPopover(this.templateMakerCheckerTable, this.makerCheckerTable.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showConfigurations === true) {
+    if (this.configurationWizardService.showConfigurations) {
       setTimeout(() => {
         this.showPopover(this.templateConfigurations, this.configurations.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showSchedulerJobs === true) {
+    if (this.configurationWizardService.showSchedulerJobs) {
       setTimeout(() => {
         this.showPopover(this.templateSchedulerJobs, this.schedulerJobs.nativeElement, 'bottom', true);
       });
     }
-    if (this.configurationWizardService.showManageReports === true) {
+    if (this.configurationWizardService.showManageReports) {
       setTimeout(() => {
         this.showPopover(this.templateManageReports, this.manageReports.nativeElement, 'bottom', true);
       });
@@ -181,7 +213,7 @@ export class SystemComponent implements AfterViewInit {
   previousStepMakerCheckerTable() {
     this.configurationWizardService.showMakerCheckerTable = false;
     this.configurationWizardService.showUsersForm = true;
-    this.router.navigate(['/users/create']);
+    this.router.navigate(['/appusers/create']);
   }
 
   /**
@@ -208,7 +240,7 @@ export class SystemComponent implements AfterViewInit {
   nextStepSchedulerJobs() {
     this.configurationWizardService.showSchedulerJobs = false;
     this.configurationWizardService.showSchedulerJobsPage = true;
-    this.router.navigate(['/system/scheduler-jobs']);
+    this.router.navigate(['/system/manage-jobs']);
   }
 
   /**
@@ -217,7 +249,7 @@ export class SystemComponent implements AfterViewInit {
   previousStepSchedulerJobs() {
     this.configurationWizardService.showSchedulerJobs = false;
     this.configurationWizardService.showConfigurationsList = true;
-    this.router.navigate(['/system/global-configurations']);
+    this.router.navigate(['/system/configurations']);
   }
 
   /**

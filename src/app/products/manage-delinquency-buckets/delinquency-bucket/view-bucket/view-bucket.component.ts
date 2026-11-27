@@ -1,29 +1,49 @@
-import { Component } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { ProductsService } from 'app/products/products.service';
 import { DeleteDialogComponent } from 'app/shared/delete-dialog/delete-dialog.component';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { DelinquencyBucketBaseComponent } from '../../delinquency-base.component';
+import { FormatNumberPipe } from '@pipes/format-number.pipe';
 
 @Component({
   selector: 'mifosx-view-bucket',
   templateUrl: './view-bucket.component.html',
-  styleUrls: ['./view-bucket.component.scss']
+  styleUrls: ['./view-bucket.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ViewBucketComponent {
+export class ViewBucketComponent extends DelinquencyBucketBaseComponent {
+  private router = inject(Router);
+  private dialog = inject(MatDialog);
+  private productsService = inject(ProductsService);
+
   /** Delinquency Bucket Data. */
   delinquencyBucketData: any;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private dialog: MatDialog,
-    private productsService: ProductsService
-  ) {
+  constructor() {
+    super();
     this.route.data.subscribe((data: { delinquencyBucket: any }) => {
       this.delinquencyBucketData = data.delinquencyBucket;
-      this.delinquencyBucketData.ranges = this.delinquencyBucketData.ranges.sort(
-        (objA: { minimumAge: number }, objB: { minimumAge: number }) => objA.minimumAge - objB.minimumAge
-      );
+      if (this.isRegularBucket) {
+        this.delinquencyBucketData.ranges = this.delinquencyBucketData.ranges.sort(
+          (objA: { minimumAge: number }, objB: { minimumAge: number }) => objA.minimumAge - objB.minimumAge
+        );
+      }
     });
   }
 

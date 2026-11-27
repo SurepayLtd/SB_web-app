@@ -1,6 +1,13 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
 <div class="container">
 
-  <div fxLayout="row" fxLayoutAlign="space-between center">
+  <div class="layout-row align-center justify-space-between responsive-column gap-16px">
     <div>
       <h3>Loan Product Mapping Details</h3>
       <p class="text-muted">
@@ -8,7 +15,7 @@
       </p>
     </div>
 
-    <div fxLayout="row" fxLayoutGap="8px">
+    <div class="layout-row align-center gap-8px">
       <button mat-stroked-button [routerLink]="['../../../']">
         <fa-icon icon="arrow-left"></fa-icon>
         Back
@@ -21,52 +28,55 @@
     </div>
   </div>
 
-  <mat-card *ngIf="mapping">
+  @if (mapping) {
+    <mat-card>
 
-    <mat-card-content>
+      <mat-card-content>
 
-      <h4>Mapping Information</h4>
+        <h4>Mapping Information</h4>
 
-      <div fxLayout="row wrap" fxLayoutGap="24px">
+        <div class="layout-row flex-wrap gap-24px">
 
-        <div fxFlex="45%">
-          <strong>Loan Product</strong>
-          <p>{{ mapping.loanProductName }}</p>
+          <div class="detail-item">
+            <strong>Loan Product</strong>
+            <p>{{ mapping.loanProductName }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Credit Bureau</strong>
+            <p>{{ mapping.creditbureauSummary }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Organisation</strong>
+            <p>{{ mapping.alias }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Status</strong>
+            <p>{{ mapping.active ? 'Active' : 'Inactive' }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Credit Check Mandatory</strong>
+            <p>{{ mapping.isCreditCheckMandatory ? 'Yes' : 'No' }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Skip Credit Check on Failure</strong>
+            <p>{{ mapping.skipCrediCheckInFailure ? 'Yes' : 'No' }}</p>
+          </div>
+
+          <div class="detail-item">
+            <strong>Stale Period</strong>
+            <p>{{ mapping.stalePeriod }} days</p>
+          </div>
+
         </div>
 
-        <div fxFlex="45%">
-          <strong>Credit Bureau</strong>
-          <p>{{ mapping.creditbureauSummary }}</p>
-        </div>
+      </mat-card-content>
 
-        <div fxFlex="45%">
-          <strong>Organisation</strong>
-          <p>{{ mapping.alias }}</p>
-        </div>
-
-        <div fxFlex="45%">
-          <strong>Status</strong>
-          <p>{{ mapping.active ? 'Active' : 'Inactive' }}</p>
-        </div>
-
-        <div fxFlex="45%">
-          <strong>Credit Check Mandatory</strong>
-          <p>{{ mapping.isCreditCheckMandatory ? 'Yes' : 'No' }}</p>
-        </div>
-
-        <div fxFlex="45%">
-          <strong>Skip Credit Check on Failure</strong>
-          <p>{{ mapping.skipCrediCheckInFailure ? 'Yes' : 'No' }}</p>
-        </div>
-
-        <div fxFlex="45%">
-          <strong>Stale Period</strong>
-          <p>{{ mapping.stalePeriod }} days</p>
-        </div>
-
-      </div>
-
-    </mat-card-content>
-  </mat-card>
+    </mat-card>
+  }
 
 </div>

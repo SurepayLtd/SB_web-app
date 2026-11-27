@@ -1,81 +1,117 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
 <div class="container">
+
   <mat-card>
+
     <form [formGroup]="creditReportForm" (ngSubmit)="submitReport()">
+
       <mat-card-content>
-        <div fxLayout="column">
+
+        <div class="layout-column">
 
           <!-- Credit Bureau -->
-          <mat-form-field fxFlex="48%">
+          <mat-form-field>
+
             <mat-label>
               {{ 'labels.inputs.Credit Bureau' | translate }}
             </mat-label>
 
             <mat-select formControlName="creditBureauID" required>
-              <mat-option *ngFor="let bureau of creditBureaus" [value]="bureau.creditBureauId">
-                {{ bureau.creditBureauSummary }}
-              </mat-option>
+              @for (bureau of creditBureaus; track bureau.creditBureauId) {
+                <mat-option [value]="bureau.creditBureauId">
+                  {{ bureau.creditBureauSummary }}
+                </mat-option>
+              }
             </mat-select>
 
-            <mat-error *ngIf="creditReportForm.controls.creditBureauID.hasError('required')">
-              Credit Bureau is <strong>required</strong>
-            </mat-error>
+            @if (creditReportForm.controls.creditBureauID.hasError('required')) {
+              <mat-error>
+                Credit Bureau is <strong>required</strong>
+              </mat-error>
+            }
+
           </mat-form-field>
 
           <!-- Report Type -->
-          <mat-form-field fxFlex="48%">
+          <mat-form-field>
+
             <mat-label>
               {{ 'labels.inputs.Report Type' | translate }}
             </mat-label>
 
             <mat-select formControlName="crbReportType" required>
-              <mat-option *ngFor="let type of creditReportTypes" [value]="type.id">
-                {{ type.value }}
-              </mat-option>
+              @for (type of creditReportTypes; track type.id) {
+                <mat-option [value]="type.id">
+                  {{ type.value }}
+                </mat-option>
+              }
             </mat-select>
 
-            <mat-error *ngIf="creditReportForm.controls.crbReportType.hasError('required')">
-              Report Type is <strong>required</strong>
-            </mat-error>
+            @if (creditReportForm.controls.crbReportType.hasError('required')) {
+              <mat-error>
+                Report Type is <strong>required</strong>
+              </mat-error>
+            }
+
           </mat-form-field>
 
           <!-- Report Format -->
-          <mat-form-field fxFlex="48%" >
+          <mat-form-field>
+
             <mat-label>
               {{ 'labels.inputs.Report Format' | translate }}
             </mat-label>
 
             <mat-select formControlName="crbReportFormat" required>
-              <mat-option *ngFor="let format of creditReportFormatTypes" [value]="format.id">
-                {{ format.value | uppercase }}
-              </mat-option>
+              @for (format of creditReportFormatTypes; track format.id) {
+                <mat-option [value]="format.id">
+                  {{ format.value | uppercase }}
+                </mat-option>
+              }
             </mat-select>
 
-            <mat-error *ngIf="creditReportForm.controls.crbReportFormat.hasError('required')">
-              Report Format is <strong>required</strong>
-            </mat-error>
+            @if (creditReportForm.controls.crbReportFormat.hasError('required')) {
+              <mat-error>
+                Report Format is <strong>required</strong>
+              </mat-error>
+            }
+
           </mat-form-field>
 
           <!-- Report Action -->
-          <mat-form-field fxFlex="48%" *ngIf="creditReportForm.get('crbReportAction')?.enabled">
+          <mat-form-field>
+
             <mat-label>
               {{ 'labels.inputs.Report Action' | translate }}
             </mat-label>
 
             <mat-select formControlName="crbReportAction" required>
-              <mat-option *ngFor="let action of creditReportActionTypes" [value]="action.id">
-                {{ action.value | titlecase }}
-              </mat-option>
+              @for (action of creditReportActionTypes; track action.id) {
+                <mat-option [value]="action.id">
+                  {{ action.value | titlecase }}
+                </mat-option>
+              }
             </mat-select>
 
-            <mat-error *ngIf="creditReportForm.controls.crbReportAction.hasError('required')">
-              Report Action is <strong>required</strong>
-            </mat-error>
+            @if (creditReportForm.controls.crbReportAction.hasError('required')) {
+              <mat-error>
+                Report Action is <strong>required</strong>
+              </mat-error>
+            }
+
           </mat-form-field>
 
         </div>
+
       </mat-card-content>
 
-      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+      <mat-card-actions class="layout-row align-center justify-center gap-5px responsive-column">
 
         <button type="button" mat-raised-button (click)="cancel()" [disabled]="isSubmitting">
           {{ 'labels.buttons.Cancel' | translate }}
@@ -83,16 +119,24 @@
 
         <button type="submit" mat-raised-button color="primary" [disabled]="!creditReportForm.valid || isSubmitting || isLoading">
 
-          <span *ngIf="!isSubmitting">
-            {{ 'labels.buttons.Confirm' | translate }}
-          </span>
+          @if (!isSubmitting) {
+            <span>
+              {{ 'labels.buttons.Confirm' | translate }}
+            </span>
+          }
 
-          <span *ngIf="isSubmitting">
-            {{ 'labels.buttons.Processing' | translate }}...
-          </span>
+          @if (isSubmitting) {
+            <span>
+              {{ 'labels.buttons.Processing' | translate }}...
+            </span>
+          }
 
         </button>
+
       </mat-card-actions>
+
     </form>
+
   </mat-card>
+
 </div>

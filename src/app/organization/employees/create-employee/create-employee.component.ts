@@ -1,7 +1,27 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject,
+  DestroyRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { take } from 'rxjs';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 /** Custom Services */
 import { OrganizationService } from '../../organization.service';
@@ -13,6 +33,8 @@ import { ConfigurationWizardService } from '../../../configuration-wizard/config
 
 /** Custom Dialog Component */
 import { ContinueSetupDialogComponent } from '../../../configuration-wizard/continue-setup-dialog/continue-setup-dialog.component';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create employee component.
@@ -20,15 +42,31 @@ import { ContinueSetupDialogComponent } from '../../../configuration-wizard/cont
 @Component({
   selector: 'mifosx-create-employee',
   templateUrl: './create-employee.component.html',
-  styleUrls: ['./create-employee.component.scss']
+  styleUrls: ['./create-employee.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateEmployeeComponent implements OnInit, AfterViewInit {
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+  private settingsService = inject(SettingsService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dateUtils = inject(Dates);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  dialog = inject(MatDialog);
+
   /** Minimum joining date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum joining date allowed. */
   maxDate = new Date();
   /** Employee form. */
-  employeeForm: UntypedFormGroup;
+  employeeForm: FormGroup;
   /** Office data. */
   officeData: any;
 
@@ -49,18 +87,8 @@ export class CreateEmployeeComponent implements OnInit, AfterViewInit {
    * @param {PopoverService} popoverService PopoverService.
    * @param {MatDialog} dialog MatDialog.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService,
-    private settingsService: SettingsService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService,
-    public dialog: MatDialog
-  ) {
-    this.route.data.subscribe((data: { offices: any }) => {
+  constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { offices: any }) => {
       this.officeData = data.offices;
     });
   }
@@ -86,20 +114,23 @@ export class CreateEmployeeComponent implements OnInit, AfterViewInit {
         '',
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       lastname: [
         '',
         [
           Validators.required,
-          Validators.pattern('(^[A-z]).*')]
+          Validators.pattern('(^[A-Za-z]).*')
+        ]
       ],
       isLoanOfficer: [false],
       mobileNo: [
         '',
         [
           Validators.required,
-          Validators.pattern('^\\+?[0-9]{10,15}$')]
+          Validators.pattern('^\\+?[0-9]{10,15}$')
+        ]
       ],
       joiningDate: [
         '',
@@ -125,14 +156,17 @@ export class CreateEmployeeComponent implements OnInit, AfterViewInit {
       dateFormat,
       locale
     };
-    this.organizationService.createEmployee(data).subscribe((response: any) => {
-      if (this.configurationWizardService.showEmployeeForm === true) {
-        this.configurationWizardService.showEmployeeForm = false;
-        this.openDialog();
-      } else {
-        this.router.navigate(['../'], { relativeTo: this.route });
-      }
-    });
+    this.organizationService
+      .createEmployee(data)
+      .pipe(take(1))
+      .subscribe((response: any) => {
+        if (this.configurationWizardService.showEmployeeForm) {
+          this.configurationWizardService.showEmployeeForm = false;
+          this.openDialog();
+        } else {
+          this.router.navigate(['../'], { relativeTo: this.route });
+        }
+      });
   }
 
   /**
@@ -155,7 +189,7 @@ export class CreateEmployeeComponent implements OnInit, AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showEmployeeForm === true) {
+    if (this.configurationWizardService.showEmployeeForm) {
       setTimeout(() => {
         this.showPopover(this.templateCreateEmployeeForm, this.createEmployeeFormRef.nativeElement, 'right', true);
       });

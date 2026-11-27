@@ -1,26 +1,54 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, Validators } from '@angular/forms';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, Input, OnInit, inject } from '@angular/core';
+import {
+  UntypedFormBuilder,
+  UntypedFormControl,
+  UntypedFormGroup,
+  Validators,
+  ReactiveFormsModule
+} from '@angular/forms';
+import { Datatables } from 'app/core/utils/datatables';
 import { Dates } from 'app/core/utils/dates';
 import { SettingsService } from 'app/settings/settings.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 
 @Component({
   selector: 'mifosx-loans-account-datatable-step',
   templateUrl: './loans-account-datatable-step.component.html',
-  styleUrls: ['./loans-account-datatable-step.component.scss']
+  styleUrls: ['./loans-account-datatable-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoansAccountDatatableStepComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private datatableService = inject(Datatables);
+
   /** Input Fields Data */
   @Input() datatableData: any;
   /** Create Input Form */
   datatableForm: UntypedFormGroup;
 
   datatableInputs: any = [];
-
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService,
-    private dateUtils: Dates
-  ) {}
 
   ngOnInit(): void {
     this.datatableInputs = this.datatableData.columnHeaderData.filter((column: any) => {
@@ -37,9 +65,16 @@ export class LoansAccountDatatableStepComponent implements OnInit {
       if (!input.isColumnNullable) {
         if (this.isNumeric(input.columnDisplayType)) {
           inputItems[input.controlName] = new UntypedFormControl(0, [Validators.required]);
+        } else if (this.isJson(input)) {
+          inputItems[input.controlName] = new UntypedFormControl('', [
+            Validators.required,
+            this.datatableService.jsonValidator
+          ]);
         } else {
           inputItems[input.controlName] = new UntypedFormControl('', [Validators.required]);
         }
+      } else if (this.isJson(input)) {
+        inputItems[input.controlName] = new UntypedFormControl('', [this.datatableService.jsonValidator]);
       } else {
         inputItems[input.controlName] = new UntypedFormControl('');
       }
@@ -78,14 +113,18 @@ export class LoansAccountDatatableStepComponent implements OnInit {
     return this.isColumnType(columnType, 'TEXT');
   }
 
+  isJson(datatableInput: any) {
+    return this.datatableService.isJson(datatableInput.columnDisplayType, datatableInput.columnType);
+  }
+
   isColumnType(columnType: string, expectedType: string) {
-    return columnType === expectedType;
+    return this.datatableService.isColumnType(columnType, expectedType);
   }
 
   get payload(): any {
     const dateFormat = this.settingsService.dateFormat;
     const datatableDataValues = this.datatableForm.value;
-    const data = {
+    const data: { [key: string]: any } = {
       locale: this.settingsService.language.code
     };
     let existDate = false;

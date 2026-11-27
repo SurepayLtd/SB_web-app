@@ -1,70 +1,142 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { UntypedFormControl } from '@angular/forms';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { FormControl, Validators } from '@angular/forms';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatCellDef,
+  MatCell,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
 import { Dates } from 'app/core/utils/dates';
 import { LoansService } from 'app/loans/loans.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsService } from 'app/settings/settings.service';
 import { ConfirmationDialogComponent } from 'app/shared/confirmation-dialog/confirmation-dialog.component';
+import {
+  WorkingCapitalUndoChargeOffDialogComponent,
+  WorkingCapitalUndoChargeOffDialogResult,
+  buildWorkingCapitalUndoChargeOffPayload
+} from '../working-capital/loan-account-actions/undo-charge-off-dialog/undo-charge-off-dialog.component';
 import { TranslateService } from '@ngx-translate/core';
+import { resolveRecoveryPaymentErrorMessage } from '../working-capital/recovery-payment-error.helper';
 import { LoanTransaction } from 'app/products/loan-products/models/loan-account.model';
 import { LoanTransactionType } from 'app/loans/models/loan-transaction-type.model';
+import { FormfieldBase } from 'app/shared/form-dialog/formfield/model/formfield-base';
+import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
+import { FormDialogComponent } from 'app/shared/form-dialog/form-dialog.component';
+import { AlertService } from 'app/core/alert/alert.service';
+import { DatepickerBase } from 'app/shared/form-dialog/formfield/model/datepicker-base';
+import { NgClass } from '@angular/common';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { ExternalIdentifierComponent } from '../../../shared/external-identifier/external-identifier.component';
+import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
+import { MatIcon } from '@angular/material/icon';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { FormatNumberPipe } from '../../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanProductBaseComponent } from 'app/products/loan-products/common/loan-product-base.component';
+import { isAccrualKindTransaction, isDiscountFeeKindTransaction } from '../loan-transaction-type.helper';
+import {
+  adjustmentReopensLoan,
+  canAdjustLoanTransaction,
+  canAdjustWorkingCapitalDiscountFee,
+  canAdjustWorkingCapitalTransaction,
+  canAdjustWorkingCapitalTransactionByDelta,
+  canReverseLoanTransaction,
+  loanAllowsReversal,
+  WORKING_CAPITAL_ADJUST_BY_DELTA_PERMISSION
+} from '../loan-transaction-adjust.helper';
+import {
+  appendReversalFields,
+  buildReversalDialogConfig,
+  REOPEN_LOAN_WARNING_KEY
+} from '../loan-transaction-reversal.helper';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'mifosx-transactions-tab',
   templateUrl: './transactions-tab.component.html',
-  styleUrls: ['./transactions-tab.component.scss']
+  styleUrls: ['./transactions-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatSlideToggle,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatCellDef,
+    MatCell,
+    NgClass,
+    ExternalIdentifierComponent,
+    MatMenuTrigger,
+    MatIcon,
+    MatMenu,
+    MatMenuItem,
+    FaIconComponent,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    DateFormatPipe,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TransactionsTabComponent implements OnInit {
+export class TransactionsTabComponent extends LoanProductBaseComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private dialog = inject(MatDialog);
+  private loansService = inject(LoansService);
+  private translateService = inject(TranslateService);
+  private settingsService = inject(SettingsService);
+  private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
+
   /** Loan Details Data */
   transactionsData: LoanTransaction[] = [];
+  loanDetailsData: any;
   /** Form control to handle accural parameter */
-  hideAccrualsParam: UntypedFormControl;
-  hideReversedParam: UntypedFormControl;
+  hideAccrualsParam: FormControl<boolean>;
+  hideReversedParam: FormControl<boolean>;
   /** Stores the status of the loan account */
   status: string;
   /** Columns to be displayed in original schedule table. */
-  displayedColumns: string[] = [
-    'row',
-    'id',
-    'office',
-    'externalId',
-    'date',
-    'transactionType',
-    'amount',
-    'principal',
-    'interest',
-    'fee',
-    'penalties',
-    'loanBalance',
-    'actions'
-  ];
-  displayedHeader1Columns: string[] = [
-    'h1-row',
-    'h1-id',
-    'h1-office',
-    'h1-external-id',
-    'h1-transaction-date',
-    'h1-transaction-type',
-    'h1-space',
-    'h1-breakdown',
-    'h1-loan-balance',
-    'h1-actions'
-  ];
-  displayedHeader2Columns: string[] = [
-    'h2-space',
-    'h2-amount',
-    'h2-principal',
-    'h2-interest',
-    'h2-fees',
-    'h2-penalties',
-    'h2-action'
-  ];
+  displayedColumns: string[] = [];
+  groupHeaderColumns: string[] = [];
+  breakdownColspan = 0;
 
   dataSource: MatTableDataSource<any>;
+  totalTransactions = 0;
+  totalPages = 0;
   @ViewChild(MatPaginator, { static: true }) paginator: MatPaginator;
   @ViewChild(MatSort, { static: true }) sort: MatSort;
 
@@ -73,34 +145,102 @@ export class TransactionsTabComponent implements OnInit {
    * Retrieves the loans with associations data from `resolve`.
    * @param {ActivatedRoute} route Activated Route.
    */
-  constructor(
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    private router: Router,
-    private dialog: MatDialog,
-    private loansService: LoansService,
-    private translateService: TranslateService,
-    private settingsService: SettingsService
-  ) {
-    this.route.parent.parent.data.subscribe((data: { loanDetailsData: any }) => {
-      this.transactionsData = data.loanDetailsData.transactions;
-      this.status = data.loanDetailsData.status.value;
-    });
+  constructor() {
+    super();
     this.loanId = this.route.parent.parent.snapshot.params['loanId'];
+    this.route.parent.parent.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { loanDetailsData: any }) => {
+        this.loanDetailsData = data.loanDetailsData;
+        this.status = data.loanDetailsData.status.value;
+      });
+    if (this.loanProductService.isWorkingCapital) {
+      this.loanDetailsData.transactions = [];
+      this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: { loanTransactionData: any }) => {
+        this.loanDetailsData.transactions = data.loanTransactionData.content ?? [];
+        this.totalTransactions = data.loanTransactionData.totalElements ?? 0;
+        this.totalPages = data.loanTransactionData.totalPages ?? 0;
+        this.cdr.markForCheck();
+      });
+    }
   }
 
   ngOnInit() {
-    this.hideAccrualsParam = new UntypedFormControl(false);
-    this.hideReversedParam = new UntypedFormControl(false);
+    if (this.loanProductService.isLoanProduct) {
+      this.displayedColumns = [
+        'row',
+        'id',
+        'externalId',
+        'date',
+        'transactionType',
+        'amount',
+        'principal',
+        'interest',
+        'fee',
+        'penalties',
+        'loanBalance',
+        'actions'
+      ];
+      this.breakdownColspan = 5; // amount, principal, interest, fee, penalties
+      this.groupHeaderColumns = [
+        'group-row',
+        'group-id',
+        'group-externalId',
+        'group-date',
+        'group-transactionType',
+        'group-breakdown',
+        'group-loanBalance',
+        'group-actions'
+      ];
+    } else {
+      this.displayedColumns = [
+        'row',
+        'id',
+        'externalId',
+        'date',
+        'transactionType',
+        'amount',
+        'principal',
+        'fee',
+        'penalties',
+        'actions'
+      ];
+      this.breakdownColspan = 4; // amount, principal, fee, penalties
+      this.groupHeaderColumns = [
+        'group-row',
+        'group-id',
+        'group-externalId',
+        'group-date',
+        'group-transactionType',
+        'group-breakdown',
+        'group-actions'
+      ];
+    }
+    this.transactionsData = this.loanDetailsData.transactions;
+    this.hideAccrualsParam = new FormControl<boolean>(true, { nonNullable: true });
+    this.hideReversedParam = new FormControl<boolean>(false, { nonNullable: true });
     this.setLoanTransactions();
+    if (this.loanProductService.isWorkingCapital) {
+      this.paginator.length = this.totalTransactions;
+      this.paginator.page.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
+        this.loadWorkingCapitalTransactions(event.pageIndex, event.pageSize);
+      });
+    }
   }
 
   setLoanTransactions() {
     this.transactionsData.forEach((element: any) => {
-      element.date = this.dateUtils.parseDate(element.date);
+      if (!(element.date instanceof Date)) {
+        // Working Capital sends the date as transactionDate. Without the fallback
+        // parseDate would receive undefined, which moment resolves to today.
+        const rawDate = element.date ?? element.transactionDate;
+        element.date = rawDate ? this.dateUtils.parseDate(rawDate) : null;
+      }
     });
     this.dataSource = new MatTableDataSource(this.transactionsData);
-    this.dataSource.paginator = this.paginator;
+    if (this.loanProductService.isLoanProduct) {
+      this.dataSource.paginator = this.paginator;
+    }
     this.dataSource.sort = this.sort;
   }
 
@@ -120,12 +260,8 @@ export class TransactionsTabComponent implements OnInit {
     return false;
   }
 
-  hideAccruals() {
-    this.filterTransactions(this.hideReversedParam.value, !this.hideAccrualsParam.value);
-  }
-
-  hideReversed() {
-    this.filterTransactions(!this.hideReversedParam.value, this.hideAccrualsParam.value);
+  onFilterChange() {
+    this.filterTransactions(this.hideReversedParam.value, this.hideAccrualsParam.value);
   }
 
   filterTransactions(hideReversed: boolean, hideAccrual: boolean): void {
@@ -133,11 +269,13 @@ export class TransactionsTabComponent implements OnInit {
 
     if (hideAccrual || hideReversed) {
       transactions = this.transactionsData.filter((t: LoanTransaction) => {
-        return !(hideReversed && t.manuallyReversed) && !(hideAccrual && t.type.accrual);
+        return !(hideReversed && (t.manuallyReversed || t.reversed)) && !(hideAccrual && this.isAccrualKindOf(t.type));
       });
     }
     this.dataSource = new MatTableDataSource(transactions);
-    this.dataSource.paginator = this.paginator;
+    if (this.loanProductService.isLoanProduct) {
+      this.dataSource.paginator = this.paginator;
+    }
     this.dataSource.sort = this.sort;
   }
 
@@ -152,6 +290,21 @@ export class TransactionsTabComponent implements OnInit {
   /**
    * Show Transactions Details
    * @param transactionsData Transactions Data
+   */
+  showTransactions(transactionsData: LoanTransaction) {
+    if (this.showTransaction(transactionsData)) {
+      this.router.navigate([transactionsData.id], {
+        queryParams: {
+          productType: this.loanProductService.productType.value
+        },
+        relativeTo: this.route
+      });
+    }
+  }
+
+  /**
+   * Show Transaction Details
+   * @param transactionsData Transaction Data
    * DISBURSEMENT:1
    * REPAYMENT:2
    * WAIVE_INTEREST:4
@@ -173,48 +326,216 @@ export class TransactionsTabComponent implements OnInit {
    * REAGE:29
    * REAMORTIZE:30
    * INTEREST REFUND:33
+   * CAPITALIZED INCOME:35
+   * CAPITALIZED_INCOME_AMORTIZATION:36
+   * CAPITALIZED INCOME ADJUSTMENT:37
+   * CONTRACT_TERMINATION:38
+   * BUY_DOWN_FEE:40
+   * BUY_DOWN_FEE_ADJUSTMENT:41
+   * BUY_DOWN_FEE_AMORTIZATION:42
+   * DISCOUNT_FEE:44
+   * DISCOUNT_FEE_AMORTIZATION:45
+   * DISCOUNT_FEE_ADJUSTMENT:46
+   * DISCOUNT_FEE_AMORTIZATION_ADJUSTMENT:47
    */
-  showTransactions(transactionsData: LoanTransaction) {
-    if ([
-        1,
-        2,
-        4,
-        9,
-        20,
-        21,
-        22,
-        23,
-        26,
-        28,
-        29,
-        30,
-        31,
-        33
-      ].includes(transactionsData.type.id)) {
-      this.router.navigate([transactionsData.id], { relativeTo: this.route });
-    }
+  showTransaction(transactionsData: LoanTransaction): boolean {
+    return [
+      1,
+      2,
+      4,
+      9,
+      20,
+      21,
+      22,
+      23,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      35,
+      36,
+      37,
+      38,
+      40,
+      41,
+      42,
+      44,
+      45,
+      46,
+      47
+    ].includes(transactionsData.type.id);
   }
 
-  allowUndoTransaction(transaction: LoanTransaction) {
-    if (transaction.manuallyReversed) {
+  allowUndoTransaction(transaction: LoanTransaction): boolean {
+    const alreadyReversed = transaction.manuallyReversed || transaction.reversed;
+    if (alreadyReversed || this.hasChargebackRelation(transaction)) {
       return false;
     }
-    return !(
-      transaction.type.disbursement ||
-      transaction.type.chargeoff ||
-      this.isReAgoeOrReAmortize(transaction.type) ||
-      transaction.type.interestRefund
+    // Working Capital keeps its own reversal rules, matched by code as well
+    // because it does not always send the type flags. The Term Loan branch is
+    // the adjust command's own gate plus write-off, which has its own undo
+    // command wired in `undoTransaction()`; charge-off, re-age, re-amortize and
+    // contract termination are undone from their own entries.
+    return this.loanProductService.isWorkingCapital
+      ? !(
+          transaction.type.disbursement ||
+          this.isChargeOff(transaction.type) ||
+          this.isReAgoeOrReAmortize(transaction.type) ||
+          transaction.type.interestRefund ||
+          this.isDiscountFee(transaction.type) ||
+          transaction.type.contractTermination
+        )
+      : (canReverseLoanTransaction(transaction.type, alreadyReversed) &&
+          loanAllowsReversal(transaction.type, this.loanDetailsData?.loanScheduleType)) ||
+          this.isWriteOff(transaction.type);
+  }
+
+  /**
+   * True when the transaction can be re-submitted with a new date, amount and
+   * payment details. Each product has its own adjust command with its own gate.
+   * @param transaction Transaction of the row
+   */
+  allowAdjustTransaction(transaction: LoanTransaction): boolean {
+    const alreadyReversed = transaction.manuallyReversed || transaction.reversed;
+    return this.loanProductService.isWorkingCapital
+      ? canAdjustWorkingCapitalTransaction(transaction.type, alreadyReversed)
+      : !this.hasChargebackRelation(transaction) && canAdjustLoanTransaction(transaction.type, alreadyReversed);
+  }
+
+  /**
+   * True when the row offers the Working Capital Discount Fee Adjustment, a
+   * command of its own that draws the remaining discount pool down rather than
+   * reversing and re-creating the transaction the way `adjust` does. An
+   * exhausted pool leaves nothing to draw down, so the entry disappears with it.
+   * @param transaction Transaction of the row
+   */
+  allowDiscountFeeAdjustment(transaction: LoanTransaction): boolean {
+    return (
+      this.loanProductService.isWorkingCapital &&
+      Number(this.loanDetailsData?.discountFee ?? 0) > 0 &&
+      canAdjustWorkingCapitalDiscountFee(
+        transaction.type,
+        transaction.manuallyReversed || transaction.reversed,
+        this.loanDetailsData?.status
+      )
     );
   }
 
+  /**
+   * Opens the discount fee adjustment form for the transaction of the row.
+   * @param transaction Transaction of the row
+   * @param $event Mouse Event
+   */
+  discountFeeAdjustment(transaction: LoanTransaction, $event: MouseEvent): void {
+    $event.stopPropagation();
+    this.router.navigate(
+      [
+        transaction.id,
+        'discount-fee-adjustment'
+      ],
+      {
+        queryParams: {
+          productType: this.loanProductService.productType.value
+        },
+        relativeTo: this.route
+      }
+    );
+  }
+
+  /** Permission of the adjust command the row posts, which differs per product. */
+  get adjustPermission(): string {
+    return this.loanProductService.isWorkingCapital ? 'ADJUST_WORKINGCAPITALLOAN' : 'ADJUST_LOAN';
+  }
+
+  /** Permission of the Working Capital delta based adjustment, gated apart from Adjust. */
+  readonly adjustByDeltaPermission = WORKING_CAPITAL_ADJUST_BY_DELTA_PERMISSION;
+
+  /**
+   * True when the row offers the Working Capital adjustment by difference, a
+   * command of its own on the same endpoint: the amount sent is the signed
+   * difference and the backend works out the corrected total.
+   * @param transaction Transaction of the row
+   */
+  allowAdjustByDeltaTransaction(transaction: LoanTransaction): boolean {
+    return (
+      this.loanProductService.isWorkingCapital &&
+      canAdjustWorkingCapitalTransactionByDelta(transaction.type, transaction.manuallyReversed || transaction.reversed)
+    );
+  }
+
+  /**
+   * The backend rejects both reversing and adjusting a transaction that is
+   * linked to a chargeback.
+   * @param transaction Transaction of the row
+   */
+  private hasChargebackRelation(transaction: LoanTransaction): boolean {
+    return !!transaction.transactionRelations?.some((relation: any) => relation.relationType === 'CHARGEBACK');
+  }
+
+  /**
+   * Opens the adjust form for the transaction of the row.
+   * @param transaction Transaction of the row
+   * @param $event Mouse Event
+   */
+  adjustTransaction(transaction: LoanTransaction, $event: MouseEvent): void {
+    this.openAdjustForm(transaction, $event, 'edit');
+  }
+
+  /**
+   * Opens the adjust form in its delta based mode for the transaction of the row.
+   * @param transaction Transaction of the row
+   * @param $event Mouse Event
+   */
+  adjustTransactionByDelta(transaction: LoanTransaction, $event: MouseEvent): void {
+    this.openAdjustForm(transaction, $event, 'adjust-by-delta');
+  }
+
+  /**
+   * Navigates to one of the adjust form routes of the transaction, carrying the
+   * product type the resolvers read.
+   * @param transaction Transaction of the row
+   * @param $event Mouse Event
+   * @param path Route of the form below the transaction
+   */
+  private openAdjustForm(transaction: LoanTransaction, $event: MouseEvent, path: string): void {
+    $event.stopPropagation();
+    this.router.navigate(
+      [
+        transaction.id,
+        path
+      ],
+      {
+        queryParams: {
+          productType: this.loanProductService.productType.value
+        },
+        relativeTo: this.route
+      }
+    );
+  }
+
+  loanTransactionBadgeClass(transaction: LoanTransaction): string {
+    if (transaction.manuallyReversed || transaction.reversed) return 'badge-reversed';
+    if (this.isAccrualKindOf(transaction.type)) return 'badge-accrual';
+    if (transaction.type.disbursement) return 'badge-disbursement';
+    if (this.isDownPayment(transaction.type)) return 'badge-downpayment';
+    if (this.isChargeOff(transaction.type)) return 'badge-chargeoff';
+    if (this.isReAge(transaction.type)) return 'badge-reage';
+    if (this.isReAmortize(transaction.type)) return 'badge-reamortize';
+    if (isDiscountFeeKindTransaction(transaction.type)) return 'badge-discount';
+    if (this.isRecoveryRepayment(transaction.type)) return 'badge-recovery';
+    if (transaction.transactionRelations?.length > 0) return 'badge-linked';
+    return 'badge-repayment';
+  }
+
   loanTransactionColor(transaction: LoanTransaction): string {
-    if (transaction.manuallyReversed) {
+    if (transaction.manuallyReversed || transaction.reversed) {
       return 'strike';
     }
-    if (transaction.transactionRelations && transaction.transactionRelations.length > 0) {
-      return 'linked';
-    }
-    if (this.isAccrual(transaction.type)) {
+    if (this.isAccrualKindOf(transaction.type)) {
       return 'accrual';
     }
     if (this.isChargeOff(transaction.type)) {
@@ -229,7 +550,47 @@ export class TransactionsTabComponent implements OnInit {
     if (this.isReAmortize(transaction.type)) {
       return 'reamortize';
     }
+    if (this.isRecoveryRepayment(transaction.type)) {
+      return 'recovery';
+    }
+    if (transaction.transactionRelations && transaction.transactionRelations.length > 0) {
+      return 'linked';
+    }
     return '';
+  }
+
+  loanTransactionBorderClass(transaction: LoanTransaction): string {
+    if (transaction.manuallyReversed || transaction.reversed) {
+      return 'row-reversed';
+    }
+    if (this.isAccrualKindOf(transaction.type)) {
+      return 'row-accrual';
+    }
+    if (transaction.type.disbursement) {
+      return 'row-disbursement';
+    }
+    if (this.isDownPayment(transaction.type)) {
+      return 'row-down-payment';
+    }
+    if (this.isChargeOff(transaction.type)) {
+      return 'row-chargeoff';
+    }
+    if (this.isReAge(transaction.type)) {
+      return 'row-reage';
+    }
+    if (this.isReAmortize(transaction.type)) {
+      return 'row-reamortize';
+    }
+    if (isDiscountFeeKindTransaction(transaction.type)) {
+      return 'row-discount';
+    }
+    if (this.isRecoveryRepayment(transaction.type)) {
+      return 'row-recovery';
+    }
+    if (transaction.transactionRelations && transaction.transactionRelations.length > 0) {
+      return 'row-linked';
+    }
+    return 'row-repayment';
   }
 
   /**
@@ -249,20 +610,34 @@ export class TransactionsTabComponent implements OnInit {
     const locale = this.settingsService.language.code;
     const dateFormat = this.settingsService.dateFormat;
     const loanId = this.route.parent.parent.snapshot.params['loanId'];
+    const isLoanProduct = this.loanProductService.isLoanProduct;
+    // Write-off has its own command and Working Capital its own rules; every
+    // other Term Loan reversal goes through the adjust command with a note.
+    if (isLoanProduct && !this.isWriteOff(transaction.type)) {
+      this.reverseTermLoanTransaction(loanId, transaction);
+      return;
+    }
     let command = 'undo';
     let operationDate = this.dateUtils.parseDate(transaction.date);
-    let payload = {};
-    if (this.isChargeOff(transaction.type)) {
-      command = 'undo-charge-off';
-      operationDate = this.settingsService.businessDate;
-      payload = {};
+    let payload: any = {};
+    // Working capital loan undo only accepts locale/dateFormat/note/reversalExternalId;
+    // transactionDate/transactionAmount are required only by the generic loan adjust endpoint.
+    const undoPayload = isLoanProduct
+      ? {
+          transactionDate: this.dateUtils.formatDate(
+            operationDate && this.dateUtils.parseDate(operationDate),
+            dateFormat
+          ),
+          transactionAmount: 0,
+          dateFormat,
+          locale
+        }
+      : { dateFormat, locale };
+    if (this.isWriteOff(transaction.type)) {
+      command = 'undowriteoff';
+      payload = undoPayload;
     } else {
-      payload = {
-        transactionDate: this.dateUtils.formatDate(operationDate && new Date(operationDate), dateFormat),
-        transactionAmount: 0,
-        dateFormat,
-        locale
-      };
+      payload = undoPayload;
     }
 
     const undoTransactionAccountDialogRef = this.dialog.open(ConfirmationDialogComponent, {
@@ -270,35 +645,144 @@ export class TransactionsTabComponent implements OnInit {
         heading: this.translateService.instant('labels.heading.Undo Transaction'),
         dialogContext:
           this.translateService.instant('labels.dialogContext.Are you sure you want undo the transaction type') +
+          ' ' +
           `${transaction.type.value}` +
+          ' ' +
           this.translateService.instant('labels.dialogContext.with id') +
+          ' ' +
           `${transaction.id}`
       }
     });
     undoTransactionAccountDialogRef.afterClosed().subscribe((response: { confirm: any }) => {
-      if (response.confirm) {
+      if (response?.confirm) {
         let transactionId = transaction.id;
-        if (this.isChargeOff(transaction.type)) {
+        if (command === 'undowriteoff' || this.isWriteOff(transaction.type)) {
           transactionId = null;
         }
-        if (transaction.transfer){
+        if (this.loanProductService.isLoanProduct && transaction.transfer) {
+          // Account transfers are reversed through the account transfer endpoint, not the loan transaction.
           this.loansService
             .executeLoansAccountTransactionsCommand(loanId, command, payload, undefined, transaction.transfer.id)
             .subscribe((responseCmd: any) => {
               transaction.manuallyReversed = true;
               this.reload();
             });
-
-        }else{
-        this.loansService
-          .executeLoansAccountTransactionsCommand(loanId, command, payload, transactionId)
-          .subscribe((responseCmd: any) => {
-            transaction.manuallyReversed = true;
-            this.reload();
+        } else if (this.loanProductService.isLoanProduct) {
+          this.loansService
+            .executeLoansAccountTransactionsCommand(loanId, command, payload, transactionId)
+            .subscribe((responseCmd: any) => {
+              transaction.manuallyReversed = true;
+              this.reload();
+            });
+        } else {
+          this.loansService.applyWorkingCapitalLoanActionCommand(loanId, payload, command, transactionId).subscribe({
+            next: () => {
+              transaction.reversed = true;
+              this.reload();
+            },
+            error: (error: unknown) => this.reportWorkingCapitalUndoError(error)
           });
         }
       }
     });
+  }
+
+  /**
+   * Reverses a Term Loan transaction through the adjust command. A zero amount
+   * means reverse only: the original transaction is reversed and no replacement
+   * is created.
+   * @param loanId Loan id
+   * @param transaction Transaction of the row
+   */
+  private reverseTermLoanTransaction(loanId: string, transaction: LoanTransaction): void {
+    const dateFormat = this.settingsService.dateFormat;
+    this.dialog
+      .open(
+        FormDialogComponent,
+        buildReversalDialogConfig(
+          this.translateService,
+          'labels.heading.Reverse Transaction',
+          'labels.buttons.Reverse',
+          adjustmentReopensLoan(this.loanDetailsData?.status) ? REOPEN_LOAN_WARNING_KEY : undefined
+        )
+      )
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((response: any) => {
+        if (!response?.data) {
+          return;
+        }
+        const operationDate = this.dateUtils.parseDate(transaction.date);
+        const payload: { [key: string]: any } = {
+          transactionDate: this.dateUtils.formatDate(
+            operationDate && this.dateUtils.parseDate(operationDate),
+            dateFormat
+          ),
+          transactionAmount: 0,
+          dateFormat,
+          locale: this.settingsService.language.code
+        };
+        appendReversalFields(payload, response.data.value);
+        this.loansService
+          .executeLoansAccountTransactionsCommand(loanId, 'adjust', payload, transaction.id)
+          .subscribe(() => {
+            transaction.manuallyReversed = true;
+            this.reload();
+          });
+      });
+  }
+
+  /**
+   * The adjust command reverses the transaction; the dedicated commands undo a
+   * loan level action, so the menu entry names them differently.
+   * @param transaction Transaction of the row
+   */
+  undoLabelKey(transaction: LoanTransaction): string {
+    return this.loanProductService.isWorkingCapital || this.isWriteOff(transaction.type)
+      ? 'tooltips.Undo Transaction'
+      : 'labels.buttons.Reverse';
+  }
+
+  /** Working Capital charge-off transactions expose a dedicated undo action in the row menu. */
+  allowUndoChargeOff(transaction: LoanTransaction): boolean {
+    return (
+      this.loanProductService.isWorkingCapital &&
+      this.isChargeOff(transaction.type) &&
+      !transaction.manuallyReversed &&
+      !transaction.reversed
+    );
+  }
+
+  /**
+   * Undoes a Working Capital charge-off from the transactions tab.
+   * Uses the same dialog and command as the account header action so both
+   * entry points stay in sync.
+   * @param transaction Charge-off transaction
+   * @param $event Mouse Event
+   */
+  undoChargeOffTransaction(transaction: LoanTransaction, $event: MouseEvent): void {
+    $event.stopPropagation();
+    const loanId = String(this.loanId);
+    this.dialog
+      .open<WorkingCapitalUndoChargeOffDialogComponent, unknown, WorkingCapitalUndoChargeOffDialogResult>(
+        WorkingCapitalUndoChargeOffDialogComponent
+      )
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (!result?.confirm) {
+          return;
+        }
+        const payload = buildWorkingCapitalUndoChargeOffPayload(result, this.settingsService.language.code);
+        // The undo charge-off command targets the loan, not a single transaction.
+        this.loansService.applyWorkingCapitalLoanActionCommand(loanId, payload, 'undoChargeOff').subscribe({
+          next: () => {
+            transaction.reversed = true;
+            this.reload();
+          },
+          error: (error: unknown) => this.reportWorkingCapitalUndoError(error)
+        });
+      });
   }
 
   undoReAgeOrReAmortize(transaction: LoanTransaction): void {
@@ -313,7 +797,7 @@ export class TransactionsTabComponent implements OnInit {
       }
     });
     undoTransactionAccountDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.confirm) {
+      if (response?.confirm) {
         const undoCommand = actionName === 'Re-Age' ? 'undoReAge' : 'undoReAmortize';
         this.loansService.executeLoansAccountTransactionsCommand(String(this.loanId), undoCommand, {}).subscribe(() => {
           this.reload();
@@ -322,12 +806,20 @@ export class TransactionsTabComponent implements OnInit {
     });
   }
 
-  private isAccrual(transactionType: LoanTransactionType): boolean {
-    return transactionType.accrual || transactionType.code === 'loanTransactionType.overdueCharge';
-  }
-
   private isChargeOff(transactionType: LoanTransactionType): boolean {
     return transactionType.chargeoff || transactionType.code === 'loanTransactionType.chargeOff';
+  }
+
+  isWriteOff(transactionType: LoanTransactionType): boolean {
+    return transactionType.writeOff || transactionType.code === 'loanTransactionType.writeOff';
+  }
+
+  /**
+   * A recovery payment is money collected after a write-off. It is recognised as
+   * income instead of reducing debt, so it is marked apart from a repayment.
+   */
+  isRecoveryRepayment(transactionType: LoanTransactionType): boolean {
+    return transactionType.recoveryRepayment || transactionType.code === 'loanTransactionType.recoveryRepayment';
   }
 
   private isDownPayment(transactionType: LoanTransactionType): boolean {
@@ -342,39 +834,132 @@ export class TransactionsTabComponent implements OnInit {
     return transactionType.reAmortize || transactionType.code === 'loanTransactionType.reAmortize';
   }
 
+  private isCapitalizedIncome(transactionType: LoanTransactionType): boolean {
+    return transactionType.capitalizedIncome || transactionType.code === 'loanTransactionType.capitalizedIncome';
+  }
+
+  private isAccrualKindOf(transactionType: LoanTransactionType): boolean {
+    return isAccrualKindTransaction(transactionType);
+  }
+
   private isReAgoeOrReAmortize(transactionType: LoanTransactionType): boolean {
     return this.isReAmortize(transactionType) || this.isReAge(transactionType);
+  }
+
+  private isDiscountFee(transactionType: LoanTransactionType): boolean {
+    return transactionType.discountFee || transactionType.code === 'loanTransactionType.discountFee';
+  }
+
+  isBuyDownFee(transactionType: LoanTransactionType): boolean {
+    return transactionType.buyDownFee || transactionType.code === 'loanTransactionType.buyDownFee';
   }
 
   viewJournalEntry(transactionType: LoanTransactionType): boolean {
     return !(this.isReAmortize(transactionType) || this.isReAge(transactionType));
   }
 
-  private getEntityId(): { type: 'client' | 'group'; id: string } {
-    let route = this.route.snapshot;
-
-    while (route) {
-      if (route.params['clientId']) {
-        return { type: 'client', id: route.params['clientId'] };
-      }
-      if (route.params['groupId']) {
-        return { type: 'group', id: route.params['groupId'] };
-      }
-      route = route.parent!;
-    }
-
-    throw new Error('No clientId or groupId found in route');
+  canCreateInterestRefund(transaction: LoanTransaction): boolean {
+    const type = transaction?.type?.code?.toLowerCase() || '';
+    const isRefundType = type.includes('payoutrefund') || type.includes('merchantissuedrefund');
+    if (!isRefundType) return false;
+    if (transaction.manuallyReversed) return false;
+    if (
+      transaction.transactionRelations &&
+      transaction.transactionRelations.some((r) => r.relationType === 'INTEREST_REFUND')
+    )
+      return false;
+    return true;
   }
 
-  private reload() {
-    const entity = this.getEntityId();
+  openInterestRefundDialog(transaction: LoanTransaction) {
+    const loanId = this.loanId;
+    this.loansService
+      .getLoanTransactionActionTemplate(String(loanId), 'interest-refund', String(transaction.id))
+      .subscribe((template: any) => {
+        const paymentTypeField = new FormfieldBase({
+          controlType: 'select',
+          controlName: 'paymentTypeId',
+          label: this.translateService.instant('labels.inputs.Payment Type'),
+          value: template.paymentTypeId || '',
+          required: true,
+          order: 2
+        });
+        (paymentTypeField as any).options = {
+          data: template.paymentTypeOptions || [],
+          value: 'id',
+          label: 'name'
+        };
+        const formfields: FormfieldBase[] = [
+          new InputBase({
+            controlName: 'amount',
+            label: this.translateService.instant('labels.inputs.Amount'),
+            value: template.amount,
+            type: 'number',
+            required: true,
+            readonly: true,
+            order: 1
+          }),
+          paymentTypeField,
+          new InputBase({
+            controlName: 'externalId',
+            label: this.translateService.instant('labels.inputs.External Id'),
+            value: '',
+            type: 'text',
+            required: false,
+            order: 3
+          }),
+          new InputBase({
+            controlName: 'note',
+            label: this.translateService.instant('labels.inputs.Note'),
+            value: '',
+            type: 'text',
+            required: false,
+            order: 4
+          })
+        ];
+        const data = {
+          title: this.translateService.instant('labels.buttons.Create Interest Refund'),
+          layout: { addButtonText: this.translateService.instant('labels.buttons.Create Interest Refund') },
+          formfields: formfields
+        };
+        const dialogRef = this.dialog.open(FormDialogComponent, { data });
+        dialogRef.afterClosed().subscribe((response: { data: any }) => {
+          if (response?.data) {
+            const { amount, transactionDate, ...rest } = response.data.value;
+            const payload = {
+              ...rest,
+              transactionAmount: amount,
+              locale: this.settingsService.language.code,
+              dateFormat: this.settingsService.dateFormat
+            };
+            this.loansService
+              .executeLoansAccountTransactionsCommand(
+                String(loanId),
+                'interest-refund',
+                payload,
+                String(transaction.id)
+              )
+              .subscribe(() => {
+                this.reload();
+              });
+          }
+        });
+      });
+  }
 
-    const baseUrl =
-      entity.type === 'client' ? `/clients/${entity.id}/loans-accounts` : `/groups/${entity.id}/loans-accounts`;
-
-    const currentUrl = this.router.url;
-
-    this.router.navigateByUrl(baseUrl, { skipLocationChange: true }).then(() => this.router.navigateByUrl(currentUrl));
+  /**
+   * Reports a failed Working Capital reversal with the backend's own rule.
+   *
+   * HTTP 403 is expected for anyone but a super user: the generic undo command
+   * is authorized with a permission derived at runtime that is not seeded, so
+   * the message says so instead of showing a bare error.
+   * @param error Failed HTTP response
+   */
+  private reportWorkingCapitalUndoError(error: unknown): void {
+    const alert = resolveRecoveryPaymentErrorMessage(error, this.translateService);
+    if (alert) {
+      this.alertService.alert(alert);
+    }
   }
 
   displaySubMenu(transaction: LoanTransaction): boolean {
@@ -382,5 +967,188 @@ export class TransactionsTabComponent implements OnInit {
       return false;
     }
     return true;
+  }
+
+  capitalizedIncomeAdjustmentTransaction(transaction: LoanTransaction) {
+    const accountId = `${this.loanId}`;
+    this.loansService
+      .getLoanTransactionActionTemplate(accountId, 'capitalizedIncomeAdjustment', `${transaction.id}`)
+      .subscribe((response: any) => {
+        const transactionDate = response.date || transaction.date;
+        if (response.amount == 0) {
+          this.displayAlertMessage(this.translateService.instant('errors.loans.alreadyAdjusted'), transaction.amount);
+        } else {
+          const transactionAmount = response.amount || transaction.amount;
+          const formfields: FormfieldBase[] = [
+            new DatepickerBase({
+              controlName: 'transactionDate',
+              label: this.translateService.instant('labels.inputs.Date'),
+              value: this.dateUtils.parseDate(transactionDate),
+              type: 'datetime-local',
+              required: true,
+              minDate: this.dateUtils.parseDate(transaction.date),
+              order: 1
+            }),
+            new InputBase({
+              controlName: 'amount',
+              label: this.translateService.instant('labels.inputs.Amount'),
+              value: transactionAmount,
+              type: 'number',
+              required: true,
+              min: 0.001,
+              max: transactionAmount,
+              validators: [
+                Validators.min(0.001),
+                Validators.max(transactionAmount)
+              ],
+              order: 2
+            })
+          ];
+          const data = {
+            title: this.translateService.instant('errors.loans.adjustment', {
+              type: this.translateService.instant('labels.catalogs.' + transaction.type.value)
+            }),
+            layout: { addButtonText: this.translateService.instant('labels.buttons.Adjustment') },
+            formfields: formfields,
+            pristine: false
+          };
+          const chargebackDialogRef = this.dialog.open(FormDialogComponent, { data });
+          chargebackDialogRef.afterClosed().subscribe((response: { data: any }) => {
+            if (response?.data) {
+              const dateFormat = this.settingsService.dateFormat;
+
+              if (response.data.value.amount <= transactionAmount) {
+                const locale = this.settingsService.language.code;
+                const payload = {
+                  transactionDate: this.dateUtils.formatDate(response.data.value.transactionDate, dateFormat),
+                  transactionAmount: response.data.value.amount,
+                  locale,
+                  dateFormat
+                };
+                this.loansService
+                  .executeLoansAccountTransactionsCommand(
+                    accountId,
+                    'capitalizedIncomeAdjustment',
+                    payload,
+                    transaction.id
+                  )
+                  .subscribe(() => {
+                    this.reload();
+                  });
+              } else {
+                this.displayAlertMessage(
+                  this.translateService.instant('errors.loans.capitalizedIncomeLimit'),
+                  transactionAmount
+                );
+              }
+            }
+          });
+        }
+      });
+  }
+
+  buyDownFeeAdjustmentTransaction(transaction: LoanTransaction) {
+    const accountId = `${this.loanId}`;
+    this.loansService
+      .getLoanTransactionActionTemplate(accountId, 'buyDownFeeAdjustment', `${transaction.id}`)
+      .subscribe((response: any) => {
+        const transactionDate = response.date || transaction.date;
+        if (response.amount == 0) {
+          this.displayAlertMessage(
+            this.translateService.instant('errors.loans.buyDownFeeAdjusted'),
+            transaction.amount
+          );
+        } else {
+          const transactionAmount = response.amount || transaction.amount;
+          const formfields: FormfieldBase[] = [
+            new DatepickerBase({
+              controlName: 'transactionDate',
+              label: this.translateService.instant('labels.inputs.Date'),
+              value: this.dateUtils.parseDate(transactionDate),
+              type: 'datetime-local',
+              required: true,
+              minDate: this.dateUtils.parseDate(transaction.date),
+              order: 1
+            }),
+            new InputBase({
+              controlName: 'amount',
+              label: this.translateService.instant('labels.inputs.Amount'),
+              value: transactionAmount,
+              type: 'number',
+              required: true,
+              min: 0.001,
+              max: transactionAmount,
+              validators: [
+                Validators.min(0.001),
+                Validators.max(transactionAmount)
+              ],
+              order: 2
+            })
+          ];
+          const data = {
+            title: this.translateService.instant('errors.loans.adjustment', {
+              type: this.translateService.instant('labels.catalogs.' + transaction.type.value)
+            }),
+            layout: { addButtonText: this.translateService.instant('labels.buttons.Adjustment') },
+            formfields: formfields,
+            pristine: false
+          };
+          const chargebackDialogRef = this.dialog.open(FormDialogComponent, { data });
+          chargebackDialogRef.afterClosed().subscribe((response: { data: any }) => {
+            if (response?.data) {
+              const dateFormat = this.settingsService.dateFormat;
+
+              if (response.data.value.amount <= transactionAmount) {
+                const locale = this.settingsService.language.code;
+                const payload = {
+                  transactionDate: this.dateUtils.formatDate(response.data.value.transactionDate, dateFormat),
+                  transactionAmount: response.data.value.amount,
+                  locale,
+                  dateFormat
+                };
+                this.loansService
+                  .executeLoansAccountTransactionsCommand(accountId, 'buyDownFeeAdjustment', payload, transaction.id)
+                  .subscribe(() => {
+                    this.reload();
+                  });
+              } else {
+                this.displayAlertMessage(
+                  this.translateService.instant('errors.loans.buyDownFeeLimit'),
+                  transactionAmount
+                );
+              }
+            }
+          });
+        }
+      });
+  }
+
+  private loadWorkingCapitalTransactions(page: number, size: number): void {
+    this.loansService
+      .getWorkingCapitalTransactions(String(this.loanId), page, size)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((response: any) => {
+        this.transactionsData = response.content ?? [];
+        this.totalTransactions = response.totalElements ?? 0;
+        this.totalPages = response.totalPages ?? 0;
+        this.paginator.length = this.totalTransactions;
+        this.setLoanTransactions();
+        this.cdr.markForCheck();
+      });
+  }
+
+  private displayAlertMessage(label: string, amount: number): void {
+    let message: string = label;
+    if (amount) {
+      message = this.translateService.instant('errors.loans.alertWithAmount', { label, amount });
+    }
+    this.alertService.alert({
+      type: this.translateService.instant('errors.loans.businessRule'),
+      message: message
+    });
+  }
+
+  get productTypePrefix(): string {
+    return this.loanProductService.isLoanProduct ? 'L' : 'WC';
   }
 }

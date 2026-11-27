@@ -1,14 +1,42 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { MatPaginator } from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource, MatTable } from '@angular/material/table';
-import { UntypedFormGroup, UntypedFormBuilder } from '@angular/forms';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import {
+  MatTableDataSource,
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { take } from 'rxjs';
+import { FormGroup, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 /** Custom Imports */
 import { OrganizationService } from '../../organization.service';
 import { BulkImports } from './bulk-imports';
+import { MatFormField, MatLabel, MatHint } from '@angular/material/form-field';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { FileUploadComponent } from '../../../shared/file-upload/file-upload.component';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * View Bulk Imports Component
@@ -16,9 +44,36 @@ import { BulkImports } from './bulk-imports';
 @Component({
   selector: 'mifosx-view-bulk-import',
   templateUrl: './view-bulk-import.component.html',
-  styleUrls: ['./view-bulk-import.component.scss']
+  styleUrls: ['./view-bulk-import.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FileUploadComponent,
+    MatHint,
+    MatTable,
+    MatSort,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatSortHeader,
+    MatCellDef,
+    MatCell,
+    MatIconButton,
+    FaIconComponent,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatPaginator,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ViewBulkImportComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private formBuilder = inject(FormBuilder);
+  private organizationService = inject(OrganizationService);
+  private destroyRef = inject(DestroyRef);
+
   /** offices Data */
   officeData: any;
   /** staff Data */
@@ -28,7 +83,7 @@ export class ViewBulkImportComponent implements OnInit {
   /** imports Data */
   importsData: any;
   /** bulk-import form. */
-  bulkImportForm: UntypedFormGroup;
+  bulkImportForm: FormGroup;
   /** array of deined bulk-imports */
   bulkImportsArray = BulkImports;
   /** bulk-import which user navigated to */
@@ -60,13 +115,9 @@ export class ViewBulkImportComponent implements OnInit {
    * @param {FormBuilder} formBuilder FormBuilder
    * @param {OrganizationService} organizationService OrganizationService
    */
-  constructor(
-    private route: ActivatedRoute,
-    private formBuilder: UntypedFormBuilder,
-    private organizationService: OrganizationService
-  ) {
+  constructor() {
     this.bulkImport.name = this.route.snapshot.params['import-name'];
-    this.route.data.subscribe((data: any) => {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: any) => {
       this.officeData = data.offices;
       this.importsData = data.imports;
     });
@@ -97,13 +148,19 @@ export class ViewBulkImportComponent implements OnInit {
    * Subscribe to value changes and fetches select options accordingly.
    */
   buildDependencies() {
-    this.bulkImportForm.get('officeId').valueChanges.subscribe((value: any) => {
-      if (this.bulkImport.formFields >= 2) {
-        this.organizationService.getStaff(value).subscribe((data: any) => {
-          this.staffData = data;
-        });
-      }
-    });
+    this.bulkImportForm
+      .get('officeId')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value: any) => {
+        if (this.bulkImport.formFields >= 2) {
+          this.organizationService
+            .getStaff(value)
+            .pipe(take(1))
+            .subscribe((data: any) => {
+              this.staffData = data;
+            });
+        }
+      });
   }
 
   /**
@@ -133,6 +190,7 @@ export class ViewBulkImportComponent implements OnInit {
     }
     this.organizationService
       .getImportTemplate(this.bulkImport.urlSuffix, officeId, staffId, legalFormType)
+      .pipe(take(1))
       .subscribe((res: any) => {
         const contentType = res.headers.get('Content-Type');
         const blob = new Blob([res.body], { type: contentType });
@@ -166,6 +224,7 @@ export class ViewBulkImportComponent implements OnInit {
     }
     this.organizationService
       .uploadImportDocument(this.template, this.bulkImport.urlSuffix, legalFormType)
+      .pipe(take(1))
       .subscribe(() => {});
   }
 
@@ -173,10 +232,13 @@ export class ViewBulkImportComponent implements OnInit {
    * Reloads imports data table.
    */
   refreshDocuments() {
-    this.organizationService.getImports(this.bulkImport.entityType).subscribe((data: any) => {
-      this.dataSource = new MatTableDataSource(data);
-      this.importsTableRef.renderRows();
-    });
+    this.organizationService
+      .getImports(this.bulkImport.entityType)
+      .pipe(take(1))
+      .subscribe((data: any) => {
+        this.dataSource = new MatTableDataSource(data);
+        this.importsTableRef.renderRows();
+      });
   }
 
   /**
@@ -185,11 +247,14 @@ export class ViewBulkImportComponent implements OnInit {
    * @param {any} id ImportID
    */
   downloadDocument(name: string, id: any) {
-    this.organizationService.getImportDocument(id).subscribe((res: any) => {
-      const contentType = res.headers.get('Content-Type');
-      const blob = new Blob([res.body], { type: contentType });
-      const fileOfBlob = new File([blob], name, { type: contentType });
-      window.open(window.URL.createObjectURL(fileOfBlob));
-    });
+    this.organizationService
+      .getImportDocument(id)
+      .pipe(take(1))
+      .subscribe((res: any) => {
+        const contentType = res.headers.get('Content-Type');
+        const blob = new Blob([res.body], { type: contentType });
+        const fileOfBlob = new File([blob], name, { type: contentType });
+        window.open(window.URL.createObjectURL(fileOfBlob));
+      });
   }
 }

@@ -1,20 +1,34 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ClientsService } from '../../../../clients/clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../../settings/settings.service';
 import { LoansService } from '../../../loans.service';
 import { finalize } from 'rxjs/operators';
-import { SystemService } from '../../../../system/system.service';
+import { ClientsService } from 'app/clients/clients.service';
+import { SettingsService } from 'app/settings/settings.service';
+import { SystemService } from 'app/system/system.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'mifosx-crb-credit-report',
   templateUrl: './crb-credit-report.component.html',
-  styleUrls: ['./crb-credit-report.component.scss']
+  styleUrls: ['./crb-credit-report.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+  ]
 })
 export class CrbCreditReportComponent implements OnInit {
-  @Output() reportFormatChangeEvent = new EventEmitter<{ format: number }>();
+  private route = inject(ActivatedRoute);
+  private router =  inject(Router);
+  private clientsService = inject(ClientsService);
+  private snackBar = inject(MatSnackBar);
+  private settingsService= inject(SettingsService);
+  private formBuilder = inject(UntypedFormBuilder);
+  private loansService = inject(LoansService);
+  private systemService = inject(SystemService);
+
 
   loanId: any;
 
@@ -30,22 +44,12 @@ export class CrbCreditReportComponent implements OnInit {
   /** Credit Report form. */
   creditReportForm: UntypedFormGroup;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService,
-    private formBuilder: UntypedFormBuilder,
-    private loansService: LoansService,
-    private systemService: SystemService
-  ) {
+  constructor() {
     this.loanId = this.route.parent?.snapshot.paramMap.get('loanId') ?? this.route.snapshot.paramMap.get('loanId');
   }
 
   ngOnInit(): void {
     this.createReportForm();
-    this.buildDependencies();
     this.loadCreditBureau();
     this.loadTemplate();
   }
@@ -71,32 +75,12 @@ export class CrbCreditReportComponent implements OnInit {
         '',
         Validators.required
       ],
-      crbReportAction: ['']
-    });
-  }  /**
-   * Adds controls conditionally.
-   */
-  buildDependencies(): void {
-    const reportFormControl = this.creditReportForm.get('crbReportFormat');
-    const reportActionControl = this.creditReportForm.get('crbReportAction');
-
-    reportFormControl?.valueChanges.subscribe((format: number) => {
-      this.reportFormatChangeEvent.emit({ format });
-
-      if (format === 1) {
-        reportActionControl?.clearValidators();
-        reportActionControl?.reset(null, { emitEvent: false });
-        reportActionControl?.disable({ emitEvent: false });
-      } else {
-        reportActionControl?.setValidators([Validators.required]);
-        reportActionControl?.enable({ emitEvent: false });
-      }
-
-      reportActionControl?.updateValueAndValidity({ emitEvent: false });
+      crbReportAction: [
+        '',
+        Validators.required
+      ]
     });
   }
-
-
 
   /**
    * Loads available credit bureaus.
@@ -150,6 +134,7 @@ export class CrbCreditReportComponent implements OnInit {
           this.creditReportForm.patchValue({
             crbReportType: this.creditReportTypes[0]?.id ?? null,
             crbReportFormat: this.creditReportFormatTypes[0]?.id ?? null,
+            crbReportAction: this.creditReportActionTypes[0]?.id ?? null
           });
         },
         error: () => {

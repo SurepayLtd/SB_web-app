@@ -1,12 +1,42 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormGroup, Validators, UntypedFormControl } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  inject,
+  ChangeDetectorRef
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, Validators, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { filter, switchMap } from 'rxjs/operators';
 import { ClientsService } from 'app/clients/clients.service';
 import { Dates } from 'app/core/utils/dates';
+import { LegalFormId } from 'app/clients/models/legal-form.enum';
+import { ExternalNationalIdService } from 'app/clients/services/external-national-id.service';
+import { COUNTRY_CALLING_CODES, composeMobileNumber } from 'app/clients/utils/country-calling-code.util';
+import { environment } from 'environments/environment';
 
 /** Custom Services */
 import { SettingsService } from 'app/settings/settings.service';
 import { SystemService } from '../../../system/system.service';
+import { MatDivider } from '@angular/material/divider';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Create Client Component
@@ -14,20 +44,45 @@ import { SystemService } from '../../../system/system.service';
 @Component({
   selector: 'mifosx-client-general-step',
   templateUrl: './client-general-step.component.html',
-  styleUrls: ['./client-general-step.component.scss']
+  styleUrls: ['./client-general-step.component.scss'],
+  providers: [ExternalNationalIdService],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatDivider,
+    CdkTextareaAutosize,
+    MatCheckbox,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientGeneralStepComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private dateUtils = inject(Dates);
+  private settingsService = inject(SettingsService);
+  private clientService = inject(ClientsService);
+  externalNationalIdService = inject(ExternalNationalIdService);
+  private destroyRef = inject(DestroyRef);
+  private configurationService = inject(SystemService);
+  private cdr = inject(ChangeDetectorRef);
+
   @Output() legalFormChangeEvent = new EventEmitter<{ legalForm: number }>();
+
+  /** Expose enum to template */
+  readonly LegalFormId = LegalFormId;
 
   /** Minimum date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum date allowed. */
   maxDate = new Date();
+  /** Maximum date allowed for fields that accept future dates. */
+  maxFutureDate = this.settingsService.maxFutureDate;
 
   /** Client Template */
   @Input() clientTemplate: any;
   /** Create Client Form */
-  createClientForm: UntypedFormGroup;
+  createClientForm: FormGroup;
 
   /** Office Options */
   officeOptions: any;
@@ -49,6 +104,8 @@ export class ClientGeneralStepComponent implements OnInit {
   savingProductOptions: any;
   /** CRB **/
   isCrbEnabled = false;
+  /** Country calling code options for the mobile number. */
+  countryCallingCodes = COUNTRY_CALLING_CODES;
 
   /**
    * @param {FormBuilder} formBuilder Form Builder
@@ -57,13 +114,7 @@ export class ClientGeneralStepComponent implements OnInit {
    * @param {ClientsService} clientService Client service
    * @param configurationService
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private dateUtils: Dates,
-    private settingsService: SettingsService,
-    private clientService: ClientsService,
-    private configurationService: SystemService
-  ) {
+  constructor() {
     this.setClientForm();
   }
 
@@ -72,6 +123,7 @@ export class ClientGeneralStepComponent implements OnInit {
     this.setOptions();
     this.buildDependencies();
     this.checkCrbConfiguration();
+    this.externalNationalIdService.watchExternalId(this.createClientForm, this.genderOptions);
   }
 
   /**
@@ -94,13 +146,14 @@ export class ClientGeneralStepComponent implements OnInit {
       accountNo: [''],
       externalId: [''],
       genderId: [''],
+      mobileNoCountryCode: [''],
       mobileNo: [
         '',
         Validators.required
       ],
       emailAddress: [
         '',
-        Validators.email
+        Validators.pattern(environment.externalEmailRegex)
       ],
       dateOfBirth: [
         '',
@@ -134,95 +187,116 @@ export class ClientGeneralStepComponent implements OnInit {
    * Adds controls conditionally.
    */
   buildDependencies() {
-    this.createClientForm.get('legalFormId').valueChanges.subscribe((legalFormId: number) => {
-      this.legalFormChangeEvent.emit({ legalForm: legalFormId });
-      if (legalFormId === 1) {
-        this.createClientForm.removeControl('fullname');
-        this.createClientForm.removeControl('clientNonPersonDetails');
-        this.createClientForm.addControl(
-          'firstname',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.pattern('(^[A-z]).*')])
-        );
-        this.createClientForm.addControl('middlename', new UntypedFormControl('', Validators.pattern('(^[A-z]).*')));
-        this.createClientForm.addControl(
-          'lastname',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.pattern('(^[A-z]).*')])
-        );
-        this.createClientForm.addControl(
-          'ninNumber',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.pattern(/^(CM|CF)[A-Za-z0-9]*$/)])
-        );
-        this.createClientForm.addControl(
-          'cardNumber',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.pattern(/^\d{1,9}$/)])
-        );
-      } else {
-        this.createClientForm.removeControl('firstname');
-        this.createClientForm.removeControl('middlename');
-        this.createClientForm.removeControl('lastname');
-        this.createClientForm.removeControl('cardNumber');
-        this.createClientForm.addControl(
-          'fullname',
-          new UntypedFormControl('', [
-            Validators.required,
-            Validators.pattern('(^[A-z]).*')])
-        );
-        this.createClientForm.addControl(
-          'clientNonPersonDetails',
-          this.formBuilder.group({
-            constitutionId: [
-              '',
-              Validators.required
-            ],
-            incorpValidityTillDate: [''],
-            incorpNumber: [''],
-            mainBusinessLineId: [''],
-            remarks: ['']
-          })
-        );
-      }
-    });
-    this.createClientForm.get('legalFormId').patchValue(1);
-    this.createClientForm.get('active').valueChanges.subscribe((active: boolean) => {
-      if (active) {
-        this.createClientForm.addControl('activationDate', new UntypedFormControl('', Validators.required));
-      } else {
-        this.createClientForm.removeControl('activationDate');
-      }
-    });
-    this.createClientForm.get('addSavings').valueChanges.subscribe((active: boolean) => {
-      if (active) {
-        this.createClientForm.addControl('savingsProductId', new UntypedFormControl('', Validators.required));
-      } else {
-        this.createClientForm.removeControl('savingsProductId');
-      }
-    });
-    this.createClientForm.get('officeId').valueChanges.subscribe((officeId: number) => {
-      this.clientService.getClientWithOfficeTemplate(officeId).subscribe((clientTemplate: any) => {
+    this.createClientForm
+      .get('legalFormId')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((legalFormId: number) => {
+        this.legalFormChangeEvent.emit({ legalForm: legalFormId });
+        if (legalFormId === LegalFormId.PERSON) {
+          this.createClientForm.removeControl('fullname');
+          this.createClientForm.removeControl('clientNonPersonDetails');
+          this.createClientForm.addControl(
+            'firstname',
+            new FormControl('', [
+              Validators.required,
+              Validators.pattern('(^[A-Za-z]).*')
+            ])
+          );
+          this.createClientForm.addControl('middlename', new FormControl('', Validators.pattern('(^[A-Za-z]).*')));
+          this.createClientForm.addControl(
+            'lastname',
+            new FormControl('', [
+              Validators.required,
+              Validators.pattern('(^[A-Za-z]).*')
+            ])
+          );
+          this.createClientForm.addControl(
+            'ninNumber',
+            new FormControl('', [
+              Validators.required,
+              Validators.pattern(/^(CM|CF)[A-Za-z0-9]*$/)
+            ])
+          );
+          this.createClientForm.addControl(
+            'cardNumber',
+            new FormControl('', [
+              Validators.required,
+              Validators.pattern(/^\d{1,9}$/)
+            ])
+          );
+        } else {
+          this.createClientForm.removeControl('firstname');
+          this.createClientForm.removeControl('middlename');
+          this.createClientForm.removeControl('lastname');
+          this.createClientForm.removeControl('cardNumber');
+          this.createClientForm.addControl(
+            'fullname',
+            new FormControl('', [
+              Validators.required,
+              Validators.pattern('(^[A-Za-z]).*')
+            ])
+          );
+          this.createClientForm.addControl(
+            'clientNonPersonDetails',
+            this.formBuilder.group({
+              constitutionId: [
+                '',
+                Validators.required
+              ],
+              incorpValidityTillDate: [''],
+              incorpNumber: [''],
+              mainBusinessLineId: [''],
+              remarks: ['']
+            })
+          );
+        }
+      });
+    this.createClientForm.get('legalFormId').patchValue(LegalFormId.PERSON);
+    this.createClientForm
+      .get('active')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((active: boolean) => {
+        if (active) {
+          this.createClientForm.addControl('activationDate', new FormControl('', Validators.required));
+        } else {
+          this.createClientForm.removeControl('activationDate');
+        }
+      });
+    this.createClientForm
+      .get('addSavings')
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((active: boolean) => {
+        if (active) {
+          this.createClientForm.addControl('savingsProductId', new FormControl('', Validators.required));
+        } else {
+          this.createClientForm.removeControl('savingsProductId');
+        }
+      });
+    this.createClientForm
+      .get('officeId')
+      .valueChanges.pipe(
+        filter((officeId: number) => !!officeId),
+        switchMap((officeId: number) => this.clientService.getClientWithOfficeTemplate(officeId)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((clientTemplate: any) => {
         this.staffOptions = clientTemplate.staffOptions;
       });
-    });
   }
 
   getDateLabel(legalFormId: number, values: string[]): string {
-    return legalFormId === 1 ? values[0] : values[1];
+    return legalFormId === LegalFormId.PERSON ? values[0] : values[1];
   }
 
   /**
    * Client General Details
    */
   get clientGeneralDetails() {
-    const generalDetails = this.createClientForm.value;
+    const generalDetails = this.createClientForm.getRawValue();
     const dateFormat = this.settingsService.dateFormat;
     const locale = this.settingsService.language.code;
+    generalDetails.mobileNo = composeMobileNumber(generalDetails.mobileNoCountryCode, generalDetails.mobileNo);
+    delete generalDetails.mobileNoCountryCode;
     for (const key in generalDetails) {
       if (generalDetails[key] === '' || key === 'addSavings') {
         delete generalDetails[key];
@@ -241,7 +315,10 @@ export class ClientGeneralStepComponent implements OnInit {
     if (generalDetails.clientNonPersonDetails && generalDetails.clientNonPersonDetails.incorpValidityTillDate) {
       generalDetails.clientNonPersonDetails = {
         ...generalDetails.clientNonPersonDetails,
-        incorpValidityTillDate: this.dateUtils.formatDate(generalDetails.dateOfBirth, dateFormat),
+        incorpValidityTillDate: this.dateUtils.formatDate(
+          generalDetails.clientNonPersonDetails.incorpValidityTillDate,
+          dateFormat
+        ),
         dateFormat,
         locale
       };
@@ -253,10 +330,12 @@ export class ClientGeneralStepComponent implements OnInit {
     this.configurationService.getConfigurationByName('enable-surepay-crb').subscribe({
       next: (configuration: any) => {
         this.isCrbEnabled = configuration.enabled === true || configuration.enabled === 'true';
+        this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to retrieve CRB configuration', error);
         this.isCrbEnabled = false;
+        this.cdr.markForCheck();
       }
     });
   }

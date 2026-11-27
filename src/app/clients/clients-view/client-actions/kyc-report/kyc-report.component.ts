@@ -1,29 +1,44 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, Validators } from '@angular/forms';
+import { Component, inject, OnInit } from '@angular/core';
+import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClientsService } from '../../../clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../../settings/settings.service';
-import { LoansService } from '../../../../loans/loans.service';
-import { SystemService } from '../../../../system/system.service';
 import { finalize } from 'rxjs/operators';
+import { SettingsService } from 'app/settings/settings.service';
+import { LoansService } from 'app/loans/loans.service';
+import { SystemService } from 'app/system/system.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'mifosx-kyc-report',
   templateUrl: './kyc-report.component.html',
-  styleUrls: ['./kyc-report.component.scss']
+  styleUrls: ['./kyc-report.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule
+  ]
 })
 export class KycReportComponent implements OnInit {
 
-  @Output() reportFormatChangeEvent = new EventEmitter<{ reportFormat: number }>();
+  private formBuilder = inject(UntypedFormBuilder);
+  private clientsService = inject(ClientsService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private settingsService = inject(SettingsService);
+  private systemService = inject(SystemService);
+  private loansService = inject(LoansService);
+  private snackBar = inject(MatSnackBar);
 
   clientId: any;
 
   creditBureaus: any[] = [];
   creditReportTypes: any[] = [];
   creditReportFormatTypes: any[] = [];
-  creditReportActionTypes: any[] = [];
-
 
   isLoadingBureau = false;
   isLoadingTemplate = false;
@@ -35,16 +50,7 @@ export class KycReportComponent implements OnInit {
   /** Client Data */
   kycData: any;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService,
-    private formBuilder: UntypedFormBuilder,
-    private loansService: LoansService,
-    private systemService: SystemService
-  ) {
+  constructor() {
     {
       this.route.data.subscribe((data: { clientActionData: any }) => {
         this.kycData = data.clientActionData.narrations;
@@ -56,7 +62,6 @@ export class KycReportComponent implements OnInit {
 
   ngOnInit(): void {
     this.createReportForm();
-    this.buildDependencies();
     this.loadCreditBureau();
     this.loadTemplate();
   }
@@ -82,30 +87,6 @@ export class KycReportComponent implements OnInit {
         '',
         Validators.required
       ],
-      crbReportAction: ['']
-    });
-  }
-
-  /**
-   * Adds controls conditionally.
-   */
-  buildDependencies(): void {
-    const reportFormatControl = this.kycReportForm.get('crbReportFormat');
-    const reportActionControl = this.kycReportForm.get('crbReportAction');
-
-    reportFormatControl?.valueChanges.subscribe((reportFormat: number) => {
-      this.reportFormatChangeEvent.emit({ reportFormat });
-
-      if (reportFormat === 1) {
-        reportActionControl?.clearValidators();
-        reportActionControl?.reset(null, { emitEvent: false });
-        reportActionControl?.disable({ emitEvent: false });
-      } else {
-        reportActionControl?.setValidators([Validators.required]);
-        reportActionControl?.enable({ emitEvent: false });
-      }
-
-      reportActionControl?.updateValueAndValidity({ emitEvent: false });
     });
   }
 
@@ -154,8 +135,7 @@ export class KycReportComponent implements OnInit {
           // Only KYC Report (600), excluding Credit Report (500).
           this.creditReportTypes = (template?.creditReportTypes || []).filter((type: any) => type.id === 600);
 
-          this.creditReportFormatTypes = template?.creditReportFormatTypes || [];
-          this.creditReportActionTypes = template?.creditReportActionTypes || [];
+          this.creditReportFormatTypes = (template?.creditReportFormatTypes || []).filter((type: any) => type.id === 1);
 
           this.kycReportForm.patchValue({
             crbReportType: this.creditReportTypes[0]?.id ?? null,

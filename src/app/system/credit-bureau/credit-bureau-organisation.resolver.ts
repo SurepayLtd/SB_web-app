@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   Router, Resolve,
   RouterStateSnapshot,
@@ -6,18 +6,16 @@ import {
 } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { SystemService } from '../system.service';
-import { switchMap } from 'rxjs/internal/operators';
-import { map } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CreditBureauOrganisationResolver implements Resolve<boolean> {
+  private systemService = inject(SystemService);
 
-  /**
-   * @param {SystemService} systemService System service for credit bureau API requests.
-   */
-  constructor(private systemService: SystemService) {}
+
+  constructor() {}
 
   /**
    * Retrieves the organisation configuration and then its loan product mappings.
@@ -45,11 +43,10 @@ export class CreditBureauOrganisationResolver implements Resolve<boolean> {
           return throwError(() => new Error('Organisation Credit Bureau ID was not returned.'));
         }
 
-        return this.systemService.getCreditBureauLoanProductMapping(organisationCreditBureauId)
-          .pipe(map((mappings: any[]) => ({ organisation, mappings: mappings || [], organisationCreditBureauId }))
-          );
+        return this.systemService
+          .getCreditBureauLoanProductMapping(organisationCreditBureauId)
+          .pipe(map((mappings: any[]) => ({ organisation, mappings: mappings || [], organisationCreditBureauId })));
       })
     );
   }
-
 }

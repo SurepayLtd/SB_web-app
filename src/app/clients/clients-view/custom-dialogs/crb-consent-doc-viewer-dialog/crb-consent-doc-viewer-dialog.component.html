@@ -1,10 +1,21 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
 <div class="doc-viewer">
 
   <!-- Header -->
   <div class="doc-viewer__header">
     <div class="doc-viewer__titles">
       <h3>{{ data.title }}</h3>
-      <small *ngIf="data.subtitle">{{ data.subtitle }}</small>
+
+      @if (data.subtitle) {
+        <small>{{ data.subtitle }}</small>
+      }
     </div>
 
     <div class="doc-viewer__actions">
@@ -18,7 +29,11 @@
         Print
       </button>
 
-      <button mat-icon-button type="button" (click)="close()" matTooltip="Close">
+      <button
+        mat-icon-button
+        type="button"
+        (click)="close()"
+        matTooltip="Close">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -36,7 +51,8 @@
 
   <!-- Footer -->
   <div class="doc-viewer__footer">
-    <mat-icon inline>info</mat-icon>
+    <mat-icon inline="">info</mat-icon>
     If the document does not display, use the <strong>Download</strong> button to open it in your PDF viewer.
   </div>
+
 </div>

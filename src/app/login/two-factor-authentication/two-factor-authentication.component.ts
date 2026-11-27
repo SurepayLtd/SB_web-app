@@ -1,12 +1,26 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
 /** rxjs Imports */
 import { finalize } from 'rxjs/operators';
 
 /** Custom Services */
 import { AuthenticationService } from '../../core/authentication/authentication.service';
+import { MatDivider } from '@angular/material/divider';
+import { MatRadioGroup, MatRadioButton } from '@angular/material/radio';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatFormField, MatPrefix, MatLabel, MatHint, MatError } from '@angular/material/form-field';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 
 /**
  * Two factor authentication component.
@@ -14,9 +28,24 @@ import { AuthenticationService } from '../../core/authentication/authentication.
 @Component({
   selector: 'mifosx-two-factor-authentication',
   templateUrl: './two-factor-authentication.component.html',
-  styleUrls: ['./two-factor-authentication.component.scss']
+  styleUrls: ['./two-factor-authentication.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatDivider,
+    MatRadioGroup,
+    MatRadioButton,
+    MatProgressSpinner,
+    MatPrefix,
+    FaIconComponent,
+    MatHint
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TwoFactorAuthenticationComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private authenticationService = inject(AuthenticationService);
+  private changeDetectorRef = inject(ChangeDetectorRef);
+
   /** Available delivery methods to receive OTP. */
   twoFactorAuthenticationDeliveryMethods: any;
   /** Delivery method selected to receive OTP. */
@@ -26,22 +55,13 @@ export class TwoFactorAuthenticationComponent implements OnInit {
   /** Time for which OTP is valid. */
   tokenValidityTime: number;
   /** Two factor authentication delivery method form group. */
-  twoFactorAuthenticationDeliveryMethodForm: UntypedFormGroup;
+  twoFactorAuthenticationDeliveryMethodForm: FormGroup;
   /** Two factor authentication form group. */
-  twoFactorAuthenticationForm: UntypedFormGroup;
+  twoFactorAuthenticationForm: FormGroup;
   /** True if loading. */
   loading = false;
   /** True if loading. */
   resendOTPLoading = false;
-
-  /**
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {AuthenticationService} authenticationService Authentication Service.
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private authenticationService: AuthenticationService
-  ) {}
 
   /**
    * Creates two factor authentication delivery method form.
@@ -52,6 +72,8 @@ export class TwoFactorAuthenticationComponent implements OnInit {
     this.createTwoFactorAuthenticationDeliveryMethodForm();
     this.authenticationService.getDeliveryMethods().subscribe((deliveryMethods: any) => {
       this.twoFactorAuthenticationDeliveryMethods = deliveryMethods;
+      // OnPush: the delivery methods arrive asynchronously, so notify the view to render the options.
+      this.changeDetectorRef.markForCheck();
     });
   }
 
@@ -73,12 +95,15 @@ export class TwoFactorAuthenticationComponent implements OnInit {
           // Angular Material Bug: Validation errors won't get removed on reset.
           this.twoFactorAuthenticationDeliveryMethodForm.enable();
           this.loading = false;
+          this.changeDetectorRef.markForCheck();
         })
       )
       .subscribe((response: any) => {
         this.createTwoFactorAuthenticationForm();
         this.otpRequested = true;
         this.tokenValidityTime = response.tokenLiveTimeInSec;
+        // OnPush: reveal the OTP entry field once the OTP has been requested.
+        this.changeDetectorRef.markForCheck();
       });
   }
 
@@ -97,6 +122,7 @@ export class TwoFactorAuthenticationComponent implements OnInit {
           // Angular Material Bug: Validation errors won't get removed on reset.
           this.twoFactorAuthenticationForm.enable();
           this.loading = false;
+          this.changeDetectorRef.markForCheck();
         })
       )
       .subscribe();
@@ -117,6 +143,7 @@ export class TwoFactorAuthenticationComponent implements OnInit {
           // Angular Material Bug: Validation errors won't get removed on reset.
           this.twoFactorAuthenticationForm.enable();
           this.resendOTPLoading = false;
+          this.changeDetectorRef.markForCheck();
         })
       )
       .subscribe();

@@ -1,6 +1,15 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
@@ -18,6 +27,12 @@ import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
 import { DatepickerBase } from 'app/shared/form-dialog/formfield/model/datepicker-base';
 import { Dates } from 'app/core/utils/dates';
 import { TranslateService } from '@ngx-translate/core';
+import { NgClass } from '@angular/common';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { FormatNumberPipe } from '../../../pipes/format-number.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountTabBaseComponent } from '../loan-account-tab-base.component';
 
 /**
  * View Charge Component.
@@ -25,9 +40,25 @@ import { TranslateService } from '@ngx-translate/core';
 @Component({
   selector: 'mifosx-view-charge',
   templateUrl: './view-charge.component.html',
-  styleUrls: ['./view-charge.component.scss']
+  styleUrls: ['./view-charge.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    FaIconComponent,
+    NgClass,
+    DateFormatPipe,
+    FormatNumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ViewChargeComponent {
+export class ViewChargeComponent extends LoanAccountTabBaseComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private loansService = inject(LoansService);
+  private route = inject(ActivatedRoute);
+  private dateUtils = inject(Dates);
+  private translateService = inject(TranslateService);
+  dialog = inject(MatDialog);
+  private settingsService = inject(SettingsService);
+
   /** Charge data. */
   chargeData: any;
   /** Loans Account Data */
@@ -44,21 +75,17 @@ export class ViewChargeComponent {
    * @param {Dates} dateUtils Date Utils.
    * @param {SettingsService} settingsService Settings Service
    */
-  constructor(
-    private loansService: LoansService,
-    private route: ActivatedRoute,
-    private dateUtils: Dates,
-    private router: Router,
-    private translateService: TranslateService,
-    public dialog: MatDialog,
-    private settingsService: SettingsService
-  ) {
-    this.route.data.subscribe((data: { loansAccountCharge: any; loanDetailsData: any }) => {
-      this.chargeData = data.loansAccountCharge;
-      this.allowPayCharge = this.chargeData.chargePayable && !this.chargeData.paid;
-      this.allowWaive = !this.chargeData.chargeTimeType.waived;
-      this.loansAccountData = data.loanDetailsData;
-    });
+  constructor() {
+    super();
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: { loansAccountCharge: any; loanDetailsData: any }) => {
+        this.chargeData = data.loansAccountCharge;
+        this.allowPayCharge = this.chargeData.chargePayable && !this.chargeData.paid;
+        // Working Capital loans do not support the waive charge command.
+        this.allowWaive = !this.chargeData.chargeTimeType.waived && !this.loanProductService.isWorkingCapital;
+        this.loansAccountData = data.loanDetailsData;
+      });
   }
 
   /**
@@ -73,7 +100,6 @@ export class ViewChargeComponent {
         type: 'date',
         required: true
       })
-
     ];
     const data = {
       title: `Pay Charge ${this.chargeData.id}`,
@@ -82,7 +108,7 @@ export class ViewChargeComponent {
     };
     const payChargeDialogRef = this.dialog.open(FormDialogComponent, { data });
     payChargeDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const locale = this.settingsService.language.code;
         const dateFormat = this.settingsService.dateFormat;
         const prevTransactionDate: Date = response.data.value.transactionDate;
@@ -92,7 +118,13 @@ export class ViewChargeComponent {
           locale
         };
         this.loansService
-          .executeLoansAccountChargesCommand(this.chargeData.loanId, 'pay', dataObject, this.chargeData.id)
+          .executeLoansAccountChargesCommand(
+            this.loanProductService.loanAccountPath,
+            this.chargeData.loanId,
+            'pay',
+            dataObject,
+            this.chargeData.id
+          )
           .subscribe(() => {
             this.reload();
           });
@@ -114,9 +146,15 @@ export class ViewChargeComponent {
       }
     });
     waiveChargeDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.confirm) {
+      if (response?.confirm) {
         this.loansService
-          .executeLoansAccountChargesCommand(this.chargeData.loanId, 'waive', {}, this.chargeData.id)
+          .executeLoansAccountChargesCommand(
+            this.loanProductService.loanAccountPath,
+            this.chargeData.loanId,
+            'waive',
+            {},
+            this.chargeData.id
+          )
           .subscribe(() => {
             this.reload();
           });
@@ -139,12 +177,11 @@ export class ViewChargeComponent {
       new DatepickerBase({
         controlName: 'dueDate',
         label: 'Due Date',
-        value: new Date(this.chargeData.dueDate),
+        value: this.dateUtils.parseDate(this.chargeData.dueDate),
         type: 'date',
         maxDate: this.settingsService.maxAllowedDate,
         required: true
       })
-
     ];
     const data = {
       title: 'Edit Charge',
@@ -153,7 +190,7 @@ export class ViewChargeComponent {
     };
     const editChargeDialogRef = this.dialog.open(FormDialogComponent, { data });
     editChargeDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.data) {
+      if (response?.data) {
         const locale = this.settingsService.language.code;
         const dateFormat = this.settingsService.dateFormat;
         const dueDate = this.dateUtils.formatDate(response.data.value.dueDate, dateFormat);
@@ -165,7 +202,12 @@ export class ViewChargeComponent {
           locale
         };
         this.loansService
-          .editLoansAccountCharge(this.loansAccountData.id, dataObject, this.chargeData.id)
+          .editLoansAccountCharge(
+            this.loanProductService.loanAccountPath,
+            this.loansAccountData.id,
+            dataObject,
+            this.chargeData.id
+          )
           .subscribe(() => {
             this.reload();
           });
@@ -181,10 +223,16 @@ export class ViewChargeComponent {
       data: { deleteContext: `charge id:${this.chargeData.id}` }
     });
     deleteChargeDialogRef.afterClosed().subscribe((response: any) => {
-      if (response.delete) {
-        this.loansService.deleteLoansAccountCharge(this.loansAccountData.id, this.chargeData.id).subscribe(() => {
-          this.reload();
-        });
+      if (response?.delete) {
+        this.loansService
+          .deleteLoansAccountCharge(
+            this.loanProductService.loanAccountPath,
+            this.loansAccountData.id,
+            this.chargeData.id
+          )
+          .subscribe(() => {
+            this.reload();
+          });
       }
     });
   }
@@ -194,18 +242,11 @@ export class ViewChargeComponent {
   }
 
   adjustmentCharge(): void {
-    this.router.navigate(['adjustment'], { relativeTo: this.route });
-  }
-
-  /**
-   * Refetches data fot the component
-   * TODO: Replace by a custom reload component instead of hard-coded back-routing.
-   */
-  private reload() {
-    const clientId = this.loansAccountData.clientId;
-    const url: string = this.router.url;
-    this.router
-      .navigateByUrl(`/clients/${clientId}/loans-accounts`, { skipLocationChange: true })
-      .then(() => this.router.navigate([url]));
+    this.router.navigate(['adjustment'], {
+      queryParams: {
+        productType: this.loanProductService.productType.value
+      },
+      relativeTo: this.route
+    });
   }
 }

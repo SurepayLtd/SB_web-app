@@ -1,18 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ClientsService } from '../../../../clients/clients.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../../settings/settings.service';
 import { LoansService } from '../../../loans.service';
 import { finalize } from 'rxjs/operators';
+import { ClientsService } from 'app/clients/clients.service';
+import { SettingsService } from 'app/settings/settings.service';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'mifosx-credit-score',
   templateUrl: './credit-score.component.html',
-  styleUrls: ['./credit-score.component.scss']
+  styleUrls: ['./credit-score.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+  ]
 })
 export class CreditScoreComponent implements OnInit {
+
+  private route = inject(ActivatedRoute);
+  private router =  inject(Router);
+  private clientsService = inject(ClientsService);
+  private snackBar = inject(MatSnackBar);
+  private settingsService= inject(SettingsService);
+  private formBuilder = inject(UntypedFormBuilder);
+  private loansService = inject(LoansService);
+
   loanId: any;
 
   creditValidationTypes: any[] = [];
@@ -24,15 +39,7 @@ export class CreditScoreComponent implements OnInit {
   /** Credit Score form. */
   creditScoreForm: UntypedFormGroup;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private clientsService: ClientsService,
-    private snackBar: MatSnackBar,
-    private settingsService: SettingsService,
-    private formBuilder: UntypedFormBuilder,
-    private loansService: LoansService
-  ) {
+  constructor() {
     this.loanId = this.route.parent?.snapshot.paramMap.get('loanId') ?? this.route.snapshot.paramMap.get('loanId');
   }
 

@@ -1,26 +1,46 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, Validators } from '@angular/forms';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import { ChangeDetectionStrategy, Component, Input, OnInit, inject } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Datatables } from 'app/core/utils/datatables';
 import { SettingsService } from 'app/settings/settings.service';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 
 @Component({
   selector: 'mifosx-client-datatable-step',
   templateUrl: './client-datatable-step.component.html',
-  styleUrls: ['./client-datatable-step.component.scss']
+  styleUrls: ['./client-datatable-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatCheckbox,
+    MatStepperPrevious,
+    FaIconComponent,
+    MatStepperNext,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ClientDatatableStepComponent implements OnInit {
+  private formBuilder = inject(FormBuilder);
+  private settingsService = inject(SettingsService);
+  private datatableService = inject(Datatables);
+
   /** Input Fields Data */
   @Input() datatableData: any;
   /** Create Input Form */
-  datatableForm: UntypedFormGroup;
+  datatableForm: FormGroup;
 
   datatableInputs: any = [];
-
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private settingsService: SettingsService,
-    private datatableService: Datatables
-  ) {}
 
   ngOnInit(): void {
     this.datatableInputs = this.datatableService.filterSystemColumns(this.datatableData.columnHeaderData);
@@ -29,12 +49,19 @@ export class ClientDatatableStepComponent implements OnInit {
       input.controlName = this.getInputName(input);
       if (!input.isColumnNullable) {
         if (this.isNumeric(input.columnDisplayType)) {
-          inputItems[input.controlName] = new UntypedFormControl(0, [Validators.required]);
+          inputItems[input.controlName] = new FormControl(0, [Validators.required]);
+        } else if (this.isJson(input)) {
+          inputItems[input.controlName] = new FormControl('', [
+            Validators.required,
+            this.datatableService.jsonValidator
+          ]);
         } else {
-          inputItems[input.controlName] = new UntypedFormControl('', [Validators.required]);
+          inputItems[input.controlName] = new FormControl('', [Validators.required]);
         }
+      } else if (this.isJson(input)) {
+        inputItems[input.controlName] = new FormControl('', [this.datatableService.jsonValidator]);
       } else {
-        inputItems[input.controlName] = new UntypedFormControl('');
+        inputItems[input.controlName] = new FormControl('');
       }
     });
     this.datatableForm = this.formBuilder.group(inputItems);
@@ -42,6 +69,10 @@ export class ClientDatatableStepComponent implements OnInit {
 
   getInputName(datatableInput: any): string {
     return this.datatableService.getInputName(datatableInput);
+  }
+
+  getDisplayLabel(datatableInput: any): string {
+    return this.datatableService.getDisplayLabel(datatableInput.columnName);
   }
 
   isNumeric(columnType: string) {
@@ -66,6 +97,10 @@ export class ClientDatatableStepComponent implements OnInit {
 
   isText(columnType: string) {
     return this.datatableService.isText(columnType);
+  }
+
+  isJson(datatableInput: any) {
+    return this.datatableService.isJson(datatableInput.columnDisplayType, datatableInput.columnType);
   }
 
   get payload(): any {

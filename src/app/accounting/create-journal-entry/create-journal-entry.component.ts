@@ -1,9 +1,27 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, TemplateRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormArray } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  TemplateRef,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject,
+  ChangeDetectorRef
+} from '@angular/core';
+import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormArray, UntypedFormControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 
 /** Custom Services */
 import { AccountingService } from '../accounting.service';
@@ -14,15 +32,56 @@ import { ConfigurationWizardService } from '../../configuration-wizard/configura
 
 /** Custom Dialog Component */
 import { NextStepDialogComponent } from '../../configuration-wizard/next-step-dialog/next-step-dialog.component';
+import { GlAccountSelectorComponent } from '../../shared/accounting/gl-account-selector/gl-account-selector.component';
+import { MatIconButton, MatButton } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 /**
  * Create Journal Entry component.
  */
 @Component({
   selector: 'mifosx-create-journal-entry',
   templateUrl: './create-journal-entry.component.html',
-  styleUrls: ['./create-journal-entry.component.scss']
+  styleUrls: ['./create-journal-entry.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    GlAccountSelectorComponent,
+    MatIconButton,
+    FaIconComponent,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private accountingService = inject(AccountingService);
+  private settingsService = inject(SettingsService);
+  private dateUtils = inject(Dates);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private dialog = inject(MatDialog);
+  private configurationWizardService = inject(ConfigurationWizardService);
+  private popoverService = inject(PopoverService);
+  private cdr = inject(ChangeDetectorRef);
+  private snackBar = inject(MatSnackBar);
+
+  isSubmitting = false;
+  submitIdempotencyKey?: string;
+
+  onAmountInput(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+
+    const raw = target.value.trim();
+    if (raw === '') return;
+
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 1) {
+      target.value = '1';
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
   /** Minimum transaction date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum transaction date allowed. */
@@ -37,8 +96,9 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
   paymentTypeData: any;
   /** Gl Account data. */
   glAccountData: any;
-
-  isSubmitting = false;
+  /** Asset Externalization */
+  assetExternalizationConfig: any;
+  assetExternalizationEnabled = false;
 
   /* Reference of create journal form */
   @ViewChild('createJournalFormRef') createJournalFormRef: ElementRef<any>;
@@ -55,24 +115,17 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    * @param {ConfigurationWizardService} configurationWizardService ConfigurationWizard Service.
    * @param {PopoverService} popoverService PopoverService.
    */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private accountingService: AccountingService,
-    private settingsService: SettingsService,
-    private dateUtils: Dates,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar,
-    private configurationWizardService: ConfigurationWizardService,
-    private popoverService: PopoverService
-  ) {
-    this.route.data.subscribe((data: { offices: any; currencies: any; paymentTypes: any; glAccounts: any }) => {
-      this.officeData = data.offices;
-      this.currencyData = data.currencies.selectedCurrencyOptions;
-      this.paymentTypeData = data.paymentTypes;
-      this.glAccountData = data.glAccounts;
-    });
+  constructor() {
+    this.assetExternalizationEnabled = false;
+    this.route.data.subscribe(
+      (data: { offices: any; currencies: any; paymentTypes: any; glAccounts: any; globalConfig: any }) => {
+        this.officeData = data.offices;
+        this.currencyData = data.currencies.selectedCurrencyOptions;
+        this.paymentTypeData = data.paymentTypes;
+        this.glAccountData = data.glAccounts;
+        this.assetExternalizationConfig = data.globalConfig;
+      }
+    );
   }
 
   /**
@@ -119,9 +172,18 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    */
   createAffectedGLEntryForm(): UntypedFormGroup {
     const group = this.formBuilder.group({
-      glAccountId: ['', Validators.required],
+      glAccountId: [
+        '',
+        Validators.required
+      ],
       glAccountName: [''],
-      amount: ['', Validators.required]
+      amount: [
+        '',
+        [
+          Validators.required,
+          Validators.min(1)
+        ]
+      ]
     });
 
     // Pick GL Name
@@ -129,10 +191,7 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
       const account = this.glAccountData?.find((a: any) => a.id === id);
 
       if (account) {
-        group.patchValue(
-          { glAccountName: `(${account.glCode || ''})-${account.name || ''}` },
-          { emitEvent: false }
-        );
+        group.patchValue({ glAccountName: `(${account.glCode || ''})-${account.name || ''}` }, { emitEvent: false });
       }
     });
 
@@ -177,8 +236,16 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    * if successful redirects to view created transaction.
    */
   submit() {
-    if (this.isSubmitting) return;
+    if (this.journalEntryForm.invalid || this.isSubmitting) {
+      return;
+    }
+
+    if (!this.submitIdempotencyKey) {
+      this.submitIdempotencyKey = crypto.randomUUID();
+    }
+
     this.isSubmitting = true;
+    this.cdr.markForCheck();
 
     const journalEntry = this.journalEntryForm.value;
     // TODO: Update once language and date settings are setup
@@ -190,24 +257,45 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
         this.settingsService.dateFormat
       );
     }
-    this.accountingService.createJournalEntry(journalEntry).subscribe((response) => {
-      this.isSubmitting = false;
-
-      if (!response.transactionId) {
-        this.snackBar.open('Journal entry submitted for approval', 'Close', {
-          duration: 3000
-        });
-
-        this.router.navigate(['/accounting/journal-entries']);
-        return;
+    if (!journalEntry['externalAssetOwner']) {
+      delete journalEntry['externalAssetOwner'];
+    }
+    this.accountingService.createJournalEntry(journalEntry, this.submitIdempotencyKey).subscribe({
+      next: (response) => {
+        this.submitIdempotencyKey = undefined;
+        if (!response.transactionId) {
+          // Maker-checker: the entry is queued for approval, so there is no transaction to open yet.
+          this.snackBar.open('Journal entry submitted for approval', 'Close', {
+            duration: 3000
+          });
+          this.router.navigate(['/accounting/journal-entries']);
+          return;
+        }
+        this.router
+          .navigate(
+            [
+              '../transactions/view',
+              response.transactionId
+            ],
+            { relativeTo: this.route }
+          )
+          .then((navigated) => {
+            if (!navigated) {
+              this.isSubmitting = false;
+              this.cdr.markForCheck();
+            }
+          })
+          .catch(() => {
+            this.isSubmitting = false;
+            this.cdr.markForCheck();
+          });
+      },
+      error: () => {
+        // Fineract replays the stored response for a reused key, so a corrected entry needs a new key.
+        this.submitIdempotencyKey = undefined;
+        this.isSubmitting = false;
+        this.cdr.markForCheck();
       }
-      this.router.navigate(
-        [
-          '../transactions/view',
-          response.transactionId
-        ],
-        { relativeTo: this.route }
-      );
     });
   }
 
@@ -231,10 +319,14 @@ export class CreateJournalEntryComponent implements OnInit, AfterViewInit {
    * To show popover.
    */
   ngAfterViewInit() {
-    if (this.configurationWizardService.showCreateJournalEntries === true) {
+    if (this.configurationWizardService.showCreateJournalEntries) {
       setTimeout(() => {
         this.showPopover(this.templateCreateJournalFormRef, this.createJournalFormRef.nativeElement, 'top', true);
       });
+    }
+    this.assetExternalizationEnabled = this.assetExternalizationConfig.enabled;
+    if (this.assetExternalizationEnabled) {
+      this.journalEntryForm.addControl('externalAssetOwner', new UntypedFormControl());
     }
   }
 

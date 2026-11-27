@@ -1,5 +1,13 @@
-<div class="container m-b-20" fxLayout="row" fxLayout.lt-md="column" fxLayoutAlign="end" fxLayoutGap="2%">
-  <ng-container *ngIf="userData.accountNonLocked; else lockedUserActions">
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
+<div class="container m-b-20 layout-row layout-lt-md-column align-end gap-2percent">
+  @if (userData.accountNonLocked) {
     <button mat-raised-button color="primary" [routerLink]="['edit']">
       <fa-icon icon="edit" class="m-r-10"></fa-icon>
       {{ 'labels.buttons.Edit' | translate }}
@@ -12,83 +20,73 @@
       <fa-icon icon="cog" class="m-r-10"></fa-icon>
       {{ 'labels.buttons.Change Password' | translate }}
     </button>
-  </ng-container>
-
-  <ng-template #lockedUserActions>
-
+  } @else {
     <button mat-raised-button color="primary" (click)="unblock()">
       <fa-icon icon="unlock" class="m-r-10"></fa-icon>
       {{ 'labels.buttons.Unblock User' | translate }}
     </button>
-
-  </ng-template>
-
+  }
 </div>
 
 <div class="container">
   <mat-card>
     <mat-card-content>
-      <div fxLayout="row wrap" class="content">
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.Login Name' | translate }}
+      <div class="content-rows">
+        <div class="content-row">
+          <div class="label">{{ 'labels.inputs.Login Name' | translate }}</div>
+          <div class="value">{{ userData.username }}</div>
         </div>
 
-        <div fxFlex="50%">
-          {{ userData.username }}
+        <div class="content-row">
+          <div class="label">{{ 'labels.inputs.First Name' | translate }}</div>
+          <div class="value">{{ userData.firstname }}</div>
         </div>
 
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.First Name' | translate }}
+        <div class="content-row">
+          <div class="label">{{ 'labels.inputs.Last Name' | translate }}</div>
+          <div class="value">{{ userData.lastname }}</div>
         </div>
 
-        <div fxFlex="50%">
-          {{ userData.firstname }}
+        @if (userData.email) {
+          <div class="content-row">
+            <div class="label">{{ 'labels.inputs.Email' | translate }}</div>
+            <div class="value">{{ userData.email }}</div>
+          </div>
+        }
+
+        <div class="content-row">
+          <div class="label">{{ 'labels.inputs.Roles' | translate }}</div>
+          <div class="value">
+            @for (role of userData.selectedRoles; track role) {
+              <span>
+                {{ role.name }}
+              </span>
+            }
+          </div>
         </div>
 
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.Last Name' | translate }}
+        <div class="content-row">
+          <div class="label">{{ 'labels.buttons.Is Self Service' | translate }}</div>
+          <div class="value">
+            <span class="self-service-container">
+              <span
+                [ngClass]="userData.isSelfServiceUser ? 'self-service-true' : 'self-service-false'"
+                class="self-service-indicator"
+              ></span>
+              {{ userData.isSelfServiceUser ? ('labels.buttons.Yes' | translate) : ('labels.buttons.No' | translate) }}
+            </span>
+          </div>
         </div>
 
-        <div fxFlex="50%">
-          {{ userData.lastname }}
-        </div>
-
-        <div fxFlex="50%" class="mat-body-strong" *ngIf="userData.email">
-          {{ 'labels.inputs.Email' | translate }}
-        </div>
-
-        <div fxFlex="50%" *ngIf="userData.email">
-          {{ userData.email }}
-        </div>
-
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.Office' | translate }}
-        </div>
-
-        <div fxFlex="50%">
-          {{ userData.officeName }}
-        </div>
-
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.Roles' | translate }}
-        </div>
-
-        <div fxFlex="50%">
-          <span *ngFor="let role of userData.selectedRoles">
-            {{ role.name }}
-          </span>
-        </div>
-
-        <div fxFlex="50%" class="mat-body-strong">
-          {{ 'labels.inputs.Bypass Two Factor' | translate }}
-        </div>
-
-        <div fxFlex="50%">
-          {{ userData.bypassTwoFactor ? ('Yes' | translate) : ('No' | translate) }}
+        <div class="content-row">
+          <div class="label">{{ 'labels.inputs.Bypass Two Factor' | translate }}</div>
+          <div class="value">
+            {{ userData.bypassTwoFactor ? ('labels.buttons.Yes' | translate) : ('labels.buttons.No' | translate) }}
+          </div>
         </div>
       </div>
 
-      <div fxLayout="row" fxLayoutAlign="center" fxLayoutGap="2%" fxLayout.lt-md="column">
+      <div class="layout-row layout-align-center gap-2percent column-on-mobile back-button-container">
         <button type="button" mat-raised-button color="primary" [routerLink]="['../']">
           {{ 'labels.buttons.Back' | translate }}
         </button>

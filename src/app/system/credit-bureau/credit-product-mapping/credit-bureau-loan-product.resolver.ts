@@ -1,7 +1,6 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
-  Router, Resolve,
-  RouterStateSnapshot,
+  Resolve,
   ActivatedRouteSnapshot
 } from '@angular/router';
 import { Observable, of } from 'rxjs';
@@ -11,11 +10,10 @@ import { SystemService } from '../../system.service';
   providedIn: 'root'
 })
 export class CreditBureauLoanProductResolver implements Resolve<boolean> {
+  private systemService = inject(SystemService);
 
-  /**
-   * @param {SystemService} systemService System Service.
-   */
-  constructor(private systemService: SystemService) {}
+
+  constructor() {}
 
   /**
    * Retrieves a mapping using its loan product ID.

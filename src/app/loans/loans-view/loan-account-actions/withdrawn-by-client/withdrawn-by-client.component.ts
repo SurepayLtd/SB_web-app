@@ -1,12 +1,20 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit, Input } from '@angular/core';
-import { UntypedFormGroup, UntypedFormBuilder, Validators, FormControl } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
 
 /** Custom Services */
-import { LoansService } from 'app/loans/loans.service';
-import { SettingsService } from 'app/settings/settings.service';
 import { Dates } from 'app/core/utils/dates';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanAccountActionsBaseComponent } from '../loan-account-actions-base.component';
 
 /**
  * Withdrawn By Applicant Loan Form
@@ -14,12 +22,17 @@ import { Dates } from 'app/core/utils/dates';
 @Component({
   selector: 'mifosx-withdrawn-by-client',
   templateUrl: './withdrawn-by-client.component.html',
-  styleUrls: ['./withdrawn-by-client.component.scss']
+  styleUrls: ['./withdrawn-by-client.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    CdkTextareaAutosize
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WithdrawnByClientComponent implements OnInit {
-  @Input() dataObject: any;
-  /** Loan Id */
-  loanId: string;
+export class WithdrawnByClientComponent extends LoanAccountActionsBaseComponent implements OnInit {
+  private formBuilder = inject(UntypedFormBuilder);
+  private dateUtils = inject(Dates);
+
   /** Minimum Date allowed. */
   minDate = new Date(2000, 0, 1);
   /** Maximum Date allowed. */
@@ -27,22 +40,8 @@ export class WithdrawnByClientComponent implements OnInit {
   /** Withdrawn By Applicant Loan Form */
   withdrawnByClientLoanForm: UntypedFormGroup;
 
-  /**
-   * @param {FormBuilder} formBuilder Form Builder.
-   * @param {LoansService} loanService Loan Service.
-   * @param {ActivatedRoute} route Activated Route.
-   * @param {Router} router Router for navigation.
-   * @param {SettingsService} settingsService Settings Service
-   */
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private loanService: LoansService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private dateUtils: Dates,
-    private settingsService: SettingsService
-  ) {
-    this.loanId = this.route.snapshot.params['loanId'];
+  constructor() {
+    super();
   }
 
   /**
@@ -82,7 +81,7 @@ export class WithdrawnByClientComponent implements OnInit {
       locale
     };
     this.loanService.loanActionButtons(this.loanId, 'withdrawnByApplicant', data).subscribe((response: any) => {
-      this.router.navigate(['../../general'], { relativeTo: this.route });
+      this.gotoLoanDefaultView();
     });
   }
 }

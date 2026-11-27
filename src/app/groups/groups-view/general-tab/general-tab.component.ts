@@ -1,6 +1,33 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgClass } from '@angular/common';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { MatTooltip } from '@angular/material/tooltip';
+import { StatusLookupPipe } from '../../../pipes/status-lookup.pipe';
+import { AccountsFilterPipe } from '../../../pipes/accounts-filter.pipe';
+import { DateFormatPipe } from '../../../pipes/date-format.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { GroupsService } from '../../groups.service';
 
 /**
  * Groups View General Tab Component.
@@ -8,9 +35,32 @@ import { ActivatedRoute, Router } from '@angular/router';
 @Component({
   selector: 'mifosx-general-tab',
   templateUrl: './general-tab.component.html',
-  styleUrls: ['./general-tab.component.scss']
+  styleUrls: ['./general-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    NgClass,
+    MatTooltip,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    StatusLookupPipe,
+    AccountsFilterPipe,
+    DateFormatPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GeneralTabComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private groupsService = inject(GroupsService);
+
   /** Group's all accounts data */
   groupAccountData: any;
   /** Group's loan accounts data */
@@ -23,6 +73,8 @@ export class GeneralTabComponent {
   glimAccounts: any;
   /** Group Summary */
   groupSummary: any;
+  /** Group data from the parent route (timeline, roles, members). */
+  groupViewData: any;
   /** Group's Client Members */
   groupClientMembers: any;
   /** Columns to be Displayed for client members table */
@@ -88,14 +140,7 @@ export class GeneralTabComponent {
   /** Boolean for toggling savings accounts table */
   showClosedSavingAccounts = false;
 
-  /**
-   * Fetches group's related data from `resolve`
-   * @param {ActivatedRoute} route Activated Route.
-   */
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
+  constructor() {
     this.route.data.subscribe(
       (data: { groupAccountsData: any; groupClientMembers: any; groupSummary: any; glimData: any; gsimData: any }) => {
         this.glimAccounts = data.glimData;
@@ -107,7 +152,33 @@ export class GeneralTabComponent {
       }
     );
     this.route.parent.data.subscribe((data: { groupViewData: any }) => {
+      this.groupViewData = data.groupViewData;
       this.groupClientMembers = data.groupViewData.clientMembers;
+    });
+  }
+
+  /** Group role flagged as Leader, if one is assigned. */
+  get groupLeader(): any {
+    return this.groupViewData?.groupRoles?.find((groupRole: any) => groupRole.role?.name === 'Leader');
+  }
+
+  get activeMembersCount(): number {
+    return this.groupViewData?.activeClientMembers?.length ?? 0;
+  }
+
+  get totalMembersCount(): number {
+    return this.groupViewData?.clientMembers?.length ?? 0;
+  }
+
+  /**
+   * Refreshes group account data from backend (for GSIM/GLIM status/balance update)
+   */
+  refreshAccounts(groupId: string) {
+    this.groupsService.getGroupAccountsData(groupId).subscribe((data: any) => {
+      this.groupAccountData = data;
+      this.savingAccounts = data.savingsAccounts;
+      this.loanAccounts = data.loanAccounts;
+      // If GSIM/GLIM data is separate, fetch and update here as well
     });
   }
 

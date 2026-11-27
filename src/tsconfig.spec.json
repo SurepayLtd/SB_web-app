@@ -2,9 +2,20 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "../out-tsc/spec",
-    "baseUrl": "./",
+    "baseUrl": "../",
+    "paths": {
+      "@pipes/*": [
+        "src/app/pipes/*"
+      ],
+      "app/*": [
+        "src/app/*"
+      ],
+      "environments/*": [
+        "src/environments/*"
+      ]
+    },
     "types": [
-      "jasmine",
+      "jest",
       "node"
     ]
   },
@@ -14,6 +25,7 @@
   ],
   "include": [
     "**/*.spec.ts",
+    "**/*.test.ts",
     "**/*.mock.ts",
     "**/*.d.ts"
   ]

@@ -1,3 +1,11 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
 import { NgModule } from '@angular/core';
 
@@ -15,6 +23,7 @@ import { MakeAccountTransfersComponent } from './make-account-transfers/make-acc
 import { ListStandingInstructionsComponent } from './list-standing-instructions/list-standing-instructions.component';
 import { ListTransactionsComponent } from './list-transactions/list-transactions.component';
 import { ViewAccountTransferComponent } from './view-account-transfer/view-account-transfer.component';
+import { MakeAccountInterbankTransfersComponent } from './make-account-interbank-transfers/make-account-interbank-transfers.component';
 /**
  * Account Transfers Module
  *
@@ -25,16 +34,15 @@ import { ViewAccountTransferComponent } from './view-account-transfer/view-accou
     SharedModule,
     PipesModule,
     DirectivesModule,
-    AccountTransfersRoutingModule
-  ],
-  declarations: [
+    AccountTransfersRoutingModule,
     ViewStandingInstructionsComponent,
     EditStandingInstructionsComponent,
     CreateStandingInstructionsComponent,
     MakeAccountTransfersComponent,
     ListStandingInstructionsComponent,
     ListTransactionsComponent,
-    ViewAccountTransferComponent
+    ViewAccountTransferComponent,
+    MakeAccountInterbankTransfersComponent
   ],
   providers: []
 })

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
   CrbCreditReportCheck,
@@ -6,27 +6,44 @@ import {
 } from '../../models/loan-account.model';
 import { LoansService } from '../../loans.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import {
   CrbConsentDocViewerDialogComponent,
   CrbDocViewerData
-} from '../../../clients/clients-view/custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
+} from 'app/clients/clients-view/custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatAccordion, MatExpansionPanel, MatExpansionPanelDescription, MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 
 @Component({
   selector: 'mifosx-crb-credit-report-tab',
   templateUrl: './crb-credit-report-tab.component.html',
   styleUrls: ['./crb-credit-report-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelDescription,
+    MatIcon,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ]
 })
 export class CrbCreditReportTabComponent implements OnInit {
 
+  private route = inject(ActivatedRoute);
+  private loanService = inject(LoansService);
+  private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
+
   checks: CrbCreditReportCheck[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private loanService: LoansService,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar
-    ) {
+  constructor() {
     this.route.data.subscribe((data: { creditReportData: CrbCreditReportCheck[] }) => {
       this.checks = this.parseCreditReportChecks(data.creditReportData || []);
     });
@@ -113,8 +130,15 @@ export class CrbCreditReportTabComponent implements OnInit {
     if (response instanceof ArrayBuffer) {
       return new Blob([response], { type: 'application/pdf' });
     }
-    if (typeof response === 'string' || response instanceof Uint8Array) {
+    if (typeof response === 'string') {
       return new Blob([response], { type: 'application/pdf' });
+    }
+
+    if (response instanceof Uint8Array) {
+      const buffer = new ArrayBuffer(response.byteLength);
+      new Uint8Array(buffer).set(response);
+
+      return new Blob([buffer], { type: 'application/pdf' });
     }
     return null;
   }

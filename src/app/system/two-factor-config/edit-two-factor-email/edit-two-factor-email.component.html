@@ -1,13 +1,21 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
 <div class="container">
   <form [formGroup]="emailConfigForm" (ngSubmit)="submit()">
     <mat-card>
       <mat-card-content>
-        <div fxLayout="column">
+        <div class="layout-column">
           <mat-slide-toggle formControlName="otp-delivery-email-enable" class="m-b-20">
             {{ 'labels.inputs.Enable Email Delivery' | translate }}
           </mat-slide-toggle>
 
-          <mat-form-field fxFlex="98%">
+          <mat-form-field class="flex-98">
             <mat-label>{{ 'labels.inputs.Email Subject' | translate }}</mat-label>
             <input matInput formControlName="otp-delivery-email-subject" required />
             <mat-error *ngIf="emailConfigForm.get('otp-delivery-email-subject').hasError('required')">
@@ -15,7 +23,7 @@
             </mat-error>
           </mat-form-field>
 
-          <mat-form-field fxFlex="98%">
+          <mat-form-field class="flex-98">
             <mat-label>{{ 'labels.inputs.Email Body' | translate }}</mat-label>
             <textarea matInput formControlName="otp-delivery-email-body" rows="5" required></textarea>
             <mat-hint
@@ -28,7 +36,7 @@
         </div>
       </mat-card-content>
 
-      <mat-card-actions fxLayout="row" fxLayout.xs="column" fxLayoutAlign="center" fxLayoutGap="5px">
+      <mat-card-actions class="layout-row responsive-column align-center gap-5px">
         <button mat-raised-button [routerLink]="['../']">{{ 'labels.buttons.Cancel' | translate }}</button>
         <button mat-raised-button color="primary" [disabled]="!emailConfigForm.valid" type="submit">
           {{ 'labels.buttons.Submit' | translate }}

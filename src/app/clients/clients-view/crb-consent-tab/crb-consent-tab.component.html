@@ -1,243 +1,336 @@
-<div class="crb-consent-page">
+<!--
+  Copyright since 2025 Mifos Initiative
 
-  <!-- ===================== Loading ===================== -->
-  <div class="loading-container" *ngIf="isLoading">
-    <mat-spinner diameter="36"></mat-spinner>
-    <span>{{ 'Loading CRB consent...' | translate }}</span>
-  </div>
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
 
-  <!-- ===================== No consent ===================== -->
-  <div class="empty-state" *ngIf="!isLoading && !consentData">
-    <mat-icon>verified_user</mat-icon>
-    <h3>{{ 'No CRB consent record is available.' | translate }}</h3>
-    <p>{{ 'This client has not yet given CRB consent.' | translate }}</p>
-  </div>
+<div class="crb-container mat-typography">
+  <div class="crb-consent-page">
 
-  <!-- ===================== Consent ===================== -->
-  <ng-container *ngIf="!isLoading && consentData">
-
-    <!-- Header -->
-    <div class="page-header">
-      <div>
-        <h3>{{ 'CRB Consent' | translate }}</h3>
-        <p>{{ consentData.clientName }} · {{ consentData.consentVersion ?? 'N/A' }}</p>
+    <!-- ===================== Loading ===================== -->
+    @if (isLoading) {
+      <div class="loading-container">
+        <mat-spinner diameter="36"></mat-spinner>
+        <span>{{ 'Loading CRB consent...' | translate }}</span>
       </div>
+    }
 
-      <button mat-icon-button type="button" [disabled]="isProcessing || isLoading" (click)="loadConsentData()"
-              [matTooltip]="'Refresh' | translate">
-        <mat-icon>refresh</mat-icon>
-      </button>
-    </div>
+    <!-- ===================== No consent ===================== -->
+    @if (!isLoading && !consentData) {
+      <div class="empty-state">
+        <mat-icon>verified_user</mat-icon>
+        <h3>{{ 'No CRB consent record is available.' | translate }}</h3>
+        <p>{{ 'This client has not yet given CRB consent.' | translate }}</p>
+      </div>
+    }
 
-    <!-- Status hero -->
-    <div class="consent-hero">
-      <div class="hero-status"
-           [ngClass]="{
-             'hero-pending':     consentData.consentStatus?.id === PENDING,
-             'hero-verified':    consentData.consentStatus?.id === VERIFIED,
-             'hero-revoked':     consentData.consentStatus?.id === REVOKED,
-             'hero-reactivated': consentData.consentStatus?.id === REACTIVATED
-           }">
-        <mat-icon>
-          {{ consentData.consentStatus?.id === VERIFIED    ? 'verified_user'
-          : consentData.consentStatus?.id === REVOKED     ? 'block'
-            : consentData.consentStatus?.id === REACTIVATED ? 'autorenew'
-              : 'hourglass_empty' }}
-        </mat-icon>
+    <!-- ===================== Consent ===================== -->
+    @if (!isLoading && consentData) {
+
+      <!-- Header -->
+      <div class="page-header">
         <div>
-          <span class="hero-label">{{ 'Consent Status' | translate }}</span>
-          <strong class="hero-value">{{ getConsentStatus() | translate }}</strong>
+          <h3>{{ 'CRB Consent' | translate }}</h3>
+          <p>{{ consentData.clientName }} · {{ consentData.consentVersion ?? 'N/A' }}</p>
+        </div>
+
+        <button
+          mat-icon-button
+          type="button"
+          [disabled]="isProcessing || isLoading"
+          (click)="loadConsentData()"
+          [matTooltip]="'Refresh' | translate">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <!-- Status hero -->
+      <div class="consent-hero">
+        <div
+          class="hero-status"
+          [ngClass]="{
+            'hero-pending': consentData.consentStatus?.id === PENDING,
+            'hero-verified': consentData.consentStatus?.id === VERIFIED,
+            'hero-revoked': consentData.consentStatus?.id === REVOKED,
+            'hero-reactivated': consentData.consentStatus?.id === REACTIVATED
+          }">
+
+          <mat-icon>
+            {{
+              consentData.consentStatus?.id === VERIFIED ? 'verified_user'
+                : consentData.consentStatus?.id === REVOKED ? 'block'
+                  : consentData.consentStatus?.id === REACTIVATED ? 'autorenew'
+                    : 'hourglass_empty'
+            }}
+          </mat-icon>
+
+          <div>
+            <span class="hero-label">{{ 'Consent Status' | translate }}</span>
+            <strong class="hero-value">{{ getConsentStatus() | translate }}</strong>
+          </div>
+        </div>
+
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <span>{{ 'Consent Channel' | translate }}</span>
+            <strong>{{ consentData.consentChannel?.value ?? '-' }}</strong>
+          </div>
+
+          <div class="hero-meta-item">
+            <span>{{ 'Phone Number' | translate }}</span>
+            <strong>{{ consentData.phoneNumber ?? '-' }}</strong>
+          </div>
+
+          <div class="hero-meta-item">
+            <span>{{ 'Consented At' | translate }}</span>
+            <strong>{{ formatConsentDate(consentData.consentedAt) }}</strong>
+          </div>
         </div>
       </div>
 
-      <div class="hero-meta">
-        <div class="hero-meta-item">
-          <span>{{ 'Consent Channel' | translate }}</span>
-          <strong>{{ consentData.consentChannel?.value ?? '-' }}</strong>
-        </div>
-        <div class="hero-meta-item">
-          <span>{{ 'Phone Number' | translate }}</span>
-          <strong>{{ consentData.phoneNumber ?? '-' }}</strong>
-        </div>
-        <div class="hero-meta-item">
-          <span>{{ 'Consented At' | translate }}</span>
-          <strong>{{ formatConsentDate(consentData.consentedAt) }}</strong>
-        </div>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="consent-actions-bar">
-      <button mat-raised-button color="primary" type="button" *ngIf="canValidateOtp" [disabled]="isProcessing" (click)="validateOtp()">
-        <mat-icon>check_circle</mat-icon>
-        {{ 'Validate OTP' | translate }}
-      </button>
-
-      <button mat-stroked-button type="button" *ngIf="canResendOtp" [disabled]="isProcessing" (click)="resendOtp()">
-        <mat-icon>send</mat-icon>
-        {{ 'Resend OTP' | translate }}
-      </button>
-
-      <button mat-raised-button color="warn" type="button" *ngIf="canRevokeConsent" [disabled]="isProcessing" (click)="revokeConsent()">
-        <mat-icon>block</mat-icon>
-        {{ 'Revoke Consent' | translate }}
-      </button>
-
-      <button mat-raised-button color="primary" type="button" *ngIf="canReactivateConsent" [disabled]="isProcessing" (click)="reactivateConsent()">
-        <mat-icon>autorenew</mat-icon>
-        {{ 'Reactivate Consent' | translate }}
-      </button>
-    </div>
-
-    <!-- ===================== Consent Information ===================== -->
-    <section class="report-section">
-      <div class="section-heading">
-        <mat-icon>person</mat-icon>
-        <h3>{{ 'Consent Information' | translate }}</h3>
-      </div>
-
-      <div class="details-grid">
-        <div class="detail-item">
-          <span>{{ 'Client Name' | translate }}</span>
-          <strong>{{ consentData.clientName ?? '-' }}</strong>
-        </div>
-        <div class="detail-item">
-          <span>{{ 'Consent Version' | translate }}</span>
-          <strong>{{ consentData.consentVersion ?? '-' }}</strong>
-        </div>
-        <div class="detail-item">
-          <span>{{ 'Consent Channel' | translate }}</span>
-          <strong>{{ consentData.consentChannel?.value ?? '-' }}</strong>
-        </div>
-        <div class="detail-item">
-          <span>{{ 'Phone Number' | translate }}</span>
-          <strong>{{ consentData.phoneNumber ?? '-' }}</strong>
-        </div>
-        <div class="detail-item">
-          <span>{{ 'Consented At' | translate }}</span>
-          <strong>{{ formatConsentDate(consentData.consentedAt) }}</strong>
-        </div>
-        <div class="detail-item">
-          <span>{{ 'Consented By' | translate }}</span>
-          <strong>{{ consentData.consentedByName ?? '-' }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== Verification ===================== -->
-    <section class="report-section" *ngIf="consentData.verifiedByName || consentData.verifiedAt">
-      <div class="section-heading">
-        <mat-icon>task_alt</mat-icon>
-        <h3>{{ 'Verification' | translate }}</h3>
-      </div>
-
-      <div class="details-grid">
-        <div class="detail-item">
-          <span>{{ 'Verified By' | translate }}</span>
-          <strong>{{ consentData.verifiedByName ?? '-' }}</strong>
-        </div>
-        <div class="detail-item" *ngIf="consentData.verifiedAt">
-          <span>{{ 'Verified At' | translate }}</span>
-          <strong>{{ formatConsentDate(consentData.verifiedAt) }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== Revocation ===================== -->
-    <section class="report-section"
-             *ngIf="consentData.revokedByName || consentData.revokedAt">
-      <div class="section-heading">
-        <mat-icon>block</mat-icon>
-        <h3>{{ 'Revocation' | translate }}</h3>
-      </div>
-
-      <div class="details-grid">
-        <div class="detail-item" *ngIf="consentData.revokedByName">
-          <span>{{ 'Revoked By' | translate }}</span>
-          <strong>{{ consentData.revokedByName }}</strong>
-        </div>
-        <div class="detail-item" *ngIf="consentData.revokedAt">
-          <span>{{ 'Revoked At' | translate }}</span>
-          <strong>{{ formatConsentDate(consentData.revokedAt) }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== Reactivation ===================== -->
-    <section class="report-section"
-             *ngIf="consentData.reactivatedByName || consentData.reactivatedAt">
-      <div class="section-heading">
-        <mat-icon>autorenew</mat-icon>
-        <h3>{{ 'Reactivation' | translate }}</h3>
-      </div>
-
-      <div class="details-grid">
-        <div class="detail-item" *ngIf="consentData.reactivatedByName">
-          <span>{{ 'Reactivated By' | translate }}</span>
-          <strong>{{ consentData.reactivatedByName }}</strong>
-        </div>
-        <div class="detail-item" *ngIf="consentData.reactivatedAt">
-          <span>{{ 'Reactivated At' | translate }}</span>
-          <strong>{{ formatConsentDate(consentData.reactivatedAt) }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== Consent Document ===================== -->
-    <section class="report-section">
-      <div class="section-heading">
-        <mat-icon>attach_file</mat-icon>
-        <h3>{{ 'Consent Document' | translate }}</h3>
-      </div>
-
-      <!-- No document -->
-      <div class="empty-sector" *ngIf="!hasDocument()">
-        <mat-icon>folder_off</mat-icon>
-        <span>{{ 'No document is attached to this consent record.' | translate }}</span>
-      </div>
-
-      <!-- Document available -->
-      <div class="document-card" *ngIf="hasDocument()">
-        <div class="document-icon">
-          <mat-icon>picture_as_pdf</mat-icon>
-        </div>
-
-        <div class="document-info">
-          <strong>{{ 'Signed consent document' | translate }}</strong>
-          <small>{{ 'PDF · Attached during consent capture' | translate }}</small>
-        </div>
-
-        <div class="document-actions">
-          <button mat-stroked-button type="button" [disabled]="documentLoading" (click)="viewConsentDocument()">
-            <mat-icon>visibility</mat-icon>
-            {{ 'View' | translate }}
+      <!-- Actions -->
+      <div class="consent-actions-bar">
+        @if (canValidateOtp) {
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            [disabled]="isProcessing"
+            (click)="validateOtp()">
+            <mat-icon>check_circle</mat-icon>
+            {{ 'Validate OTP' | translate }}
           </button>
+        }
 
-          <button mat-raised-button color="primary" type="button" [disabled]="documentLoading" (click)="downloadConsentDocument()">
-            <mat-icon>download</mat-icon>
-            {{ 'Download' | translate }}
+        @if (canResendOtp) {
+          <button
+            mat-stroked-button
+            type="button"
+            [disabled]="isProcessing"
+            (click)="resendOtp()">
+            <mat-icon>send</mat-icon>
+            {{ 'Resend OTP' | translate }}
           </button>
+        }
+
+        @if (canRevokeConsent) {
+          <button
+            mat-raised-button
+            color="warn"
+            type="button"
+            [disabled]="isProcessing"
+            (click)="revokeConsent()">
+            <mat-icon>block</mat-icon>
+            {{ 'Revoke Consent' | translate }}
+          </button>
+        }
+
+        @if (canReactivateConsent) {
+          <button
+            mat-raised-button
+            color="primary"
+            type="button"
+            [disabled]="isProcessing"
+            (click)="reactivateConsent()">
+            <mat-icon>autorenew</mat-icon>
+            {{ 'Reactivate Consent' | translate }}
+          </button>
+        }
+      </div>
+
+      <!-- ===================== Consent Information ===================== -->
+      <section class="report-section">
+        <div class="section-heading">
+          <mat-icon>person</mat-icon>
+          <h3>{{ 'Consent Information' | translate }}</h3>
         </div>
-      </div>
 
-      <!-- Document loading -->
-      <div class="report-notice" *ngIf="documentLoading">
-        <mat-icon>hourglass_top</mat-icon>
-        <span>{{ 'Fetching document...' | translate }}</span>
-      </div>
+        <div class="details-grid">
+          <div class="detail-item">
+            <span>{{ 'Client Name' | translate }}</span>
+            <strong>{{ consentData.clientName ?? '-' }}</strong>
+          </div>
 
-      <!-- Document error -->
-      <div class="report-error" *ngIf="documentError">
-        <mat-icon>error_outline</mat-icon>
-        <span>{{ documentError }}</span>
-      </div>
-    </section>
+          <div class="detail-item">
+            <span>{{ 'Consent Version' | translate }}</span>
+            <strong>{{ consentData.consentVersion ?? '-' }}</strong>
+          </div>
 
-    <!-- Processing overlay -->
-    <div class="processing-message" *ngIf="isProcessing">
-      <mat-spinner diameter="20"></mat-spinner>
-      <span>{{ 'Processing...' | translate }}</span>
-    </div>
+          <div class="detail-item">
+            <span>{{ 'Consent Channel' | translate }}</span>
+            <strong>{{ consentData.consentChannel?.value ?? '-' }}</strong>
+          </div>
 
-  </ng-container>
+          <div class="detail-item">
+            <span>{{ 'Phone Number' | translate }}</span>
+            <strong>{{ consentData.phoneNumber ?? '-' }}</strong>
+          </div>
+
+          <div class="detail-item">
+            <span>{{ 'Consented At' | translate }}</span>
+            <strong>{{ formatConsentDate(consentData.consentedAt) }}</strong>
+          </div>
+
+          <div class="detail-item">
+            <span>{{ 'Consented By' | translate }}</span>
+            <strong>{{ consentData.consentedByName ?? '-' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== Verification ===================== -->
+      @if (consentData.verifiedByName || consentData.verifiedAt) {
+        <section class="report-section">
+          <div class="section-heading">
+            <mat-icon>task_alt</mat-icon>
+            <h3>{{ 'Verification' | translate }}</h3>
+          </div>
+
+          <div class="details-grid">
+            <div class="detail-item">
+              <span>{{ 'Verified By' | translate }}</span>
+              <strong>{{ consentData.verifiedByName ?? '-' }}</strong>
+            </div>
+
+            @if (consentData.verifiedAt) {
+              <div class="detail-item">
+                <span>{{ 'Verified At' | translate }}</span>
+                <strong>{{ formatConsentDate(consentData.verifiedAt) }}</strong>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ===================== Revocation ===================== -->
+      @if (consentData.revokedByName || consentData.revokedAt) {
+        <section class="report-section">
+          <div class="section-heading">
+            <mat-icon>block</mat-icon>
+            <h3>{{ 'Revocation' | translate }}</h3>
+          </div>
+
+          <div class="details-grid">
+            @if (consentData.revokedByName) {
+              <div class="detail-item">
+                <span>{{ 'Revoked By' | translate }}</span>
+                <strong>{{ consentData.revokedByName }}</strong>
+              </div>
+            }
+
+            @if (consentData.revokedAt) {
+              <div class="detail-item">
+                <span>{{ 'Revoked At' | translate }}</span>
+                <strong>{{ formatConsentDate(consentData.revokedAt) }}</strong>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ===================== Reactivation ===================== -->
+      @if (consentData.reactivatedByName || consentData.reactivatedAt) {
+        <section class="report-section">
+          <div class="section-heading">
+            <mat-icon>autorenew</mat-icon>
+            <h3>{{ 'Reactivation' | translate }}</h3>
+          </div>
+
+          <div class="details-grid">
+            @if (consentData.reactivatedByName) {
+              <div class="detail-item">
+                <span>{{ 'Reactivated By' | translate }}</span>
+                <strong>{{ consentData.reactivatedByName }}</strong>
+              </div>
+            }
+
+            @if (consentData.reactivatedAt) {
+              <div class="detail-item">
+                <span>{{ 'Reactivated At' | translate }}</span>
+                <strong>{{ formatConsentDate(consentData.reactivatedAt) }}</strong>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ===================== Consent Document ===================== -->
+      <section class="report-section">
+        <div class="section-heading">
+          <mat-icon>attach_file</mat-icon>
+          <h3>{{ 'Consent Document' | translate }}</h3>
+        </div>
+
+        <!-- No document -->
+        @if (!hasDocument()) {
+          <div class="empty-sector">
+            <mat-icon>folder_off</mat-icon>
+            <span>{{ 'No document is attached to this consent record.' | translate }}</span>
+          </div>
+        }
+
+        <!-- Document available -->
+        @if (hasDocument()) {
+          <div class="document-card">
+            <div class="document-icon">
+              <mat-icon>picture_as_pdf</mat-icon>
+            </div>
+
+            <div class="document-info">
+              <strong>{{ 'Signed consent document' | translate }}</strong>
+              <small>{{ 'PDF · Attached during consent capture' | translate }}</small>
+            </div>
+
+            <div class="document-actions">
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="documentLoading"
+                (click)="viewConsentDocument()">
+                <mat-icon>visibility</mat-icon>
+                {{ 'View' | translate }}
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                [disabled]="documentLoading"
+                (click)="downloadConsentDocument()">
+                <mat-icon>download</mat-icon>
+                {{ 'Download' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Document loading -->
+        @if (documentLoading) {
+          <div class="report-notice">
+            <mat-icon>hourglass_top</mat-icon>
+            <span>{{ 'Fetching document...' | translate }}</span>
+          </div>
+        }
+
+        <!-- Document error -->
+        @if (documentError) {
+          <div class="report-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ documentError }}</span>
+          </div>
+        }
+      </section>
+
+      <!-- Processing overlay -->
+      @if (isProcessing) {
+        <div class="processing-message">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>{{ 'Processing...' | translate }}</span>
+        </div>
+      }
+    }
+
+  </div>
 </div>

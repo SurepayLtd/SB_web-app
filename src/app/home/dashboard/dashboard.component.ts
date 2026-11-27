@@ -1,99 +1,77 @@
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 /** Angular Imports */
-import { Component, OnInit } from '@angular/core';
-import { UntypedFormControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { activities } from '../activities';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { DashboardEngineComponent } from 'app/analytics/dashboard-engine/dashboard-engine.component';
+import { GLOBAL_ANALYTICS_DASHBOARD } from 'app/analytics/global-dashboard.config';
+import { MatTab, MatTabContent, MatTabGroup } from '@angular/material/tabs';
+import { OnboardingBoardComponent } from './onboarding-board/onboarding-board.component';
+import { TranslateService } from '@ngx-translate/core';
+
 /**
  * Dashboard component.
  */
+import { AdvancedAnalyticsComponent } from './advanced-analytics/advanced-analytics.component';
+
 @Component({
   selector: 'mifosx-dashboard',
+  standalone: true,
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    DashboardEngineComponent,
+    MatTab,
+    MatTabContent,
+    MatTabGroup,
+    OnboardingBoardComponent,
+    AdvancedAnalyticsComponent
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
-  /** Array of all user activities */
-  userActivity: string[];
-  /** Array of most recent user activities */
-  recentActivities: string[];
-  /** Array of most frequent user activities */
-  frequentActivities: string[];
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private translateService = inject(TranslateService);
+
   /** Search Text. */
-  searchText: UntypedFormControl = new UntypedFormControl();
+  searchText: FormControl = new FormControl();
   /** Filtered Activities. */
-  filteredActivities: Observable<any[]>;
+  filteredActivities!: Observable<any[]>;
   /** All User Activities. */
   allActivities: any[] = activities;
+  /** Dashboard definition */
+  dashboardDefinition = GLOBAL_ANALYTICS_DASHBOARD;
+  /** Office options from resolver */
+  offices: any[] = [];
+  /** Product options */
+  products: any[] = [];
+  /** Client group options */
+  clientGroups: any[] = [];
 
-  /**
-   * Gets user activities from local storage.
-   */
-  constructor(private router: Router) {
-    this.userActivity = JSON.parse(localStorage.getItem('mifosXLocation'));
+  constructor() {
+    this.route.data.subscribe((data: { offices: any[]; products?: any[]; clientGroups?: any[] }) => {
+      this.offices = data.offices || [];
+      this.products = data.products || [];
+      this.clientGroups = data.clientGroups || [];
+    });
   }
 
   ngOnInit() {
-    this.recentActivities = this.getRecentActivities();
-    this.frequentActivities = this.getFrequentActivities();
     this.setFilteredActivities();
-  }
-
-  /**
-   * Returns top eight recent activities.
-   */
-  getRecentActivities() {
-    const reverseActivities = this.userActivity.reverse();
-    const uniqueActivities: string[] = [];
-    reverseActivities.forEach((activity: string) => {
-      if (!uniqueActivities.includes(activity)) {
-        uniqueActivities.push(activity);
-      }
-    });
-    const topEightRecentActivities = uniqueActivities
-      .filter(
-        (activity: string) => ![
-            '/',
-            '/login',
-            '/home',
-            '/dashboard'
-          ].includes(activity)
-      )
-      .slice(0, 8);
-    return topEightRecentActivities;
-  }
-
-  /**
-   * Returns top eight frequent activities.
-   */
-  getFrequentActivities() {
-    const frequencyCounts: any = {};
-    let index = this.userActivity.length;
-    while (index) {
-      frequencyCounts[this.userActivity[--index]] = (frequencyCounts[this.userActivity[index]] || 0) + 1;
-    }
-    const frequencyCountsArray = Object.entries(frequencyCounts);
-    const topEigthFrequentActivities = frequencyCountsArray
-      .sort((a: any, b: any) => b[1] - a[1])
-      .map((entry: any[]) => entry[0])
-      .filter(
-        (activity: string) => ![
-            '/',
-            '/login',
-            '/home',
-            '/dashboard'
-          ].includes(activity)
-      )
-      .slice(0, 8);
-    return topEigthFrequentActivities;
-  }
-
-  /**
-   * Navigates to the activity
-   */
-  navigatetoActivity(activity: string) {
-    this.router.navigateByUrl(activity);
   }
 
   /**
@@ -113,6 +91,8 @@ export class DashboardComponent implements OnInit {
    */
   private filterActivity(activityName: string): any {
     const filterValue = activityName.toLowerCase();
-    return this.allActivities.filter((activity) => activity.activity.toLowerCase().indexOf(filterValue) === 0);
+    return this.allActivities.filter(
+      (activity) => this.translateService.instant(activity.activity).toLowerCase().indexOf(filterValue) === 0
+    );
   }
 }

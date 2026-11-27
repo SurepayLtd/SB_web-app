@@ -1,4 +1,22 @@
-import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
+/**
+ * Copyright since 2025 Mifos Initiative
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  Input,
+  OnChanges,
+  SimpleChanges,
+  inject
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UntypedFormGroup, UntypedFormBuilder, Validators, UntypedFormArray, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -10,16 +28,88 @@ import { InputBase } from 'app/shared/form-dialog/formfield/model/input-base';
 import { SelectBase } from 'app/shared/form-dialog/formfield/model/select-base';
 import { ProcessingStrategyService } from '../../services/processing-strategy.service';
 import { TranslateService } from '@ngx-translate/core';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatDivider } from '@angular/material/divider';
+import { MatIconButton } from '@angular/material/button';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import {
+  MatTable,
+  MatColumnDef,
+  MatHeaderCellDef,
+  MatHeaderCell,
+  MatCellDef,
+  MatCell,
+  MatHeaderRowDef,
+  MatHeaderRow,
+  MatRowDef,
+  MatRow
+} from '@angular/material/table';
+import { MatStepperPrevious, MatStepperNext } from '@angular/material/stepper';
+import { FindPipe } from '../../../../pipes/find.pipe';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { LoanProductService } from '../../services/loan-product.service';
+import { LoanProductBaseComponent } from '../../common/loan-product-base.component';
+import {
+  WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY,
+  WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY_OPTIONS,
+  WorkingCapitalPaymentAmountCalculationStrategy,
+  inactivePricingFields,
+  resolvePaymentAmountCalculationStrategy
+} from 'app/loans/models/working-capital/working-capital-loan-account.model';
+import { StringEnumOptionData } from 'app/shared/models/option-data.model';
+import {
+  annualEirValidators,
+  greaterThanZeroValidator,
+  withinBoundsValidator
+} from 'app/shared/validators/working-capital-pricing.validator';
+import {
+  applyRepaymentDaysToPayload,
+  firstRepaymentDayOptions,
+  isSemiMonthly,
+  secondRepaymentDayOptions
+} from 'app/shared/loan/semi-monthly/semi-monthly';
+import { SemiMonthlyDayPipe, SemiMonthlyDueDaysPipe } from 'app/shared/loan/semi-monthly/semi-monthly-due-days.pipe';
 
 @Component({
   selector: 'mifosx-loan-product-terms-step',
   templateUrl: './loan-product-terms-step.component.html',
-  styleUrls: ['./loan-product-terms-step.component.scss']
+  styleUrls: ['./loan-product-terms-step.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatTooltip,
+    MatCheckbox,
+    MatDivider,
+    FaIconComponent,
+    MatTable,
+    MatColumnDef,
+    MatHeaderCellDef,
+    MatHeaderCell,
+    MatCellDef,
+    MatCell,
+    MatIconButton,
+    MatHeaderRowDef,
+    MatHeaderRow,
+    MatRowDef,
+    MatRow,
+    MatStepperPrevious,
+    MatStepperNext,
+    FindPipe,
+    SemiMonthlyDayPipe,
+    SemiMonthlyDueDaysPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LoanProductTermsStepComponent implements OnInit, OnChanges {
+export class LoanProductTermsStepComponent extends LoanProductBaseComponent implements OnInit, OnChanges {
+  private readonly destroyRef = inject(DestroyRef);
+  private formBuilder = inject(UntypedFormBuilder);
+  private processingStrategyService = inject(ProcessingStrategyService);
+  private dialog = inject(MatDialog);
+  private translateService = inject(TranslateService);
+
   @Input() loanProductsTemplate: any;
 
-  loanProductTermsForm: UntypedFormGroup;
+  loanProductTermsForm!: UntypedFormGroup;
 
   /** Zero Interest control. */
   zeroInterest = new UntypedFormControl(false);
@@ -30,6 +120,8 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
   overAppliedCalculationTypeData: any;
   repaymentFrequencyTypeData: any;
   repaymentStartDateTypeOptions: any;
+  /** Semi-monthly first-day options (1–27). */
+  readonly firstRepaymentDayOptions = firstRepaymentDayOptions();
 
   displayedColumns: string[] = [
     'valueConditionType',
@@ -41,12 +133,12 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
   ];
   isAdvancedTransactionProcessingStrategy = false;
 
-  constructor(
-    private formBuilder: UntypedFormBuilder,
-    private processingStrategyService: ProcessingStrategyService,
-    private dialog: MatDialog,
-    private translateService: TranslateService
-  ) {
+  /** Working Capital: options of the payment amount calculation strategy select. */
+  paymentAmountCalculationStrategyOptions: StringEnumOptionData[] = WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY_OPTIONS;
+  readonly wcStrategy = WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY;
+
+  constructor() {
+    super();
     this.createLoanProductTermsForm();
     this.setConditionalControls();
   }
@@ -55,246 +147,556 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
     this.valueConditionTypeData = this.loanProductsTemplate.valueConditionTypeOptions;
     this.floatingRateData = this.loanProductsTemplate.floatingRateOptions;
     this.interestRateFrequencyTypeData = this.loanProductsTemplate.interestRateFrequencyTypeOptions;
-    this.repaymentFrequencyTypeData = this.loanProductsTemplate.repaymentFrequencyTypeOptions;
+    this.repaymentFrequencyTypeData = this.loanProductService.isLoanProduct
+      ? this.loanProductsTemplate.repaymentFrequencyTypeOptions
+      : this.loanProductsTemplate.periodFrequencyTypeOptions;
     this.repaymentStartDateTypeOptions = this.loanProductsTemplate.repaymentStartDateTypeOptions;
     this.overAppliedCalculationTypeData = [
       { id: 'percentage', value: 'Percentage' },
       { id: 'flat', value: 'Fixed Amount' }
     ];
 
-    this.loanProductTermsForm.patchValue({
-      minPrincipal: this.loanProductsTemplate.minPrincipal,
-      principal: this.loanProductsTemplate.principal,
-      maxPrincipal: this.loanProductsTemplate.maxPrincipal,
-      minNumberOfRepayments: this.loanProductsTemplate.minNumberOfRepayments,
-      numberOfRepayments: this.loanProductsTemplate.numberOfRepayments,
-      maxNumberOfRepayments: this.loanProductsTemplate.maxNumberOfRepayments,
-      isLinkedToFloatingInterestRates: this.loanProductsTemplate.isLinkedToFloatingInterestRates,
-      minInterestRatePerPeriod: this.loanProductsTemplate.minInterestRatePerPeriod,
-      interestRatePerPeriod: this.loanProductsTemplate.interestRatePerPeriod,
-      maxInterestRatePerPeriod: this.loanProductsTemplate.maxInterestRatePerPeriod,
-      interestRateFrequencyType: this.loanProductsTemplate.interestRateFrequencyType.id,
-      floatingRatesId: this.loanProductsTemplate.floatingRateId,
-      interestRateDifferential: this.loanProductsTemplate.interestRateDifferential,
-      isFloatingInterestRateCalculationAllowed: this.loanProductsTemplate.isFloatingInterestRateCalculationAllowed,
-      allowApprovedDisbursedAmountsOverApplied: this.loanProductsTemplate.allowApprovedDisbursedAmountsOverApplied,
-      minDifferentialLendingRate: this.loanProductsTemplate.minDifferentialLendingRate,
-      defaultDifferentialLendingRate: this.loanProductsTemplate.defaultDifferentialLendingRate,
-      maxDifferentialLendingRate: this.loanProductsTemplate.maxDifferentialLendingRate,
-      useBorrowerCycle: this.loanProductsTemplate.useBorrowerCycle,
-      repaymentEvery: this.loanProductsTemplate.repaymentEvery,
-      repaymentFrequencyType: this.loanProductsTemplate.repaymentFrequencyType.id,
-      minimumDaysBetweenDisbursalAndFirstRepayment:
-        this.loanProductsTemplate.minimumDaysBetweenDisbursalAndFirstRepayment,
-      repaymentStartDateType: this.loanProductsTemplate.repaymentStartDateType.id || 1,
-      interestRecognitionOnDisbursementDate: this.loanProductsTemplate.interestRecognitionOnDisbursementDate || false
-    });
-
-    if (this.loanProductsTemplate.allowApprovedDisbursedAmountsOverApplied) {
+    if (this.loanProductService.isLoanProduct) {
       this.loanProductTermsForm.patchValue({
-        overAppliedCalculationType: this.loanProductsTemplate.overAppliedCalculationType,
-        overAppliedNumber: this.loanProductsTemplate.overAppliedNumber
+        minPrincipal: this.loanProductsTemplate.minPrincipal,
+        principal: this.loanProductsTemplate.principal,
+        maxPrincipal: this.loanProductsTemplate.maxPrincipal,
+        minNumberOfRepayments: this.loanProductsTemplate.minNumberOfRepayments,
+        numberOfRepayments: this.loanProductsTemplate.numberOfRepayments,
+        maxNumberOfRepayments: this.loanProductsTemplate.maxNumberOfRepayments,
+        isLinkedToFloatingInterestRates: this.loanProductsTemplate.isLinkedToFloatingInterestRates,
+        minInterestRatePerPeriod: this.loanProductsTemplate.minInterestRatePerPeriod,
+        interestRatePerPeriod: this.loanProductsTemplate.interestRatePerPeriod,
+        maxInterestRatePerPeriod: this.loanProductsTemplate.maxInterestRatePerPeriod,
+        floatingRatesId: this.loanProductsTemplate.floatingRateId,
+        interestRateDifferential: this.loanProductsTemplate.interestRateDifferential,
+        isFloatingInterestRateCalculationAllowed: this.loanProductsTemplate.isFloatingInterestRateCalculationAllowed,
+        allowApprovedDisbursedAmountsOverApplied: this.loanProductsTemplate.allowApprovedDisbursedAmountsOverApplied,
+        minDifferentialLendingRate: this.loanProductsTemplate.minDifferentialLendingRate,
+        defaultDifferentialLendingRate: this.loanProductsTemplate.defaultDifferentialLendingRate,
+        maxDifferentialLendingRate: this.loanProductsTemplate.maxDifferentialLendingRate,
+        useBorrowerCycle: this.loanProductsTemplate.useBorrowerCycle,
+        repaymentEvery: this.loanProductsTemplate.repaymentEvery,
+        minimumDaysBetweenDisbursalAndFirstRepayment:
+          this.loanProductsTemplate.minimumDaysBetweenDisbursalAndFirstRepayment,
+        interestRecognitionOnDisbursementDate: this.loanProductsTemplate.interestRecognitionOnDisbursementDate || false,
+        interestRateFrequencyType: this.loanProductsTemplate.interestRateFrequencyType?.id,
+        repaymentFrequencyType: this.loanProductsTemplate.repaymentFrequencyType?.id,
+        // A product moved off semi-monthly keeps its old days on the backend, so they are only
+        // prefilled while the product is still semi-monthly.
+        firstRepaymentDayOfMonth: isSemiMonthly(this.loanProductsTemplate.repaymentFrequencyType)
+          ? (this.loanProductsTemplate.firstRepaymentDayOfMonth ?? null)
+          : null,
+        secondRepaymentDayOfMonth: isSemiMonthly(this.loanProductsTemplate.repaymentFrequencyType)
+          ? (this.loanProductsTemplate.secondRepaymentDayOfMonth ?? null)
+          : null,
+        repaymentStartDateType: this.loanProductsTemplate.repaymentStartDateType?.id || 1
       });
+
+      if (this.loanProductsTemplate.allowApprovedDisbursedAmountsOverApplied) {
+        this.loanProductTermsForm.patchValue({
+          overAppliedCalculationType: this.loanProductsTemplate.overAppliedCalculationType,
+          overAppliedNumber: this.loanProductsTemplate.overAppliedNumber
+        });
+      }
+
+      this.loanProductTermsForm.setControl(
+        'principalVariationsForBorrowerCycle',
+        this.formBuilder.array(
+          this.loanProductsTemplate.principalVariationsForBorrowerCycle.map((variation: any) => ({
+            ...variation,
+            valueConditionType: variation.valueConditionType.id
+          }))
+        )
+      );
+      this.loanProductTermsForm.setControl(
+        'numberOfRepaymentVariationsForBorrowerCycle',
+        this.formBuilder.array(
+          this.loanProductsTemplate.numberOfRepaymentVariationsForBorrowerCycle.map((variation: any) => ({
+            ...variation,
+            valueConditionType: variation.valueConditionType.id
+          }))
+        )
+      );
+      this.loanProductTermsForm.setControl(
+        'interestRateVariationsForBorrowerCycle',
+        this.formBuilder.array(
+          this.loanProductsTemplate.interestRateVariationsForBorrowerCycle.map((variation: any) => ({
+            ...variation,
+            valueConditionType: variation.valueConditionType.id
+          }))
+        )
+      );
+
+      this.zeroInterest.patchValue(
+        this.loanProductsTemplate.minInterestRatePerPeriod === 0 &&
+          this.loanProductsTemplate.interestRatePerPeriod === 0 &&
+          this.loanProductsTemplate.maxInterestRatePerPeriod === 0
+      );
+
+      this.processingStrategyService.advancedTransactionProcessingStrategy.subscribe((value: boolean) => {
+        this.isAdvancedTransactionProcessingStrategy = value;
+      });
+      this.validateAdvancedPaymentStrategyControls();
     }
 
-    this.loanProductTermsForm.setControl(
-      'principalVariationsForBorrowerCycle',
-      this.formBuilder.array(
-        this.loanProductsTemplate.principalVariationsForBorrowerCycle.map((variation: any) => ({
-          ...variation,
-          valueConditionType: variation.valueConditionType.id
-        }))
-      )
-    );
-    this.loanProductTermsForm.setControl(
-      'numberOfRepaymentVariationsForBorrowerCycle',
-      this.formBuilder.array(
-        this.loanProductsTemplate.numberOfRepaymentVariationsForBorrowerCycle.map((variation: any) => ({
-          ...variation,
-          valueConditionType: variation.valueConditionType.id
-        }))
-      )
-    );
-    this.loanProductTermsForm.setControl(
-      'interestRateVariationsForBorrowerCycle',
-      this.formBuilder.array(
-        this.loanProductsTemplate.interestRateVariationsForBorrowerCycle.map((variation: any) => ({
-          ...variation,
-          valueConditionType: variation.valueConditionType.id
-        }))
-      )
-    );
+    if (this.loanProductService.isWorkingCapital) {
+      this.paymentAmountCalculationStrategyOptions =
+        this.loanProductsTemplate.paymentAmountCalculationStrategyOptions?.length > 0
+          ? this.loanProductsTemplate.paymentAmountCalculationStrategyOptions
+          : WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY_OPTIONS;
+      const strategy = resolvePaymentAmountCalculationStrategy(
+        this.loanProductsTemplate.paymentAmountCalculationStrategy
+      );
+      this.loanProductTermsForm.patchValue({
+        minPrincipal: this.loanProductsTemplate.minPrincipal,
+        principal: this.loanProductsTemplate.principal,
+        maxPrincipal: this.loanProductsTemplate.maxPrincipal,
+        paymentAmountCalculationStrategy: strategy,
+        minPeriodPaymentRate: this.loanProductsTemplate.minPeriodPaymentRate,
+        periodPaymentRate: this.loanProductsTemplate.periodPaymentRate,
+        maxPeriodPaymentRate: this.loanProductsTemplate.maxPeriodPaymentRate,
+        minAnnualEir: this.loanProductsTemplate.minAnnualEir,
+        annualEir: this.loanProductsTemplate.annualEir,
+        maxAnnualEir: this.loanProductsTemplate.maxAnnualEir,
+        minPaymentAmount: this.loanProductsTemplate.minPaymentAmount,
+        paymentAmount: this.loanProductsTemplate.paymentAmount,
+        maxPaymentAmount: this.loanProductsTemplate.maxPaymentAmount,
+        repaymentEvery: this.loanProductsTemplate.repaymentEvery,
+        repaymentFrequencyType: this.loanProductsTemplate.repaymentFrequencyType
+          ? this.loanProductsTemplate.repaymentFrequencyType.id
+          : null,
+        discount: this.loanProductsTemplate.discount
+      });
+      this.applyPaymentAmountCalculationStrategy(strategy);
+    }
+  }
 
-    this.zeroInterest.patchValue(
-      this.loanProductsTemplate.minInterestRatePerPeriod === 0 &&
-        this.loanProductsTemplate.interestRatePerPeriod === 0 &&
-        this.loanProductsTemplate.maxInterestRatePerPeriod === 0
+  /** Working Capital: strategy currently selected in the form (TPV when the control is blank). */
+  get paymentAmountCalculationStrategy(): WorkingCapitalPaymentAmountCalculationStrategy {
+    return resolvePaymentAmountCalculationStrategy(
+      this.loanProductTermsForm.get('paymentAmountCalculationStrategy')?.value
     );
+  }
 
-    this.processingStrategyService.advancedTransactionProcessingStrategy.subscribe((value: boolean) => {
-      this.isAdvancedTransactionProcessingStrategy = value;
+  /**
+   * Working Capital: the backend accepts exactly one pricing group per strategy and returns
+   * `not.allowed.for.<strategy>.strategy` for any other. Switching the select therefore clears
+   * the groups that no longer apply and moves the validators to the active one. Under ANNUAL_EIR
+   * and PAYMENT_AMOUNT the discount is mandatory and must be positive.
+   */
+  private applyPaymentAmountCalculationStrategy(strategy: WorkingCapitalPaymentAmountCalculationStrategy): void {
+    const form = this.loanProductTermsForm;
+    const bounded = (minName: string, maxName: string) =>
+      withinBoundsValidator(
+        () => form.get(minName)?.value,
+        () => form.get(maxName)?.value
+      );
+    const groups: Record<WorkingCapitalPaymentAmountCalculationStrategy, Record<string, any[]>> = {
+      TPV: {
+        minPeriodPaymentRate: [Validators.min(0)],
+        periodPaymentRate: [
+          Validators.required,
+          Validators.min(0),
+          bounded('minPeriodPaymentRate', 'maxPeriodPaymentRate')
+        ],
+        maxPeriodPaymentRate: [Validators.min(0)]
+      },
+      ANNUAL_EIR: {
+        minAnnualEir: annualEirValidators(),
+        annualEir: [
+          Validators.required,
+          ...annualEirValidators(),
+          bounded('minAnnualEir', 'maxAnnualEir')
+        ],
+        maxAnnualEir: annualEirValidators()
+      },
+      PAYMENT_AMOUNT: {
+        minPaymentAmount: [greaterThanZeroValidator()],
+        paymentAmount: [
+          Validators.required,
+          greaterThanZeroValidator(),
+          bounded('minPaymentAmount', 'maxPaymentAmount')
+        ],
+        maxPaymentAmount: [greaterThanZeroValidator()]
+      }
+    };
+    inactivePricingFields(strategy).forEach((name) => {
+      const control = form.get(name);
+      if (control) {
+        control.clearValidators();
+        control.setValue(null, { emitEvent: false });
+        control.updateValueAndValidity({ emitEvent: false });
+      }
     });
-    this.validateAdvancedPaymentStrategyControls();
+    Object.entries(groups[strategy]).forEach(
+      ([
+        name,
+        validators
+      ]) => {
+        const control = form.get(name)!;
+        control.setValidators(validators);
+        control.updateValueAndValidity({ emitEvent: false });
+      }
+    );
+    const discount = form.get('discount')!;
+    discount.setValidators(
+      strategy === WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY.TPV ? [Validators.min(0)] : [
+            Validators.required,
+            greaterThanZeroValidator()
+          ]
+    );
+    discount.updateValueAndValidity({ emitEvent: false });
   }
 
   createLoanProductTermsForm() {
-    this.loanProductTermsForm = this.formBuilder.group({
-      useBorrowerCycle: [false],
-      minPrincipal: [''],
-      principal: [
-        '',
-        Validators.required
-      ],
-      maxPrincipal: [''],
-      minNumberOfRepayments: [''],
-      numberOfRepayments: [
-        '',
-        Validators.required
-      ],
-      maxNumberOfRepayments: [''],
-      isLinkedToFloatingInterestRates: [false],
-      allowApprovedDisbursedAmountsOverApplied: [false],
-      minInterestRatePerPeriod: [''],
-      interestRatePerPeriod: [
-        '',
-        Validators.required
-      ],
-      maxInterestRatePerPeriod: [''],
-      interestRateFrequencyType: [
-        '',
-        Validators.required
-      ],
-      repaymentEvery: [
-        '',
-        Validators.required
-      ],
-      repaymentFrequencyType: [
-        '',
-        Validators.required
-      ],
-      minimumDaysBetweenDisbursalAndFirstRepayment: [''],
-      repaymentStartDateType: [1],
-      fixedLength: [null],
-      interestRecognitionOnDisbursementDate: [false]
-    });
+    if (this.loanProductService.isLoanProduct) {
+      this.loanProductTermsForm = this.formBuilder.group({
+        useBorrowerCycle: [false],
+        minPrincipal: [
+          '',
+          [
+            Validators.min(1)
+          ]
+        ],
+        principal: [
+          '',
+          [
+            Validators.required,
+            Validators.min(1)
+          ]
+        ],
+        maxPrincipal: [
+          '',
+          [
+            Validators.min(1)
+          ]
+        ],
+        minNumberOfRepayments: [
+          '',
+          [
+            Validators.pattern('^[1-9]\\d*$')
+          ]
+        ],
+        numberOfRepayments: [
+          '',
+          [
+            Validators.required,
+            Validators.pattern('^[1-9]\\d*$')
+          ]
+        ],
+        maxNumberOfRepayments: [
+          '',
+          [
+            Validators.pattern('^[1-9]\\d*$')
+          ]
+        ],
+        isLinkedToFloatingInterestRates: [false],
+        allowApprovedDisbursedAmountsOverApplied: [false],
+        overAppliedCalculationType: [{ value: null, disabled: true }],
+        overAppliedNumber: [{ value: null, disabled: true }],
+        minInterestRatePerPeriod: [
+          '',
+          [
+            Validators.min(0),
+            Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+          ]
+        ],
+        interestRatePerPeriod: [
+          '',
+          [
+            Validators.required,
+            Validators.min(0),
+            Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+          ]
+        ],
+        maxInterestRatePerPeriod: [
+          '',
+          [
+            Validators.min(0),
+            Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+          ]
+        ],
+        interestRateFrequencyType: [
+          '',
+          Validators.required
+        ],
+        repaymentEvery: [
+          '',
+          [
+            Validators.required,
+            Validators.min(1)
+          ]
+        ],
+        repaymentFrequencyType: [
+          '',
+          Validators.required
+        ],
+        // Only meaningful for the semi-monthly frequency; validators are attached/removed by
+        // `setConditionalControls` as the frequency changes.
+        firstRepaymentDayOfMonth: [null],
+        secondRepaymentDayOfMonth: [null],
+        minimumDaysBetweenDisbursalAndFirstRepayment: [
+          '',
+          []
+        ],
+        repaymentStartDateType: [1],
+        fixedLength: [null],
+        interestRecognitionOnDisbursementDate: [false]
+      });
+    } else if (this.loanProductService.isWorkingCapital) {
+      this.loanProductTermsForm = this.formBuilder.group({
+        minPrincipal: [
+          '',
+          [
+            Validators.min(1)
+          ]
+        ],
+        principal: [
+          '',
+          [
+            Validators.required,
+            Validators.min(1)
+          ]
+        ],
+        maxPrincipal: [
+          '',
+          [
+            Validators.min(1)
+          ]
+        ],
+        minPeriodPaymentRate: [
+          '',
+          [
+            Validators.min(0)
+          ]
+        ],
+        periodPaymentRate: [
+          '',
+          [
+            Validators.required,
+            Validators.min(0)
+          ]
+        ],
+        maxPeriodPaymentRate: [
+          '',
+          [
+            Validators.min(0)
+          ]
+        ],
+        paymentAmountCalculationStrategy: [
+          WC_PAYMENT_AMOUNT_CALCULATION_STRATEGY.TPV,
+          Validators.required
+        ],
+        minAnnualEir: [null],
+        annualEir: [null],
+        maxAnnualEir: [null],
+        minPaymentAmount: [null],
+        paymentAmount: [null],
+        maxPaymentAmount: [null],
+        repaymentEvery: [
+          '',
+          [
+            Validators.required,
+            Validators.min(1)
+          ]
+        ],
+        repaymentFrequencyType: [
+          '',
+          Validators.required
+        ],
+        discount: [
+          '',
+          [
+            Validators.min(0)
+          ]
+        ]
+      });
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    this.validateAdvancedPaymentStrategyControls();
+    if (this.loanProductService.isLoanProduct) {
+      this.validateAdvancedPaymentStrategyControls();
+    }
   }
 
   setConditionalControls() {
-    this.loanProductTermsForm
-      .get('allowApprovedDisbursedAmountsOverApplied')
-      .valueChanges.subscribe((allowApprovedDisbursedAmountsOverApplied) => {
-        if (allowApprovedDisbursedAmountsOverApplied) {
-          this.loanProductTermsForm.addControl('overAppliedCalculationType', new UntypedFormControl(''));
-          this.loanProductTermsForm.addControl('overAppliedNumber', new UntypedFormControl(''));
-          this.loanProductTermsForm.addControl('disallowExpectedDisbursements', new UntypedFormControl('true'));
+    if (this.loanProductService.isWorkingCapital) {
+      this.setWorkingCapitalConditionalControls();
+    }
+    if (this.loanProductService.isLoanProduct) {
+      this.loanProductTermsForm
+        .get('allowApprovedDisbursedAmountsOverApplied')!
+        .valueChanges.subscribe((allowApprovedDisbursedAmountsOverApplied) => {
+          if (allowApprovedDisbursedAmountsOverApplied) {
+            this.loanProductTermsForm.get('overAppliedCalculationType')!.enable();
+            this.loanProductTermsForm.get('overAppliedNumber')!.enable();
+            if (this.loanProductService.isLoanProduct) {
+              this.loanProductTermsForm.addControl('disallowExpectedDisbursements', new UntypedFormControl(true));
+            }
+          } else {
+            this.loanProductTermsForm.get('overAppliedCalculationType')!.disable();
+            this.loanProductTermsForm.get('overAppliedCalculationType')!.patchValue(null);
+            this.loanProductTermsForm.get('overAppliedNumber')!.disable();
+            this.loanProductTermsForm.get('overAppliedNumber')!.patchValue(null);
+            if (this.loanProductService.isLoanProduct) {
+              this.loanProductTermsForm.removeControl('disallowExpectedDisbursements');
+            }
+          }
+        });
+
+      this.loanProductTermsForm
+        .get('isLinkedToFloatingInterestRates')!
+        .valueChanges.subscribe((isLinkedToFloatingInterestRates) => {
+          if (isLinkedToFloatingInterestRates) {
+            this.loanProductTermsForm.removeControl('minInterestRatePerPeriod');
+            this.loanProductTermsForm.removeControl('interestRatePerPeriod');
+            this.loanProductTermsForm.removeControl('maxInterestRatePerPeriod');
+            this.loanProductTermsForm.removeControl('interestRateFrequencyType');
+            this.loanProductTermsForm.addControl('floatingRatesId', new UntypedFormControl('', Validators.required));
+            this.loanProductTermsForm.addControl(
+              'interestRateDifferential',
+              new UntypedFormControl('', Validators.required)
+            );
+            this.loanProductTermsForm.addControl(
+              'isFloatingInterestRateCalculationAllowed',
+              new UntypedFormControl(false)
+            );
+            this.loanProductTermsForm.addControl(
+              'minDifferentialLendingRate',
+              new UntypedFormControl('', Validators.required)
+            );
+            this.loanProductTermsForm.addControl(
+              'defaultDifferentialLendingRate',
+              new UntypedFormControl('', Validators.required)
+            );
+            this.loanProductTermsForm.addControl(
+              'maxDifferentialLendingRate',
+              new UntypedFormControl('', Validators.required)
+            );
+          } else {
+            this.loanProductTermsForm.addControl(
+              'minInterestRatePerPeriod',
+              new UntypedFormControl('', [
+                Validators.min(0),
+                Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+              ])
+            );
+            this.loanProductTermsForm.addControl(
+              'interestRatePerPeriod',
+              new UntypedFormControl('', [
+                Validators.required,
+                Validators.min(0),
+                Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+              ])
+            );
+            this.loanProductTermsForm.addControl(
+              'maxInterestRatePerPeriod',
+              new UntypedFormControl('', [
+                Validators.min(0),
+                Validators.pattern(/^\d+([.,]\d{1,6})?$/)
+              ])
+            );
+            this.loanProductTermsForm.addControl(
+              'interestRateFrequencyType',
+              new UntypedFormControl(
+                this.loanProductsTemplate.interestRateFrequencyType?.id ?? +this.interestRateFrequencyTypeData[0]?.id,
+                Validators.required
+              )
+            );
+            this.loanProductTermsForm.removeControl('floatingRatesId');
+            this.loanProductTermsForm.removeControl('interestRateDifferential');
+            this.loanProductTermsForm.removeControl('isFloatingInterestRateCalculationAllowed');
+            this.loanProductTermsForm.removeControl('minDifferentialLendingRate');
+            this.loanProductTermsForm.removeControl('defaultDifferentialLendingRate');
+            this.loanProductTermsForm.removeControl('maxDifferentialLendingRate');
+          }
+        });
+
+      this.loanProductTermsForm.get('useBorrowerCycle')!.valueChanges.subscribe((useBorrowerCycle) => {
+        if (useBorrowerCycle) {
+          this.loanProductTermsForm.addControl('principalVariationsForBorrowerCycle', this.formBuilder.array([]));
+          this.loanProductTermsForm.addControl(
+            'numberOfRepaymentVariationsForBorrowerCycle',
+            this.formBuilder.array([])
+          );
+          this.loanProductTermsForm.addControl('interestRateVariationsForBorrowerCycle', this.formBuilder.array([]));
         } else {
-          this.loanProductTermsForm.removeControl('overAppliedCalculationType');
-          this.loanProductTermsForm.removeControl('overAppliedNumber');
-          this.loanProductTermsForm.removeControl('disallowExpectedDisbursements');
+          this.loanProductTermsForm.removeControl('principalVariationsForBorrowerCycle');
+          this.loanProductTermsForm.removeControl('numberOfRepaymentVariationsForBorrowerCycle');
+          this.loanProductTermsForm.removeControl('interestRateVariationsForBorrowerCycle');
         }
       });
 
-    this.loanProductTermsForm
-      .get('isLinkedToFloatingInterestRates')
-      .valueChanges.subscribe((isLinkedToFloatingInterestRates) => {
-        if (isLinkedToFloatingInterestRates) {
-          this.loanProductTermsForm.removeControl('minInterestRatePerPeriod');
-          this.loanProductTermsForm.removeControl('interestRatePerPeriod');
-          this.loanProductTermsForm.removeControl('maxInterestRatePerPeriod');
-          this.loanProductTermsForm.removeControl('interestRateFrequencyType');
-          this.loanProductTermsForm.addControl('floatingRatesId', new UntypedFormControl('', Validators.required));
-          this.loanProductTermsForm.addControl(
-            'interestRateDifferential',
-            new UntypedFormControl('', Validators.required)
-          );
-          this.loanProductTermsForm.addControl(
-            'isFloatingInterestRateCalculationAllowed',
-            new UntypedFormControl(false)
-          );
-          this.loanProductTermsForm.addControl(
-            'minDifferentialLendingRate',
-            new UntypedFormControl('', Validators.required)
-          );
-          this.loanProductTermsForm.addControl(
-            'defaultDifferentialLendingRate',
-            new UntypedFormControl('', Validators.required)
-          );
-          this.loanProductTermsForm.addControl(
-            'maxDifferentialLendingRate',
-            new UntypedFormControl('', Validators.required)
-          );
+      this.loanProductTermsForm
+        .get('repaymentFrequencyType')!
+        .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((repaymentFrequencyType) => this.applySemiMonthlyRules(isSemiMonthly(repaymentFrequencyType)));
+
+      // A first day on or after the selected second day leaves no valid second day, so it is cleared.
+      this.loanProductTermsForm
+        .get('firstRepaymentDayOfMonth')!
+        .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((firstDay) => {
+          const secondDay = this.loanProductTermsForm.get('secondRepaymentDayOfMonth')!;
+          if (secondDay.value != null && firstDay != null && Number(secondDay.value) <= Number(firstDay)) {
+            secondDay.setValue(null);
+          }
+        });
+
+      this.zeroInterest.valueChanges.subscribe((zeroInterest) => {
+        if (zeroInterest) {
+          this.loanProductTermsForm.get('minInterestRatePerPeriod')!.patchValue(0);
+          this.loanProductTermsForm.get('minInterestRatePerPeriod')!.disable();
+          this.loanProductTermsForm.get('interestRatePerPeriod')!.patchValue(0);
+          this.loanProductTermsForm.get('interestRatePerPeriod')!.disable();
+          this.loanProductTermsForm.get('maxInterestRatePerPeriod')!.patchValue(0);
+          this.loanProductTermsForm.get('maxInterestRatePerPeriod')!.disable();
         } else {
-          this.loanProductTermsForm.addControl('minInterestRatePerPeriod', new UntypedFormControl(''));
-          this.loanProductTermsForm.addControl(
-            'interestRatePerPeriod',
-            new UntypedFormControl('', Validators.required)
-          );
-          this.loanProductTermsForm.addControl('maxInterestRatePerPeriod', new UntypedFormControl(''));
-          this.loanProductTermsForm.addControl(
-            'interestRateFrequencyType',
-            new UntypedFormControl(this.interestRateFrequencyTypeData.id, Validators.required)
-          );
-          this.loanProductTermsForm.removeControl('floatingRatesId');
-          this.loanProductTermsForm.removeControl('interestRateDifferential');
-          this.loanProductTermsForm.removeControl('isFloatingInterestRateCalculationAllowed');
-          this.loanProductTermsForm.removeControl('minDifferentialLendingRate');
-          this.loanProductTermsForm.removeControl('defaultDifferentialLendingRate');
-          this.loanProductTermsForm.removeControl('maxDifferentialLendingRate');
+          const interestRateValues = this.getInterestRateValues();
+          this.loanProductTermsForm.get('minInterestRatePerPeriod')!.patchValue(interestRateValues.min);
+          this.loanProductTermsForm.get('minInterestRatePerPeriod')!.enable();
+          this.loanProductTermsForm.get('interestRatePerPeriod')!.patchValue(interestRateValues.default);
+          this.loanProductTermsForm.get('interestRatePerPeriod')!.enable();
+          this.loanProductTermsForm.get('maxInterestRatePerPeriod')!.patchValue(interestRateValues.max);
+          this.loanProductTermsForm.get('maxInterestRatePerPeriod')!.enable();
         }
+        this.validateAdvancedPaymentStrategyControls();
       });
+    }
+  }
 
-    this.loanProductTermsForm.get('useBorrowerCycle').valueChanges.subscribe((useBorrowerCycle) => {
-      if (useBorrowerCycle) {
-        this.loanProductTermsForm.addControl('principalVariationsForBorrowerCycle', this.formBuilder.array([]));
-        this.loanProductTermsForm.addControl('numberOfRepaymentVariationsForBorrowerCycle', this.formBuilder.array([]));
-        this.loanProductTermsForm.addControl('interestRateVariationsForBorrowerCycle', this.formBuilder.array([]));
-      } else {
-        this.loanProductTermsForm.removeControl('principalVariationsForBorrowerCycle');
-        this.loanProductTermsForm.removeControl('numberOfRepaymentVariationsForBorrowerCycle');
-        this.loanProductTermsForm.removeControl('interestRateVariationsForBorrowerCycle');
-      }
-    });
-
-    this.zeroInterest.valueChanges.subscribe((zeroInterest) => {
-      if (zeroInterest) {
-        this.loanProductTermsForm.get('minInterestRatePerPeriod').patchValue(0);
-        this.loanProductTermsForm.get('minInterestRatePerPeriod').disable();
-        this.loanProductTermsForm.get('interestRatePerPeriod').patchValue(0);
-        this.loanProductTermsForm.get('interestRatePerPeriod').disable();
-        this.loanProductTermsForm.get('maxInterestRatePerPeriod').patchValue(0);
-        this.loanProductTermsForm.get('maxInterestRatePerPeriod').disable();
-      } else {
+  /** Working Capital: re-shape the pricing inputs whenever the strategy or a bound changes. */
+  private setWorkingCapitalConditionalControls(): void {
+    this.loanProductTermsForm
+      .get('paymentAmountCalculationStrategy')!
+      .valueChanges.subscribe((value: string) =>
+        this.applyPaymentAmountCalculationStrategy(resolvePaymentAmountCalculationStrategy(value))
+      );
+    const revalidate = (target: string, ...bounds: string[]) =>
+      bounds.forEach((name) =>
         this.loanProductTermsForm
-          .get('minInterestRatePerPeriod')
-          .patchValue(this.loanProductsTemplate.minInterestRatePerPeriod);
-        this.loanProductTermsForm.get('minInterestRatePerPeriod').enable();
-        this.loanProductTermsForm
-          .get('interestRatePerPeriod')
-          .patchValue(this.loanProductsTemplate.interestRatePerPeriod);
-        this.loanProductTermsForm.get('interestRatePerPeriod').enable();
-        this.loanProductTermsForm
-          .get('maxInterestRatePerPeriod')
-          .patchValue(this.loanProductsTemplate.maxInterestRatePerPeriod);
-        this.loanProductTermsForm.get('maxInterestRatePerPeriod').enable();
-      }
-      this.validateAdvancedPaymentStrategyControls();
-    });
+          .get(name)!
+          .valueChanges.subscribe(() =>
+            this.loanProductTermsForm.get(target)!.updateValueAndValidity({ emitEvent: false })
+          )
+      );
+    revalidate('periodPaymentRate', 'minPeriodPaymentRate', 'maxPeriodPaymentRate');
+    revalidate('annualEir', 'minAnnualEir', 'maxAnnualEir');
+    revalidate('paymentAmount', 'minPaymentAmount', 'maxPaymentAmount');
   }
 
   get principalVariationsForBorrowerCycle(): UntypedFormArray {
-    return this.loanProductTermsForm.get('principalVariationsForBorrowerCycle') as UntypedFormArray;
+    return this.loanProductTermsForm.get('principalVariationsForBorrowerCycle')! as UntypedFormArray;
   }
 
   get numberOfRepaymentVariationsForBorrowerCycle(): UntypedFormArray {
-    return this.loanProductTermsForm.get('numberOfRepaymentVariationsForBorrowerCycle') as UntypedFormArray;
+    return this.loanProductTermsForm.get('numberOfRepaymentVariationsForBorrowerCycle')! as UntypedFormArray;
   }
 
   get interestRateVariationsForBorrowerCycle(): UntypedFormArray {
-    return this.loanProductTermsForm.get('interestRateVariationsForBorrowerCycle') as UntypedFormArray;
+    return this.loanProductTermsForm.get('interestRateVariationsForBorrowerCycle')! as UntypedFormArray;
   }
 
   setLoanProductTermsFormDirty() {
@@ -358,7 +760,7 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
         };
       case 'NominalInterestRate':
         return {
-          title: this.translateService.instant('labels.heading.Nominal Interest Rate by loan cycle'),
+          title: this.translateService.instant('labels.inputs.Annual interest rate by loan cycle'),
           formfields: this.getFormfields(values)
         };
     }
@@ -380,6 +782,7 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
         value: values ? values.borrowerCycleNumber : undefined,
         type: 'number',
         required: true,
+        min: 0,
         order: 2
       }),
       new InputBase({
@@ -387,6 +790,7 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
         label: this.translateService.instant('labels.inputs.Minimum'),
         value: values ? values.minValue : undefined,
         type: 'number',
+        min: 0,
         order: 3
       }),
       new InputBase({
@@ -395,6 +799,7 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
         value: values ? values.defaultValue : undefined,
         type: 'number',
         required: true,
+        min: 0,
         order: 4
       }),
       new InputBase({
@@ -402,15 +807,81 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
         label: this.translateService.instant('labels.inputs.Maximum'),
         value: values ? values.maxValue : undefined,
         type: 'number',
+        min: 0,
         order: 5
       })
-
     ];
     return formfields;
   }
 
+  /**
+   * Semi-monthly products carry both due days (mandatory, set as a pair) and are always repaid every
+   * single period — the backend rejects any other `repaymentEvery`. Any other frequency rejects the
+   * days, so they are cleared and their validators dropped.
+   */
+  private applySemiMonthlyRules(semiMonthly: boolean): void {
+    const firstDay = this.loanProductTermsForm.get('firstRepaymentDayOfMonth');
+    const secondDay = this.loanProductTermsForm.get('secondRepaymentDayOfMonth');
+    const repaymentEvery = this.loanProductTermsForm.get('repaymentEvery');
+    if (!firstDay || !secondDay || !repaymentEvery) {
+      return;
+    }
+    if (semiMonthly) {
+      firstDay.setValidators(Validators.required);
+      secondDay.setValidators(Validators.required);
+      repaymentEvery.setValue(1);
+      repaymentEvery.disable();
+    } else {
+      firstDay.clearValidators();
+      firstDay.setValue(null);
+      secondDay.clearValidators();
+      secondDay.setValue(null);
+      repaymentEvery.enable();
+    }
+    firstDay.updateValueAndValidity();
+    secondDay.updateValueAndValidity();
+  }
+
+  /** Second-day options: only the days after the selected first day. */
+  secondRepaymentDayOptions(): number[] {
+    return secondRepaymentDayOptions(this.loanProductTermsForm.get('firstRepaymentDayOfMonth')?.value);
+  }
+
+  isSemiMonthly(): boolean {
+    return isSemiMonthly(this.loanProductTermsForm.get('repaymentFrequencyType')?.value);
+  }
+
   get loanProductTerms() {
-    return this.loanProductTermsForm.getRawValue();
+    const formValue = this.loanProductTermsForm.getRawValue();
+    // The backend rejects the days on any frequency other than semi-monthly, and takes them only as a pair.
+    applyRepaymentDaysToPayload(formValue, formValue.repaymentFrequencyType);
+    // Normalize decimal separators: convert comma to dot for backend compatibility
+    const normalizeDecimal = (value: any) => {
+      if (typeof value === 'string' && value.includes(',')) {
+        return value.replace(',', '.');
+      }
+      return value;
+    };
+
+    if (this.loanProductService.isWorkingCapital) {
+      // Only the active strategy's inputs may travel: the backend rejects the others and, on
+      // update, clears whatever belonged to the previous strategy by itself.
+      const terms = {
+        ...formValue,
+        minAnnualEir: normalizeDecimal(formValue.minAnnualEir),
+        annualEir: normalizeDecimal(formValue.annualEir),
+        maxAnnualEir: normalizeDecimal(formValue.maxAnnualEir)
+      };
+      inactivePricingFields(this.paymentAmountCalculationStrategy).forEach((name) => delete terms[name]);
+      return terms;
+    }
+
+    return {
+      ...formValue,
+      minInterestRatePerPeriod: normalizeDecimal(formValue.minInterestRatePerPeriod),
+      interestRatePerPeriod: normalizeDecimal(formValue.interestRatePerPeriod),
+      maxInterestRatePerPeriod: normalizeDecimal(formValue.maxInterestRatePerPeriod)
+    };
   }
 
   isZeroInterest(): boolean {
@@ -423,9 +894,33 @@ export class LoanProductTermsStepComponent implements OnInit, OnChanges {
 
   private validateAdvancedPaymentStrategyControls(): void {
     if (this.allowFixedLength()) {
-      this.loanProductTermsForm.get('fixedLength').patchValue(this.loanProductsTemplate.fixedLength || null);
+      this.loanProductTermsForm.get('fixedLength')!.patchValue(this.loanProductsTemplate.fixedLength || null);
     } else {
-      this.loanProductTermsForm.get('fixedLength').patchValue(null);
+      this.loanProductTermsForm.get('fixedLength')!.patchValue(null);
     }
+  }
+
+  private getInterestRateValues(): { min: any; default: any; max: any } {
+    if (this.isZeroInterestTemplate()) {
+      return {
+        min: '',
+        default: '',
+        max: ''
+      };
+    }
+
+    return {
+      min: this.loanProductsTemplate.minInterestRatePerPeriod,
+      default: this.loanProductsTemplate.interestRatePerPeriod,
+      max: this.loanProductsTemplate.maxInterestRatePerPeriod
+    };
+  }
+
+  private isZeroInterestTemplate(): boolean {
+    return (
+      this.loanProductsTemplate.minInterestRatePerPeriod === 0 &&
+      this.loanProductsTemplate.interestRatePerPeriod === 0 &&
+      this.loanProductsTemplate.maxInterestRatePerPeriod === 0
+    );
   }
 }
