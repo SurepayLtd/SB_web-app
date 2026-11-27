@@ -1,5 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelDescription,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 
 interface CrbIndividual {
   individual_id: number;
@@ -74,12 +85,26 @@ interface KycEnquiryAttempt {
 @Component({
   selector: 'mifosx-kyc-enquiry-tab',
   templateUrl: './kyc-enquiry-tab.component.html',
-  styleUrls: ['./kyc-enquiry-tab.component.scss']
+  styleUrls: ['./kyc-enquiry-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelDescription,
+    MatIcon,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ]
 })
 export class KycEnquiryTabComponent implements OnInit {
+
+  private route = inject(ActivatedRoute);
+
   kycEnquiryChecks: KycEnquiryAttempt[] = [];
 
-  constructor(private route: ActivatedRoute) {
+  constructor() {
     this.route.data.subscribe((data: { kycEnquiryData: KycEnquiryAttempt[] }) => {
       this.kycEnquiryChecks = this.parseKycEnquiryChecks(data.kycEnquiryData || []);
     });

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CrbCreditReportCheck } from '../../../loans/models/loan-account.model';
 import {
@@ -6,8 +6,18 @@ import {
   CrbDocViewerData
 } from '../custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
 import { LoansService } from '../../../loans/loans.service';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { MatButtonModule } from '@angular/material/button';
+import {
+  MatAccordion,
+  MatExpansionPanel,
+  MatExpansionPanelDescription,
+  MatExpansionPanelHeader,
+  MatExpansionPanelTitle
+} from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 
 export interface KycReportCheck {
   id: number;
@@ -129,18 +139,29 @@ export interface KycEmployment {
 @Component({
   selector: 'mifosx-kyc-report-tab',
   templateUrl: './kyc-report-tab.component.html',
-  styleUrls: ['./kyc-report-tab.component.scss']
+  styleUrls: ['./kyc-report-tab.component.scss'],
+  imports: [
+    ...STANDALONE_SHARED_IMPORTS,
+    MatButtonModule,
+    MatDialogModule,
+    MatAccordion,
+    MatExpansionPanel,
+    MatExpansionPanelDescription,
+    MatIcon,
+    MatExpansionPanelHeader,
+    MatExpansionPanelTitle
+  ]
 })
 export class KycReportTabComponent implements OnInit {
 
+  private route = inject(ActivatedRoute);
+  private loanService = inject(LoansService);
+  private dialog = inject(MatDialog)
+  private snackBar = inject(MatSnackBar);
+
   checks: KycReportCheck[] = [];
 
-  constructor(
-              private route: ActivatedRoute,
-              private loanService: LoansService,
-              private dialog: MatDialog,
-              private snackBar: MatSnackBar
-  ) {
+  constructor() {
     this.route.data.subscribe((data: { kycReportData: KycReportCheck[] }) => {
       this.checks = this.parseKycReportChecks(data.kycReportData || []);
     });
@@ -231,8 +252,14 @@ export class KycReportTabComponent implements OnInit {
     if (response instanceof ArrayBuffer) {
       return new Blob([response], { type: 'application/pdf' });
     }
-    if (typeof response === 'string' || response instanceof Uint8Array) {
+    if (typeof response === 'string') {
       return new Blob([response], { type: 'application/pdf' });
+    }
+    if (response instanceof Uint8Array) {
+      const buffer = new ArrayBuffer(response.byteLength);
+      new Uint8Array(buffer).set(response);
+
+      return new Blob([buffer], { type: 'application/pdf' });
     }
     return null;
   }

@@ -1,432 +1,519 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
 <div class="kyc-report-page">
 
-  <div class="report-overview" *ngIf="checks.length">
-    <div class="overview-item">
-      <span class="overview-label">Total Attempts</span>
-      <strong>{{ checks.length }}</strong>
-    </div>
-
-    <div class="overview-item">
-      <span class="overview-label">Reports Parsed</span>
-      <strong>{{ reportCount }}</strong>
-      <small class="overview-hint" *ngIf="reportCount < checks.length">
-        {{ checks.length - reportCount }} attempt(s) without report body
-      </small>
-    </div>
-
-    <div class="overview-item">
-      <span class="overview-label">Latest Attempt</span>
-      <strong>
-        {{ latestCheck?.createdAt
-        ? (toDate(latestCheck!.createdAt) | date: 'medium')
-        : 'N/A' }}
-      </strong>
-    </div>
-
-    <div class="overview-item">
-      <span class="overview-label">Client</span>
-      <strong>{{ latestCheck?.clientName ?? 'N/A' }}</strong>
-    </div>
-  </div>
-
-  <div class="empty-state" *ngIf="!checks.length">
-    <mat-icon>verified_user</mat-icon>
-    <h3>No KYC Reports</h3>
-    <p>No KYC report attempts are available for this client.</p>
-  </div>
-
-  <mat-accordion multi="true" *ngIf="checks.length">
-
-    <mat-expansion-panel *ngFor="let check of checks; let i = index; trackBy: trackByCheckId"
-      [expanded]="i === 0"
-      class="attempt-panel">
-
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <div class="attempt-title">
-            <span class="attempt-number">Attempt {{ checks.length - i }}</span>
-            <span class="status-badge" [ngClass]="statusCode(check.status)">
-              {{ statusLabel(check.status) }}
-            </span>
-          </div>
-        </mat-panel-title>
-
-        <mat-panel-description>
-          <span class="header-meta">
-            <mat-icon inline>event</mat-icon>
-            {{ check.createdAt ? (toDate(check.createdAt) | date: 'medium') : 'Date unavailable' }}
-          </span>
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-
-      <div class="attempt-content">
-
-        <div class="attempt-actions">
-          <div class="attempt-meta">
-            <span>
-              <mat-icon>schedule</mat-icon>
-              {{ check.createdAt ? (toDate(check.createdAt) | date: 'medium') : 'N/A' }}
-            </span>
-            <span *ngIf="check.completedAt">
-              <mat-icon>check_circle</mat-icon>
-              Completed: {{ toDate(check.completedAt) | date: 'medium' }}
-            </span>
-            <span *ngIf="labelOf(check.validationType) !== 'N/A'">
-              <mat-icon>verified_user</mat-icon>
-              {{ labelOf(check.validationType) }}
-            </span>
-            <span *ngIf="labelOf(check.requestType) !== 'N/A'">
-              <mat-icon>assignment</mat-icon>
-              {{ labelOf(check.requestType) }}
-            </span>
-          </div>
-          <div class="pdf-actions" *ngIf="hasPdf(check)">
-            <button
-              mat-raised-button
-              color="primary"
-              type="button"
-              (click)="openKycReportPdf(check)">
-              <mat-icon>visibility</mat-icon>
-              View PDF Report
-            </button>
-          </div>
-        </div>
-
-        <!-- Parse error -->
-        <div class="report-error" *ngIf="check.parseError">
-          <mat-icon>error_outline</mat-icon>
-          <div>
-            <strong>Unable to display JSON report</strong>
-            <p>The stored response could not be parsed.</p>
-          </div>
-        </div>
-
-        <!-- No payload -->
-        <div class="report-notice"
-             *ngIf="!check.parseError && !check.parsedResponse">
-          <mat-icon>info</mat-icon>
-          <span>No JSON report response is available for this attempt.</span>
-        </div>
-
-        <!-- Payload exists but no kyc_information -->
-        <!-- PDF only -->
-        <div class="report-notice report-notice--pdf"
-             *ngIf="check.parsedResponse && !hasJson(check) && hasPdf(check)">
-          <mat-icon>picture_as_pdf</mat-icon>
-          <span>This attempt has a <strong>PDF report only</strong>.
-                The CRB returned a request acknowledgement without the
-                structured KYC information.
-                Use <em>View PDF Report</em> above to open it.
-           </span>
-        </div>
-
-        <!-- No structured data and no PDF -->
-        <div class="report-notice report-notice--muted"
-             *ngIf="check.parsedResponse && !hasJson(check) && !hasPdf(check)">
-          <mat-icon>info</mat-icon>
-          <span>The provider response does not contain kyc_information, and no PDF report is available.</span>
-        </div>
-
-        <ng-container *ngIf="hasJson(check) && check.parsedResponse!.kyc_information as info">
-
-          <!-- Provider meta -->
-          <div class="provider-response"
-               *ngIf="hasValue(check.parsedResponse!.message) || hasValue(check.parsedResponse!.count) || hasValue(check.parsedResponse!.status)">
-            <span *ngIf="hasValue(check.parsedResponse!.message)">
-              <strong>Provider message:</strong> {{ check.parsedResponse!.message }}
-            </span>
-            <span *ngIf="hasValue(check.parsedResponse!.count)">
-              <strong>Record count:</strong> {{ check.parsedResponse!.count }}
-            </span>
-            <span *ngIf="hasValue(check.parsedResponse!.status)">
-              <strong>Provider status:</strong> {{ check.parsedResponse!.status }}
-            </span>
-          </div>
-
-          <!-- Customer details -->
-          <section class="report-section" *ngIf="info.customer_details as customer">
-            <div class="section-heading">
-              <mat-icon>person</mat-icon>
-              <h3>Customer Details</h3>
-            </div>
-
-            <div class="customer-profile">
-              <img *ngIf="getPhoto(customer.Photo) as src"
-                   [src]="src"
-                   alt="Customer photo"
-                   class="customer-photo"
-                   (error)="$any($event.target).style.display='none'" />
-
-              <div class="details-grid">
-                <div class="detail-item">
-                  <span>Name</span>
-                  <strong>{{ customer.Name ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Date of Birth</span>
-                  <strong>{{ customer.Date_of_Birth ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Gender</span>
-                  <strong>{{ customer.Gender ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Marital Status</span>
-                  <strong>{{ customer.Marital_Status ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Nationality</span>
-                  <strong>{{ customer.Nationality ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item">
-                  <span>Contact</span>
-                  <strong>{{ customer.Contact ?? 'N/A' }}</strong>
-                </div>
-                <div class="detail-item full-width">
-                  <span>Address</span>
-                  <strong>{{ customer.Address ?? 'N/A' }}</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Business details (only if present) -->
-          <section class="report-section" *ngIf="info.business_details as business">
-            <div class="section-heading">
-              <mat-icon>business</mat-icon>
-              <h3>Business Details</h3>
-            </div>
-
-            <div class="details-grid">
-              <div class="detail-item">
-                <span>Business Name</span>
-                <strong>{{ business.Business_Name ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Trading Name</span>
-                <strong>{{ business.Trading_Name ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Industry Sector</span>
-                <strong>{{ business.Industry_Sector ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Registration Date</span>
-                <strong>{{ business.Date_of_Registration ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Business Type</span>
-                <strong>{{ business.Business_Type ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item">
-                <span>Contact</span>
-                <strong>{{ business.Contact ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item full-width">
-                <span>Postal Address</span>
-                <strong>{{ business.Postal_Address ?? 'N/A' }}</strong>
-              </div>
-              <div class="detail-item full-width">
-                <span>Address</span>
-                <strong>{{ business.Address ?? 'N/A' }}</strong>
-              </div>
-            </div>
-          </section>
-
-          <!-- Identification -->
-          <section class="report-section">
-            <div class="section-heading">
-              <mat-icon>badge</mat-icon>
-              <h3>Identification Details</h3>
-            </div>
-
-            <ng-container *ngIf="hasItems(info.identification_details); else noId">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Identifier</th>
-                    <th>Identifier Type</th>
-                    <th>Country of Issue</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr *ngFor="let item of info.identification_details; trackBy: trackByIndex">
-                    <td>{{ item.SNo ?? 'N/A' }}</td>
-                    <td>{{ item.Identifier || 'N/A' }}</td>
-                    <td>{{ item.Identifier_Type || 'N/A' }}</td>
-                    <td>{{ item.Country_of_Issue || 'N/A' }}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </ng-container>
-            <ng-template #noId>
-              <p class="no-data">No identification details available.</p>
-            </ng-template>
-          </section>
-
-          <!-- Contact history -->
-          <section class="report-section" *ngIf="info.contact_history as contacts">
-            <div class="section-heading">
-              <mat-icon>contacts</mat-icon>
-              <h3>Contact History</h3>
-            </div>
-
-            <div class="two-column">
-              <div>
-                <h4>Phone Numbers</h4>
-                <div class="simple-list" *ngIf="hasItems(contacts.Phone_Numbers); else noPhones">
-                  <div *ngFor="let p of contacts.Phone_Numbers; trackBy: trackByIndex">
-                    {{ p.Phone_Number || 'N/A' }}
-                  </div>
-                </div>
-                <ng-template #noPhones>
-                  <p class="no-data">No phone numbers available.</p>
-                </ng-template>
-              </div>
-
-              <div>
-                <h4>Email Addresses</h4>
-                <div class="simple-list" *ngIf="hasItems(contacts.Emails); else noEmails">
-                  <div *ngFor="let e of contacts.Emails; trackBy: trackByIndex">
-                    {{ e.Email || 'N/A' }}
-                  </div>
-                </div>
-                <ng-template #noEmails>
-                  <p class="no-data">No email addresses available.</p>
-                </ng-template>
-              </div>
-            </div>
-          </section>
-
-          <!-- Physical address history -->
-          <section class="report-section">
-            <div class="section-heading">
-              <mat-icon>home</mat-icon>
-              <h3>Physical Address History</h3>
-            </div>
-
-            <ng-container *ngIf="hasItems(info.physical_address_history); else noPhysical">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Address</th>
-                    <th>Ownership</th>
-                    <th>Period at Address</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr *ngFor="let a of info.physical_address_history; trackBy: trackByIndex">
-                    <td>{{ a.SNo ?? 'N/A' }}</td>
-                    <td>{{ a.Address || 'N/A' }}</td>
-                    <td>{{ a.Ownership || 'N/A' }}</td>
-                    <td>{{ a.Period_at_Address || 'N/A' }}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </ng-container>
-            <ng-template #noPhysical>
-              <p class="no-data">No physical address history available.</p>
-            </ng-template>
-          </section>
-
-          <!-- Postal address history -->
-          <section class="report-section">
-            <div class="section-heading">
-              <mat-icon>markunread_mailbox</mat-icon>
-              <h3>Postal Address History</h3>
-            </div>
-
-            <div class="simple-list" *ngIf="hasItems(info.postal_address_history); else noPostal">
-              <div *ngFor="let a of info.postal_address_history; trackBy: trackByIndex">
-                {{ a.address || 'N/A' }}
-              </div>
-            </div>
-            <ng-template #noPostal>
-              <p class="no-data">No postal address history available.</p>
-            </ng-template>
-          </section>
-
-          <!-- Employment history -->
-          <section class="report-section">
-            <div class="section-heading">
-              <mat-icon>work</mat-icon>
-              <h3>Employment History</h3>
-            </div>
-
-            <ng-container *ngIf="hasItems(info.employment_history); else noEmployment">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Employer</th>
-                    <th>Occupation</th>
-                    <th>Employment Date</th>
-                    <th>Income Band</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr *ngFor="let e of info.employment_history; trackBy: trackByIndex">
-                    <td>{{ e.SNo ?? 'N/A' }}</td>
-                    <td>{{ e.Employer_Name || 'N/A' }}</td>
-                    <td>{{ e.Occupation || 'N/A' }}</td>
-                    <td>{{ e.Employment_Date || 'N/A' }}</td>
-                    <td>{{ e.Income_Band || 'N/A' }}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </ng-container>
-            <ng-template #noEmployment>
-              <p class="no-data">No employment history available.</p>
-            </ng-template>
-          </section>
-
-          <!-- Shareholders -->
-          <section class="report-section">
-            <div class="section-heading">
-              <mat-icon>groups</mat-icon>
-              <h3>Shareholder Details</h3>
-            </div>
-
-            <ng-container *ngIf="hasItems(info.shareholder_details); else noShareholders">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Business Name</th>
-                    <th>Stakeholder Type</th>
-                    <th>Category</th>
-                    <th>Shareholding</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr *ngFor="let s of info.shareholder_details; trackBy: trackByIndex">
-                    <td>{{ s.SNo ?? 'N/A' }}</td>
-                    <td>{{ s.Business_Name || 'N/A' }}</td>
-                    <td>{{ s.stakeholderType || 'N/A' }}</td>
-                    <td>{{ s.Stakeholder_Category || 'N/A' }}</td>
-                    <td>{{ s.Shareholder_Percentage || 'N/A' }}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </ng-container>
-            <ng-template #noShareholders>
-              <p class="no-data">No shareholder details available.</p>
-            </ng-template>
-          </section>
-
-        </ng-container>
-
+  @if (checks.length) {
+    <div class="report-overview">
+      <div class="overview-item">
+        <span class="overview-label">Total Attempts</span>
+        <strong>{{ checks.length }}</strong>
       </div>
-    </mat-expansion-panel>
-  </mat-accordion>
+
+      <div class="overview-item">
+        <span class="overview-label">Reports Parsed</span>
+        <strong>{{ reportCount }}</strong>
+        @if (reportCount < checks.length) {
+          <small class="overview-hint">
+            {{ checks.length - reportCount }} attempt(s) without report body
+          </small>
+        }
+      </div>
+
+      <div class="overview-item">
+        <span class="overview-label">Latest Attempt</span>
+        <strong>
+          {{ latestCheck?.createdAt
+          ? (toDate(latestCheck!.createdAt) | date: 'medium')
+          : 'N/A' }}
+        </strong>
+      </div>
+
+      <div class="overview-item">
+        <span class="overview-label">Client</span>
+        <strong>{{ latestCheck?.clientName ?? 'N/A' }}</strong>
+      </div>
+    </div>
+  }
+
+  @if (!checks.length) {
+    <div class="empty-state">
+      <mat-icon>verified_user</mat-icon>
+      <h3>No KYC Reports</h3>
+      <p>No KYC report attempts are available for this client.</p>
+    </div>
+  }
+
+  @if (checks.length) {
+    <mat-accordion multi="true">
+
+      @for (check of checks; track trackByCheckId($index, check); let i = $index) {
+        <mat-expansion-panel
+          [expanded]="i === 0"
+          class="attempt-panel">
+
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <div class="attempt-title">
+                <span class="attempt-number">Attempt {{ checks.length - i }}</span>
+                <span class="status-badge" [ngClass]="statusCode(check.status)">
+                  {{ statusLabel(check.status) }}
+                </span>
+              </div>
+            </mat-panel-title>
+
+            <mat-panel-description>
+              <span class="header-meta">
+                <mat-icon inline>event</mat-icon>
+                {{ check.createdAt ? (toDate(check.createdAt) | date: 'medium') : 'Date unavailable' }}
+              </span>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="attempt-content">
+
+            <div class="attempt-actions">
+              <div class="attempt-meta">
+                <span>
+                  <mat-icon>schedule</mat-icon>
+                  {{ check.createdAt ? (toDate(check.createdAt) | date: 'medium') : 'N/A' }}
+                </span>
+
+                @if (check.completedAt) {
+                  <span>
+                    <mat-icon>check_circle</mat-icon>
+                    Completed: {{ toDate(check.completedAt) | date: 'medium' }}
+                  </span>
+                }
+
+                @if (labelOf(check.validationType) !== 'N/A') {
+                  <span>
+                    <mat-icon>verified_user</mat-icon>
+                    {{ labelOf(check.validationType) }}
+                  </span>
+                }
+
+                @if (labelOf(check.requestType) !== 'N/A') {
+                  <span>
+                    <mat-icon>assignment</mat-icon>
+                    {{ labelOf(check.requestType) }}
+                  </span>
+                }
+              </div>
+
+              @if (hasPdf(check)) {
+                <div class="pdf-actions">
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="openKycReportPdf(check)">
+                    <mat-icon>visibility</mat-icon>
+                    View PDF Report
+                  </button>
+                </div>
+              }
+            </div>
+
+            <!-- Parse error -->
+            @if (check.parseError) {
+              <div class="report-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
+                  <strong>Unable to display JSON report</strong>
+                  <p>The stored response could not be parsed.</p>
+                </div>
+              </div>
+            }
+
+            <!-- No payload -->
+            @if (!check.parseError && !check.parsedResponse) {
+              <div class="report-notice">
+                <mat-icon>info</mat-icon>
+                <span>No JSON report response is available for this attempt.</span>
+              </div>
+            }
+
+            <!-- Payload exists but no kyc_information -->
+            <!-- PDF only -->
+            @if (check.parsedResponse && !hasJson(check) && hasPdf(check)) {
+              <div class="report-notice report-notice--pdf">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>
+                  This attempt has a <strong>PDF report only</strong>.
+                  The CRB returned a request acknowledgement without the
+                  structured KYC information.
+                  Use <em>View PDF Report</em> above to open it.
+                </span>
+              </div>
+            }
+
+            <!-- No structured data and no PDF -->
+            @if (check.parsedResponse && !hasJson(check) && !hasPdf(check)) {
+              <div class="report-notice report-notice--muted">
+                <mat-icon>info</mat-icon>
+                <span>The provider response does not contain kyc_information, and no PDF report is available.</span>
+              </div>
+            }
+
+            @if (hasJson(check) && check.parsedResponse!.kyc_information; as info) {
+
+              <!-- Provider meta -->
+              @if (
+                hasValue(check.parsedResponse!.message) ||
+                hasValue(check.parsedResponse!.count) ||
+                hasValue(check.parsedResponse!.status)
+                ) {
+                <div class="provider-response">
+                  @if (hasValue(check.parsedResponse!.message)) {
+                    <span>
+                      <strong>Provider message:</strong> {{ check.parsedResponse!.message }}
+                    </span>
+                  }
+
+                  @if (hasValue(check.parsedResponse!.count)) {
+                    <span>
+                      <strong>Record count:</strong> {{ check.parsedResponse!.count }}
+                    </span>
+                  }
+
+                  @if (hasValue(check.parsedResponse!.status)) {
+                    <span>
+                      <strong>Provider status:</strong> {{ check.parsedResponse!.status }}
+                    </span>
+                  }
+                </div>
+              }
+
+              <!-- Customer details -->
+              @if (info.customer_details; as customer) {
+                <section class="report-section">
+                  <div class="section-heading">
+                    <mat-icon>person</mat-icon>
+                    <h3>Customer Details</h3>
+                  </div>
+
+                  <div class="customer-profile">
+                    @if (getPhoto(customer.Photo); as src) {
+                      <img
+                        [src]="src"
+                        alt="Customer photo"
+                        class="customer-photo"
+                        (error)="$any($event.target).style.display='none'" />
+                    }
+
+                    <div class="details-grid">
+                      <div class="detail-item">
+                        <span>Name</span>
+                        <strong>{{ customer.Name ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item">
+                        <span>Date of Birth</span>
+                        <strong>{{ customer.Date_of_Birth ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item">
+                        <span>Gender</span>
+                        <strong>{{ customer.Gender ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item">
+                        <span>Marital Status</span>
+                        <strong>{{ customer.Marital_Status ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item">
+                        <span>Nationality</span>
+                        <strong>{{ customer.Nationality ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item">
+                        <span>Contact</span>
+                        <strong>{{ customer.Contact ?? 'N/A' }}</strong>
+                      </div>
+
+                      <div class="detail-item full-width">
+                        <span>Address</span>
+                        <strong>{{ customer.Address ?? 'N/A' }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <!-- Business details (only if present) -->
+              @if (info.business_details; as business) {
+                <section class="report-section">
+                  <div class="section-heading">
+                    <mat-icon>business</mat-icon>
+                    <h3>Business Details</h3>
+                  </div>
+
+                  <div class="details-grid">
+                    <div class="detail-item">
+                      <span>Business Name</span>
+                      <strong>{{ business.Business_Name ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Trading Name</span>
+                      <strong>{{ business.Trading_Name ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Industry Sector</span>
+                      <strong>{{ business.Industry_Sector ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Registration Date</span>
+                      <strong>{{ business.Date_of_Registration ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Business Type</span>
+                      <strong>{{ business.Business_Type ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Contact</span>
+                      <strong>{{ business.Contact ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item full-width">
+                      <span>Postal Address</span>
+                      <strong>{{ business.Postal_Address ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item full-width">
+                      <span>Address</span>
+                      <strong>{{ business.Address ?? 'N/A' }}</strong>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <!-- Identification -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>badge</mat-icon>
+                  <h3>Identification Details</h3>
+                </div>
+
+                @if (hasItems(info.identification_details)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Identifier</th>
+                        <th>Identifier Type</th>
+                        <th>Country of Issue</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of info.identification_details; track $index) {
+                          <tr>
+                            <td>{{ item.SNo ?? 'N/A' }}</td>
+                            <td>{{ item.Identifier || 'N/A' }}</td>
+                            <td>{{ item.Identifier_Type || 'N/A' }}</td>
+                            <td>{{ item.Country_of_Issue || 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No identification details available.</p>
+                }
+              </section>
+
+              <!-- Contact history -->
+              @if (info.contact_history; as contacts) {
+                <section class="report-section">
+                  <div class="section-heading">
+                    <mat-icon>contacts</mat-icon>
+                    <h3>Contact History</h3>
+                  </div>
+
+                  <div class="two-column">
+                    <div>
+                      <h4>Phone Numbers</h4>
+
+                      @if (hasItems(contacts.Phone_Numbers)) {
+                        <div class="simple-list">
+                          @for (p of contacts.Phone_Numbers; track $index) {
+                            <div>
+                              {{ p.Phone_Number || 'N/A' }}
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="no-data">No phone numbers available.</p>
+                      }
+                    </div>
+
+                    <div>
+                      <h4>Email Addresses</h4>
+
+                      @if (hasItems(contacts.Emails)) {
+                        <div class="simple-list">
+                          @for (e of contacts.Emails; track $index) {
+                            <div>
+                              {{ e.Email || 'N/A' }}
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="no-data">No email addresses available.</p>
+                      }
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <!-- Physical address history -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>home</mat-icon>
+                  <h3>Physical Address History</h3>
+                </div>
+
+                @if (hasItems(info.physical_address_history)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Address</th>
+                        <th>Ownership</th>
+                        <th>Period at Address</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (a of info.physical_address_history; track $index) {
+                          <tr>
+                            <td>{{ a.SNo ?? 'N/A' }}</td>
+                            <td>{{ a.Address || 'N/A' }}</td>
+                            <td>{{ a.Ownership || 'N/A' }}</td>
+                            <td>{{ a.Period_at_Address || 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No physical address history available.</p>
+                }
+              </section>
+
+              <!-- Postal address history -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>markunread_mailbox</mat-icon>
+                  <h3>Postal Address History</h3>
+                </div>
+
+                @if (hasItems(info.postal_address_history)) {
+                  <div class="simple-list">
+                    @for (a of info.postal_address_history; track $index) {
+                      <div>
+                        {{ a.address || 'N/A' }}
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="no-data">No postal address history available.</p>
+                }
+              </section>
+
+              <!-- Employment history -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>work</mat-icon>
+                  <h3>Employment History</h3>
+                </div>
+
+                @if (hasItems(info.employment_history)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Employer</th>
+                        <th>Occupation</th>
+                        <th>Employment Date</th>
+                        <th>Income Band</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (e of info.employment_history; track $index) {
+                          <tr>
+                            <td>{{ e.SNo ?? 'N/A' }}</td>
+                            <td>{{ e.Employer_Name || 'N/A' }}</td>
+                            <td>{{ e.Occupation || 'N/A' }}</td>
+                            <td>{{ e.Employment_Date || 'N/A' }}</td>
+                            <td>{{ e.Income_Band || 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No employment history available.</p>
+                }
+              </section>
+
+              <!-- Shareholders -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>groups</mat-icon>
+                  <h3>Shareholder Details</h3>
+                </div>
+
+                @if (hasItems(info.shareholder_details)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Business Name</th>
+                        <th>Stakeholder Type</th>
+                        <th>Category</th>
+                        <th>Shareholding</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (s of info.shareholder_details; track $index) {
+                          <tr>
+                            <td>{{ s.SNo ?? 'N/A' }}</td>
+                            <td>{{ s.Business_Name || 'N/A' }}</td>
+                            <td>{{ s.stakeholderType || 'N/A' }}</td>
+                            <td>{{ s.Stakeholder_Category || 'N/A' }}</td>
+                            <td>{{ s.Shareholder_Percentage || 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No shareholder details available.</p>
+                }
+              </section>
+
+            }
+
+          </div>
+        </mat-expansion-panel>
+      }
+
+    </mat-accordion>
+  }
+
 </div>
