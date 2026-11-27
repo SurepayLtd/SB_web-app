@@ -337,7 +337,25 @@ export class LoansViewComponent extends LoanProductBaseComponent implements OnIn
           taskPermissionName: 'ADJUST_REPAYMENT_SCHEDULE'
         });
       }
-    } else if (this.status === 'Approved') {
+    } else if (this.loanDetailsData.isLoanProductCrbEnabled) {
+      this.buttonConfig.addOption({
+        name: 'Credit Enquiry',
+        icon: 'search-dollar',
+        taskPermissionName: 'CREATE_CRBCREDIT'
+      });
+
+      this.buttonConfig.addOption({
+        name: 'Credit Score',
+        icon: 'chart-line',
+        taskPermissionName: 'CREATE_CRBCREDIT'
+      });
+
+      this.buttonConfig.addOption({
+        name: 'Credit Report',
+        icon: 'chart-line',
+        taskPermissionName: 'GET_CREDITREPORT'
+      });
+    }else if (this.status === 'Approved') {
       this.buttonConfig.addButton({
         name: this.loanDetailsData.loanOfficerName ? 'Change Loan Officer' : 'Assign Loan Officer',
         icon: 'user-tie',

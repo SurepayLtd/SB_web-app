@@ -1,0 +1,706 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
+
+<div class="crb-report-page">
+
+  <!-- ===================== Overview ===================== -->
+  @if (checks.length) {
+    <div class="report-overview">
+      <div class="overview-item">
+        <span class="overview-label">Total Attempts</span>
+        <strong>{{ checks.length }}</strong>
+      </div>
+
+      <div class="overview-item">
+        <span class="overview-label">PDF Reports</span>
+        <strong>{{ checks.length }}</strong>
+      </div>
+
+      <div class="overview-item">
+        <span class="overview-label">JSON Reports Parsed</span>
+        <strong>{{ reportCount }}</strong>
+        @if (pdfOnlyCount) {
+          <small class="overview-hint">
+            {{ pdfOnlyCount }} attempt(s) have PDF only
+          </small>
+        }
+      </div>
+
+      <div class="overview-item">
+        <span class="overview-label">Latest Attempt</span>
+        <strong>
+          {{ latestCheck?.createdAt
+          ? (toDate(latestCheck!.createdAt) | date: 'medium')
+          : 'N/A' }}
+        </strong>
+      </div>
+    </div>
+  }
+
+  <!-- ===================== Empty ===================== -->
+  @if (!checks.length) {
+    <div class="empty-state">
+      <mat-icon>description</mat-icon>
+      <h3>No Credit Reports</h3>
+      <p>No credit report attempts are available for this loan.</p>
+    </div>
+  }
+
+  <!-- ===================== Attempts ===================== -->
+  @if (checks.length) {
+    <mat-accordion multi="true">
+
+      @for (check of checks; track $index; let i = $index) {
+        <mat-expansion-panel
+          [expanded]="i === 0"
+          class="attempt-panel">
+
+          <!-- ---------- Header ---------- -->
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <div class="attempt-title">
+                <span class="attempt-number">
+                  Attempt {{ checks.length - i }}
+                </span>
+
+                <span class="status-badge" [ngClass]="statusCode(check.status)">
+                  {{ statusLabel(check.status) }}
+                </span>
+              </div>
+            </mat-panel-title>
+
+            <mat-panel-description>
+              <span class="header-meta">
+                <mat-icon inline="">event</mat-icon>
+                {{ check.createdAt
+                ? (toDate(check.createdAt) | date: 'medium')
+                : 'Date unavailable' }}
+              </span>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <!-- ---------- Body ---------- -->
+          <div class="attempt-content">
+
+            <!-- Actions bar -->
+            <div class="attempt-actions">
+              <div class="attempt-meta">
+                <span>
+                  <mat-icon>schedule</mat-icon>
+                  {{ check.createdAt
+                  ? (toDate(check.createdAt) | date: 'medium')
+                  : 'N/A' }}
+                </span>
+
+                @if (check.completedAt) {
+                  <span>
+                    <mat-icon>check_circle</mat-icon>
+                    Completed: {{ toDate(check.completedAt) | date: 'medium' }}
+                  </span>
+                }
+
+                @if (labelOf(check.validationType) !== 'N/A') {
+                  <span>
+                    <mat-icon>verified_user</mat-icon>
+                    {{ labelOf(check.validationType) }}
+                  </span>
+                }
+
+                @if (labelOf(check.requestType) !== 'N/A') {
+                  <span>
+                    <mat-icon>assignment</mat-icon>
+                    {{ labelOf(check.requestType) }}
+                  </span>
+                }
+              </div>
+
+              <!-- PDF actions -->
+              @if (hasPdf(check)) {
+                <div class="pdf-actions">
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="openCreditReportPdf(check)">
+                    <mat-icon>visibility</mat-icon>
+                    View PDF Report
+                  </button>
+
+                  <!--
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    (click)="downloadCreditReportPdf(check)">
+                    <mat-icon>download</mat-icon>
+                    Download
+                  </button>
+                  -->
+                </div>
+              }
+            </div>
+
+            <!-- Parse error -->
+            @if (check.parseError) {
+              <div class="report-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
+                  <strong>Unable to display JSON report</strong>
+                  <p>The stored response could not be parsed.</p>
+                </div>
+              </div>
+            }
+
+            <!-- No payload -->
+            @if (!check.parseError && !check.parsedResponse) {
+              <div class="report-notice">
+                <mat-icon>info</mat-icon>
+                <span>No JSON report response is available for this attempt.</span>
+              </div>
+            }
+
+            <!-- PDF only -->
+            @if (check.parsedResponse && !hasJson(check)) {
+              <div class="report-notice report-notice--pdf">
+                <mat-icon>picture_as_pdf</mat-icon>
+                <span>
+                  This attempt has a <strong>PDF report only</strong>.
+                  The CRB returned a request acknowledgement without the
+                  structured credit information.
+                  Use <em>View PDF Report</em> above to open it.
+                </span>
+              </div>
+            }
+
+            <!-- ================= Full JSON report ================= -->
+            @if (hasJson(check) && check.parsedResponse!.credit_information; as report) {
+
+              <!-- Provider meta -->
+              @if (
+                hasValue(check.parsedResponse!.message) ||
+                hasValue(check.parsedResponse!.count) ||
+                hasValue(check.parsedResponse!.status)
+                ) {
+                <div class="provider-response">
+                  @if (hasValue(check.parsedResponse!.message)) {
+                    <span>
+                      <strong>Provider message:</strong>
+                      {{ check.parsedResponse!.message }}
+                    </span>
+                  }
+
+                  @if (hasValue(check.parsedResponse!.count)) {
+                    <span>
+                      <strong>Record count:</strong>
+                      {{ check.parsedResponse!.count }}
+                    </span>
+                  }
+
+                  @if (hasValue(check.parsedResponse!.status)) {
+                    <span>
+                      <strong>Provider status:</strong>
+                      {{ check.parsedResponse!.status }}
+                    </span>
+                  }
+                </div>
+              }
+
+              <!-- Customer details -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>person</mat-icon>
+                  <h3>Customer Details</h3>
+                </div>
+
+                <div class="customer-profile">
+                  @if (report.customer_details?.Photo) {
+                    <img
+                      [src]="report.customer_details?.Photo!"
+                      alt="Customer photo"
+                      class="customer-photo"
+                      (error)="$any($event.target).style.display='none'" />
+                  }
+
+                  <div class="details-grid">
+                    <div class="detail-item">
+                      <span>Name</span>
+                      <strong>{{ report.customer_details?.Name ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Date of Birth</span>
+                      <strong>{{ report.customer_details?.Date_of_Birth ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Gender</span>
+                      <strong>{{ report.customer_details?.Gender ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Marital Status</span>
+                      <strong>{{ report.customer_details?.Marital_Status ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Nationality</span>
+                      <strong>{{ report.customer_details?.Nationality ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item">
+                      <span>Contact</span>
+                      <strong>{{ report.customer_details?.Contact ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="detail-item full-width">
+                      <span>Address</span>
+                      <strong>{{ report.customer_details?.Address ?? 'N/A' }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Scoring -->
+              @if (report.scoring_details; as scoring) {
+                <section class="report-section">
+                  <div class="section-heading">
+                    <mat-icon>analytics</mat-icon>
+                    <h3>Credit Scoring</h3>
+                  </div>
+
+                  <div class="score-overview">
+                    <div class="score-card">
+                      <span>Current Score</span>
+                      <strong>{{ scoring.Current_Score ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="score-card">
+                      <span>Score Band</span>
+                      <strong>{{ scoring.Current_Score_Band ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="score-card">
+                      <span>Score Rating</span>
+                      <strong>{{ scoring.Current_Score_Rating ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="score-card">
+                      <span>Probability of Default</span>
+                      <strong>{{ scoring.Probability_of_Default ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="score-card">
+                      <span>Likelihood to Default</span>
+                      <strong>{{ scoring.Likelihood_to_Default ?? 'N/A' }}</strong>
+                    </div>
+
+                    <div class="score-card">
+                      <span>Evaluation Period</span>
+                      <strong>{{ scoring.Evaluation_Period ?? 'N/A' }}</strong>
+                    </div>
+                  </div>
+
+                  @if (scoring.Score_Explanation?.length) {
+                    <div class="score-explanation">
+                      <h4>Score Explanation</h4>
+                      <ul>
+                        @for (item of scoring.Score_Explanation; track $index) {
+                          <li>{{ item }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+
+                  @if (hasRows(scoring.Score_History)) {
+                    <div class="table-wrapper">
+                      <h4>Score History</h4>
+                      <table>
+                        <thead>
+                        <tr>
+                          <th>Month</th>
+                          <th>Score</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                          @for (h of scoring.Score_History; track $index) {
+                            <tr>
+                              <td>{{ h.MonthYear ?? 'N/A' }}</td>
+                              <td>{{ h.Score ?? 'N/A' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </section>
+              }
+
+              <!-- Identification -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>badge</mat-icon>
+                  <h3>Identification Details</h3>
+                </div>
+
+                @if (hasRows(report.identification_details)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Identifier</th>
+                        <th>Identifier Type</th>
+                        <th>Country of Issue</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of report.identification_details; track $index) {
+                          <tr>
+                            <td>{{ item.SNo ?? 'N/A' }}</td>
+                            <td>{{ item.Identifier ?? 'N/A' }}</td>
+                            <td>{{ item.Identifier_Type ?? 'N/A' }}</td>
+                            <td>{{ item.Country_of_Issue ?? 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No identification details available.</p>
+                }
+              </section>
+
+              <!-- Contact history -->
+              @if (report.contact_history; as contacts) {
+                <section class="report-section">
+                  <div class="section-heading">
+                    <mat-icon>contacts</mat-icon>
+                    <h3>Contact History</h3>
+                  </div>
+
+                  <div class="two-column">
+                    <div>
+                      <h4>Phone Numbers</h4>
+
+                      @if (hasRows(contacts.Phone_Numbers)) {
+                        <div class="simple-list">
+                          @for (p of contacts.Phone_Numbers; track $index) {
+                            <div>{{ p.Phone_Number ?? 'N/A' }}</div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="no-data">No phone numbers available.</p>
+                      }
+                    </div>
+
+                    <div>
+                      <h4>Email Addresses</h4>
+
+                      @if (hasRows(contacts.Emails)) {
+                        <div class="simple-list">
+                          @for (e of contacts.Emails; track $index) {
+                            <div>{{ e.Email ?? 'N/A' }}</div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="no-data">No email addresses available.</p>
+                      }
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <!-- Physical addresses -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>home</mat-icon>
+                  <h3>Physical Address History</h3>
+                </div>
+
+                @if (hasRows(report.physical_address_history)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Address</th>
+                        <th>Ownership</th>
+                        <th>Period at Address</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (a of report.physical_address_history; track $index) {
+                          <tr>
+                            <td>{{ a.SNo ?? 'N/A' }}</td>
+                            <td>{{ a.Address ?? 'N/A' }}</td>
+                            <td>{{ a.Ownership ?? 'N/A' }}</td>
+                            <td>{{ a.Period_at_Address ?? 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No physical address history available.</p>
+                }
+              </section>
+
+              <!-- Postal addresses -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>markunread_mailbox</mat-icon>
+                  <h3>Postal Address History</h3>
+                </div>
+
+                @if (hasRows(report.postal_address_history)) {
+                  <div class="simple-list">
+                    @for (a of report.postal_address_history; track $index) {
+                      <div>{{ a.address ?? 'N/A' }}</div>
+                    }
+                  </div>
+                } @else {
+                  <p class="no-data">No postal address history available.</p>
+                }
+              </section>
+
+              <!-- Employment -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>work</mat-icon>
+                  <h3>Employment History</h3>
+                </div>
+
+                @if (hasRows(report.employment_history)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Employer</th>
+                        <th>Occupation</th>
+                        <th>Employment Date</th>
+                        <th>Income Band</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (e of report.employment_history; track $index) {
+                          <tr>
+                            <td>{{ e.SNo ?? 'N/A' }}</td>
+                            <td>{{ e.Employer_Name ?? 'N/A' }}</td>
+                            <td>{{ e.Occupation ?? 'N/A' }}</td>
+                            <td>{{ e.Employment_Date ?? 'N/A' }}</td>
+                            <td>{{ e.Income_Band ?? 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No employment history available.</p>
+                }
+              </section>
+
+              <!-- Shareholders -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>groups</mat-icon>
+                  <h3>Shareholder Details</h3>
+                </div>
+
+                @if (hasRows(report.shareholder_details)) {
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Business Name</th>
+                        <th>Stakeholder Type</th>
+                        <th>Category</th>
+                        <th>Shareholding</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                        @for (s of report.shareholder_details; track $index) {
+                          <tr>
+                            <td>{{ s.SNo ?? 'N/A' }}</td>
+                            <td>{{ s.Business_Name ?? 'N/A' }}</td>
+                            <td>{{ s.stakeholderType ?? 'N/A' }}</td>
+                            <td>{{ s.Stakeholder_Category ?? 'N/A' }}</td>
+                            <td>{{ s.Shareholder_Percentage ?? 'N/A' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="no-data">No shareholder details available.</p>
+                }
+              </section>
+
+              <!-- Summaries (key/value with nested sub-tables) -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>summarize</mat-icon>
+                  <h3>Credit Report Summaries</h3>
+                </div>
+
+                @for (section of [
+                  { title: 'Credit Applications Summary', rows: report.credit_applications_summary },
+                  { title: 'Credit Accounts Summary', rows: report.credit_accounts_summary },
+                  { title: 'Credit Accounts Classification Summary', rows: report.credits_accounts_classification_summary },
+                  { title: 'Collateral Material Summary', rows: report.collateral_material_summary },
+                  { title: 'Collateral Guarantor Summary', rows: report.collateral_guarantor_summary },
+                  { title: 'Bounced Cheques Summary', rows: report.bounced_cheques_summary },
+                  { title: 'Financial Fraud Summary', rows: report.financial_fraud_summary }
+                ]; track section.title) {
+                  @if (hasRows(section.rows)) {
+                    <div class="report-subsection">
+                      <h4>{{ section.title }}</h4>
+
+                      <div class="table-wrapper">
+                        <table class="kv-table">
+                          <thead>
+                          <tr>
+                            <th class="key-col">Field</th>
+                            <th>Value</th>
+                          </tr>
+                          </thead>
+                          <tbody>
+                            @for (row of $any(section.rows); track $index) {
+                              @for (entry of $any(row) | keyvalue; track entry.key) {
+                                <tr>
+                                  <td class="key-col">
+                                    {{ humaniseKey(entry.key) }}
+                                  </td>
+                                  <td>
+                                    @if (isScalar(entry.value)) {
+                                      {{ formatValue(entry.value) }}
+                                    }
+
+                                    @if (isNestedTable(entry.value)) {
+                                      <div class="nested-table">
+                                        <table>
+                                          <thead>
+                                          <tr>
+                                            @for (subCol of columnsOf(entry.value); track subCol) {
+                                              <th>{{ humaniseKey(subCol) }}</th>
+                                            }
+                                          </tr>
+                                          </thead>
+                                          <tbody>
+                                            @for (subRow of entry.value; track $index) {
+                                              <tr>
+                                                @for (subCol of columnsOf(entry.value); track subCol) {
+                                                  <td>
+                                                    {{ formatValue(cellValue(subRow, subCol)) }}
+                                                  </td>
+                                                }
+                                              </tr>
+                                            }
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    }
+                                  </td>
+                                </tr>
+                              }
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  }
+                }
+              </section>
+
+              <!-- Details (key/value with nested sub-tables) -->
+              <section class="report-section">
+                <div class="section-heading">
+                  <mat-icon>table_chart</mat-icon>
+                  <h3>Credit Report Details</h3>
+                </div>
+
+                @for (section of [
+                  { title: 'Credit Application Details', rows: report.credit_applications_details },
+                  { title: 'Credit Account Details', rows: report.credit_account_details },
+                  { title: 'Collateral Material Details', rows: report.collateral_material_details },
+                  { title: 'Collateral Guarantor Details', rows: report.collateral_guarantor_details },
+                  { title: 'Bounced Cheque Details', rows: report.bounced_cheques_details },
+                  { title: 'Financial Fraud Details', rows: report.financial_fraud_details },
+                  { title: 'Enquiry Details', rows: report.enquiries_details }
+                ]; track section.title) {
+                  @if (hasRows(section.rows)) {
+                    <div class="report-subsection">
+                      <h4>{{ section.title }}</h4>
+
+                      <div class="table-wrapper">
+                        <table class="kv-table">
+                          <thead>
+                          <tr>
+                            <th class="key-col">Field</th>
+                            <th>Value</th>
+                          </tr>
+                          </thead>
+                          <tbody>
+                            @for (row of $any(section.rows); track $index) {
+                              @for (entry of $any(row) | keyvalue; track entry.key) {
+                                <tr>
+                                  <td class="key-col">
+                                    {{ humaniseKey(entry.key) }}
+                                  </td>
+                                  <td>
+                                    @if (isScalar(entry.value)) {
+                                      {{ formatValue(entry.value) }}
+                                    }
+
+                                    @if (isNestedTable(entry.value)) {
+                                      <div class="nested-table">
+                                        <table>
+                                          <thead>
+                                          <tr>
+                                            @for (subCol of columnsOf(entry.value); track subCol) {
+                                              <th>{{ humaniseKey(subCol) }}</th>
+                                            }
+                                          </tr>
+                                          </thead>
+                                          <tbody>
+                                            @for (subRow of entry.value; track $index) {
+                                              <tr>
+                                                @for (subCol of columnsOf(entry.value); track subCol) {
+                                                  <td>
+                                                    {{ formatValue(cellValue(subRow, subCol)) }}
+                                                  </td>
+                                                }
+                                              </tr>
+                                            }
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    }
+                                  </td>
+                                </tr>
+                              }
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  }
+                }
+              </section>
+
+            }
+
+          </div>
+        </mat-expansion-panel>
+      }
+
+    </mat-accordion>
+  }
+
+</div>

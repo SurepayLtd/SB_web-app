@@ -367,6 +367,47 @@
         >
           {{ 'labels.inputs.Account Details' | translate }}
         </a>
+        @if (loanDetailsData.isLoanProductCrbEnabled) {
+          <a
+            mat-tab-link
+            [routerLink]="['./crb-credit-enquiry']"
+            [queryParams]="{
+              productType: loanProductService.productType.value
+            }"
+            routerLinkActive
+            #creditEnquiry="routerLinkActive"
+            [active]="creditEnquiry.isActive"
+          >
+            {{ 'labels.inputs.CRB Credit Enquiry' | translate }}
+          </a>
+          <a
+            mat-tab-link
+            [routerLink]="['./crb-credit-score']"
+            [queryParams]="{
+              productType: loanProductService.productType.value
+            }"
+            routerLinkActive
+            #creditScore="routerLinkActive"
+            [active]="creditScore.isActive"
+            *mifosxHasPermission="'READ_CRBCREDIT'"
+
+          >
+            {{ 'labels.inputs.CRB Credit Score' | translate }}
+          </a>
+          <a
+            mat-tab-link
+            [routerLink]="['./crb-credit-report']"
+            [queryParams]="{
+              productType: loanProductService.productType.value
+            }"
+            routerLinkActive
+            #creditReport="routerLinkActive"
+            [active]="creditReport.isActive"
+            *mifosxHasPermission="'READ_CRBCREDIT'"
+          >
+            {{ 'labels.inputs.CRB Credit Reports' | translate }}
+          </a>
+        }
         @if (loanProductService.isLoanProduct && loanDetailsData.originalSchedule) {
           <a
             mat-tab-link

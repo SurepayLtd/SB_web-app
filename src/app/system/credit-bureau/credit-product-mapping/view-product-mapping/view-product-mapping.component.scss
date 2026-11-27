@@ -1,0 +1,10 @@
+.detail-item {
+  flex: 0 1 calc(45% - 24px);
+  min-width: 0;
+}
+
+@media (max-width: 599px) {
+  .detail-item {
+    flex-basis: 100%;
+  }
+}

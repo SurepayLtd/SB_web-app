@@ -9,9 +9,7 @@
 <div class="container">
   <mat-card>
     <mat-card-header>
-      <mat-card-title>
-        {{ 'CRB Consent' | translate }}
-      </mat-card-title>
+      <mat-card-title>{{ 'CRB Consent' | translate }}</mat-card-title>
       <mat-card-subtitle>
         {{ 'Review the consent details and select a consent channel.' | translate }}
       </mat-card-subtitle>
@@ -19,6 +17,7 @@
 
     <mat-card-content>
       <form [formGroup]="crbConsentForm" (ngSubmit)="submit()">
+
         <div class="consent-section">
           <h3>{{ 'Consent Information' | translate }}</h3>
 
@@ -50,13 +49,60 @@
             </mat-error>
           </mat-form-field>
 
+          <!-- ============================================================ -->
+          <!-- Paper channel: upload signed consent document               -->
+          <!-- ============================================================ -->
+          <div class="upload-section" *ngIf="isPaperChannel">
+            <h4 class="upload-title">
+              <mat-icon>upload_file</mat-icon>
+              {{ 'Signed Consent Document' | translate }}
+              <span class="required-badge">{{ 'Required' | translate }}</span>
+            </h4>
+
+            <p class="upload-hint">
+              {{ 'Upload the signed consent document. Accepted formats: PDF, JPG, PNG. Max size: 10 MB.' | translate }}
+            </p>
+
+            <!-- Drop / pick zone -->
+            <div class="upload-zone" [class.has-file]="!!selectedFile" [class.has-error]="!!fileError" *ngIf="!selectedFile">
+
+              <mat-icon class="upload-icon">cloud_upload</mat-icon>
+              <p>{{ 'Click to select a file' | translate }}</p>
+              <small>{{ 'PDF, JPG, or PNG · Max 5 MB' | translate }}</small>
+
+              <input #fileInput type="file" class="file-input" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" (change)="onFileSelected($event)" />
+            </div>
+
+            <!-- Selected file -->
+            <div class="file-chip" *ngIf="selectedFile">
+              <img *ngIf="filePreviewUrl" [src]="filePreviewUrl" alt="Consent document preview" class="file-preview" />
+
+              <div class="file-meta">
+                <strong>{{ selectedFile.name }}</strong>
+                <small>{{ formatFileSize(selectedFile.size) }}</small>
+              </div>
+
+              <button mat-icon-button type="button" (click)="removeFile(fileInput)" matTooltip="Remove file">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Client-side validation error -->
+            <div class="upload-error" *ngIf="fileError">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ fileError }}</span>
+            </div>
+
+            <div class="upload-error" *ngIf="crbConsentForm.controls.file.touched && crbConsentForm.controls.file.hasError('required')">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ 'A signed consent document is required for Paper consent.' | translate }}</span>
+            </div>
+          </div>
+
           <div class="consent-notice">
             <mat-icon>info</mat-icon>
             <span>
-              {{
-                'OTP consent sends a verification code to the client’s registered phone number. Paper consent is recorded as verified.'
-                  | translate
-              }}
+              {{ 'OTP consent sends a verification code to the client’s registered phone number. Paper consent requires the signed document to be uploaded.' | translate }}
             </span>
           </div>
         </div>
@@ -66,15 +112,12 @@
             {{ 'Cancel' | translate }}
           </button>
 
-          <button
-            type="submit"
-            mat-raised-button
-            color="primary"
-            [disabled]="isLoading || isSubmitting || crbConsentForm.invalid"
-          >
+          <button type="submit" mat-raised-button color="primary" [disabled]="isLoading || isSubmitting || crbConsentForm.invalid
+                              || (isPaperChannel && !selectedFile)">
             {{ 'Submit' | translate }}
           </button>
         </mat-card-actions>
+
       </form>
     </mat-card-content>
   </mat-card>

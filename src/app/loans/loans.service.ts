@@ -1152,4 +1152,31 @@ export class LoansService {
   addWorkingCapitalBreachAction(loanId: string, payload: WorkingCapitalBreachActionRequest) {
     return this.http.post(`/working-capital-loans/${loanId}/breach-actions`, payload);
   }
+
+  createCrbEnquiryOrScore(loanId: any, loanData: any): Observable<any> {
+    return this.http.post(`/crbchecks/${loanId}/credit`, loanData);
+  }
+
+  getCrbEnquiry(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '200');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
+
+  getCrbScore(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '300');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
+
+  getCrbReport(loanId: any): Observable<any> {
+    const httpParams = new HttpParams().set('type', '500');
+    return this.http.get(`/crbchecks/${loanId}/credit`, {params: httpParams});
+  }
+
+  createCrbReport(loanData: any): Observable<any> {
+    return this.http.post(`/creditBureauIntegration/creditReport`, loanData);
+  }
+
+  getCrbCreditReportPdf(checkId: any): Observable<Blob> {
+    return this.http.get(`/crbchecks/${checkId}/report-pdf`, { responseType: 'blob' });
+  }
 }

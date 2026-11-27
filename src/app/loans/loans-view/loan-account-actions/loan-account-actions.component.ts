@@ -154,6 +154,9 @@ export class LoanAccountActionsComponent {
     'Interest Payment Waiver': boolean;
     'Add Interest Pause': boolean;
     'Mass Penalty Waiver': boolean;
+    'Credit Enquiry': boolean;
+    'Credit Score': boolean;
+    'Credit Report': boolean;
     'Capitalized Income': boolean;
     'Contract Termination': boolean;
     'Buy Down Fee': boolean;
@@ -198,6 +201,10 @@ export class LoanAccountActionsComponent {
     'Re-Amortize': false,
     'Interest Payment Waiver': false,
     'Add Interest Pause': false,
+    'Mass Penalty Waiver': false,
+    'Credit Enquiry': false,
+    'Credit Score': false,
+    'Credit Report': false,
     'Capitalized Income': false,
     'Contract Termination': false,
     'Buy Down Fee': false,
@@ -205,8 +212,7 @@ export class LoanAccountActionsComponent {
     'Attach Loan Originator': false,
     'Discount Fee': false,
     'Update Near Breach': false,
-    'Update Breach': false,
-    'Mass Penalty Waiver': false
+    'Update Breach': false
   };
 
   actionButtonData: any;

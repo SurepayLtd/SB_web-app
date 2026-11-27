@@ -77,6 +77,11 @@ import { CrbConsentTabComponent } from './clients-view/crb-consent-tab/crb-conse
 import { CrbConsentRevokeDialogComponent } from './clients-view/custom-dialogs/crb-consent-revoke-dialog/crb-consent-revoke-dialog.component';
 import { CrbCheckComponent } from './clients-view/client-actions/crb-check/crb-check.component';
 import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-tab.component';
+import { KycEnquiryComponent } from './clients-view/client-actions/kyc-enquiry/kyc-enquiry.component';
+import { KycEnquiryTabComponent } from './clients-view/kyc-enquiry-tab/kyc-enquiry-tab.component';
+import { KycReportTabComponent } from './clients-view/kyc-report-tab/kyc-report-tab.component';
+import { KycReportComponent } from './clients-view/client-actions/kyc-report/kyc-report.component';
+import { CrbConsentDocViewerDialogComponent } from './clients-view/custom-dialogs/crb-consent-doc-viewer-dialog/crb-consent-doc-viewer-dialog.component';
 
 /**
  * Clients Module
@@ -149,7 +154,12 @@ import { CrbChecksTabComponent } from './clients-view/crb-checks-tab/crb-checks-
     CrbConsentTabComponent,
     CrbConsentRevokeDialogComponent,
     CrbCheckComponent,
-    CrbChecksTabComponent
+    CrbChecksTabComponent,
+    KycEnquiryComponent,
+    KycEnquiryTabComponent,
+    KycReportTabComponent,
+    KycReportComponent,
+    CrbConsentDocViewerDialogComponent
   ],
   providers: []
 })

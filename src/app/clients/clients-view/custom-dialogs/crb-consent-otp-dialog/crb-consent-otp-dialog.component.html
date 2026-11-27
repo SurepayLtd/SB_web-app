@@ -17,9 +17,11 @@
 
       <input matInput formControlName="otp" autocomplete="one-time-code" required />
 
-      <mat-error *ngIf="otpForm.controls.otp.hasError('required')">
-        {{ 'OTP is required' | translate }}
-      </mat-error>
+      @if (otpForm.controls.otp.hasError('required')) {
+        <mat-error>
+          {{ 'OTP is required' | translate }}
+        </mat-error>
+      }
     </mat-form-field>
   </form>
 </mat-dialog-content>

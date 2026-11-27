@@ -29,6 +29,8 @@ import { AddClientCollateralComponent } from './add-client-collateral/add-client
 import { CrbConsentComponent } from './crb-consent/crb-consent.component';
 import { CrbCheckComponent } from './crb-check/crb-check.component';
 import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
+import { KycEnquiryComponent } from 'app/clients/clients-view/client-actions/kyc-enquiry/kyc-enquiry.component';
+import { KycReportComponent } from 'app/clients/clients-view/client-actions/kyc-report/kyc-report.component';
 
 /**
  * Client actions component.
@@ -57,7 +59,9 @@ import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
     ClientScreenReportsComponent,
     AddClientCollateralComponent,
     CrbConsentComponent,
-    CrbCheckComponent
+    CrbCheckComponent,
+    KycEnquiryComponent,
+    KycReportComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -86,6 +90,8 @@ export class ClientActionsComponent {
     'Create Collateral': boolean;
     'Crb Consent': boolean;
     'Crb Check': boolean;
+    'Kyc Enquiry': boolean;
+    'Kyc Report': boolean;
   } = {
     'Assign Staff': false,
     Close: false,
@@ -105,7 +111,9 @@ export class ClientActionsComponent {
     'Client Screen Reports': false,
     'Create Collateral': false,
     'Crb Consent': false,
-    'Crb Check': false
+    'Crb Check': false,
+    'Kyc Enquiry': false,
+    'Kyc Report': false,
   };
 
   /**

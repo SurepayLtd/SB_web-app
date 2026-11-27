@@ -16,6 +16,7 @@ import { catchError } from 'rxjs/operators';
 
 /** Custom Services */
 import { LoansService } from '../loans.service';
+import { ClientsService } from '../../clients/clients.service';
 import { OrganizationService } from 'app/organization/organization.service';
 import { LoanProductService } from 'app/products/loan-products/services/loan-product.service';
 import { ProductsService } from 'app/products/products.service';
@@ -29,6 +30,8 @@ export class LoanActionButtonResolver {
   private organizationService = inject(OrganizationService);
   private loanProductService = inject(LoanProductService);
   private productService = inject(ProductsService);
+  private clientService = inject(ClientsService);
+
 
   /**
    * Returns the Loans Notes Data.
@@ -128,6 +131,8 @@ export class LoanActionButtonResolver {
       return this.productService.getWorkingCapitalBreachTemplate();
     } else if (loanActionButton === 'Mass Penalty Waiver') {
       return this.loansService.getLoanPenaltyActionTemplate(loanId, 'mass-waiver');
+    } else if (loanActionButton === 'Credit Enquiry') {
+      return this.clientService.getClientCommandTemplate('kyc');
     } else {
       return undefined;
     }

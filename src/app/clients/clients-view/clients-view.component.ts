@@ -35,18 +35,18 @@ import { LegalFormId } from '../models/legal-form.enum';
 import { MatCardMdImage } from '@angular/material/card';
 import { MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
-import { EntityNameComponent } from '../../shared/entity-name/entity-name.component';
 import { MatMenuTrigger, MatMenu, MatMenuItem } from '@angular/material/menu';
 import { MatIcon } from '@angular/material/icon';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { AccountNumberComponent } from '../../shared/account-number/account-number.component';
-import { ExternalIdentifierComponent } from '../../shared/external-identifier/external-identifier.component';
 import { MatTabNav, MatTabLink, MatTabNavPanel } from '@angular/material/tabs';
-import { DateFormatPipe } from '../../pipes/date-format.pipe';
-import { StatusLookupPipe } from '../../pipes/status-lookup.pipe';
 import { STANDALONE_SHARED_IMPORTS } from 'app/standalone-shared.module';
 import { formatTabLabel } from 'app/shared/utils/format-tab-label.util';
 import { AccountHeaderComponent } from 'app/shared/account-header/account-header.component';
+import { EntityNameComponent } from 'app/shared/entity-name/entity-name.component';
+import { AccountNumberComponent } from 'app/shared/account-number/account-number.component';
+import { ExternalIdentifierComponent } from 'app/shared/external-identifier/external-identifier.component';
+import { DateFormatPipe } from '@pipes/date-format.pipe';
+import { StatusLookupPipe } from '@pipes/status-lookup.pipe';
 
 @Component({
   selector: 'mifosx-clients-view',
@@ -211,6 +211,8 @@ export class ClientsViewComponent implements OnInit {
       case 'Withdraw':
       case 'Crb Consent':
       case 'Crb Check':
+      case 'Kyc Enquiry':
+      case 'Kyc Report':
       case 'Update Default Savings':
       case 'Transfer Client':
       case 'Undo Transfer':

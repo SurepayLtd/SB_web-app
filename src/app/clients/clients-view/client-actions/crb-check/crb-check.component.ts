@@ -21,6 +21,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'mifosx-crb-check',
   templateUrl: './crb-check.component.html',
   styleUrls: ['./crb-check.component.scss'],
+  standalone: true,
   imports: [
     ...STANDALONE_SHARED_IMPORTS,
     MatButtonModule,

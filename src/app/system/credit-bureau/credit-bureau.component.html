@@ -1,0 +1,82 @@
+<!--
+  Copyright since 2025 Mifos Initiative
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
+<div class="container">
+
+  <div class="layout-row align-center justify-space-between">
+    <div>
+      <h3>Credit Bureau Providers</h3>
+      <p class="description">
+        Select a credit bureau provider to manage its organisations
+        and loan product mappings.
+      </p>
+    </div>
+  </div>
+
+  <div class="layout-row flex-wrap gap-16px align-start">
+    @for (creditBureau of creditBureauProviders; track $index) {
+      <div class="credit-bureau-item">
+        <mat-card class="credit-bureau-card clickable-card" (click)="viewOrganisations(creditBureau)"
+          tabindex="0"
+          role="button"
+          (keydown.enter)="viewOrganisations(creditBureau)"
+          (keydown.space)="viewOrganisations(creditBureau); $event.preventDefault()">
+
+          <mat-card-content>
+
+            <div class="layout-row align-center gap-16px">
+
+              <div class="flex-fill">
+                <h3>{{ creditBureau.creditBureauName }}</h3>
+
+                <span class="text-muted">
+                  {{ creditBureau.implementationKey }}
+                </span>
+              </div>
+
+              <mat-icon color="primary">chevron_right</mat-icon>
+
+            </div>
+
+            <mat-divider class="m-t-16 m-b-16"></mat-divider>
+
+            <div class="layout-row align-center justify-space-between">
+
+              <span>
+                <mat-icon inline>public</mat-icon>
+                {{ creditBureau.country }}
+              </span>
+
+              <span class="text-muted">
+                {{ creditBureau.creditBureauSummary }}
+              </span>
+
+            </div>
+
+          </mat-card-content>
+
+        </mat-card>
+      </div>
+    }
+  </div>
+
+  @if (creditBureauProviders.length === 0) {
+    <div class="layout-column align-center justify-center m-t-32">
+
+      <mat-icon>account_balance</mat-icon>
+
+      <h3>No Credit Bureau Providers Found</h3>
+
+      <p class="text-muted">
+        There are currently no credit bureau providers configured.
+      </p>
+
+    </div>
+  }
+
+</div>

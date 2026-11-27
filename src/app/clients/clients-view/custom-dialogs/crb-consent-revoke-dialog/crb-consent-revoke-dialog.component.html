@@ -19,15 +19,22 @@
     <mat-label>{{ 'Revocation Reason' | translate }}</mat-label>
 
     <mat-select [formControl]="reasonControl" required>
-      <mat-option *ngFor="let narration of data.narrations" [value]="narration.id">
-        {{ narration.name }}
-        <span *ngIf="narration.mandatory">*</span>
-      </mat-option>
+      @for (narration of data.narrations; track narration.id) {
+        <mat-option [value]="narration.id">
+          {{ narration.name }}
+
+          @if (narration.mandatory) {
+            <span>*</span>
+          }
+        </mat-option>
+      }
     </mat-select>
 
-    <mat-error *ngIf="reasonControl.hasError('required')">
-      {{ 'A revocation reason is required.' | translate }}
-    </mat-error>
+    @if (reasonControl.hasError('required')) {
+      <mat-error>
+        {{ 'A revocation reason is required.' | translate }}
+      </mat-error>
+    }
   </mat-form-field>
 </mat-dialog-content>
 

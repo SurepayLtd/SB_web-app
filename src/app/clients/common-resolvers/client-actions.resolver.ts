@@ -61,6 +61,8 @@ export class ClientActionsResolver {
         return this.clientsService.getClientTransferProposalDate(clientId);
       case 'Crb Consent':
         return this.clientsService.getCrbConsentTemplate();
+      case 'Kyc Enquiry':
+        return this.clientsService.getClientCommandTemplate('kyc');
       default:
         return undefined;
     }
